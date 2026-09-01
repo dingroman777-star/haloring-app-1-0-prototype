@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Halo Ring App 1.0 High Fidelity v6</title>
+  <link rel="icon" type="image/png" href="assets/HALORING_super_symbol_copper.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="workspace">
+    <aside class="rail" aria-label="页面导航">
+      <div class="brand-lockup">
+        <img class="brand-wordmark" src="assets/HALORING_wordmark_with_slogan_ink.png" alt="HALORING · IN TUNE WITH YOU">
+        <small>APP 1.0 · HIGH FIDELITY V6</small>
+      </div>
+      <label class="search-field">
+        <span>搜索页面</span>
+        <input id="search" type="search" placeholder="ID / 名称 / 功能">
+      </label>
+      <div class="scope-summary"><b id="page-count">140</b><span>个可交互页面 / 页面形态</span></div>
+      <nav id="group-nav" class="group-nav" aria-label="模块筛选"></nav>
+      <nav id="page-nav" class="page-nav" aria-label="页面清单"></nav>
+    </aside>
+
+    <section class="stage">
+      <header class="stage-header">
+        <div><span>APP 1.0 REVIEW BUILD</span><strong id="stage-title">TOD-01 · 今日首页</strong></div>
+        <div class="stage-tools">
+          <button id="previous" class="icon-button" type="button" title="上一页" aria-label="上一页">←</button>
+          <button id="next" class="icon-button" type="button" title="下一页" aria-label="下一页">→</button>
+        </div>
+      </header>
+      <div class="device-shell">
+        <div class="device-status"><span>9:41</span><span>●●● 76%</span></div>
+        <section id="screen" class="screen" aria-live="polite"></section>
+        <nav id="tabbar" class="tabbar" aria-label="主导航">
+          <button data-tab="TOD-01"><i>◐</i><span>今日</span></button>
+          <button data-tab="NIG-01"><i>◒</i><span>夜间</span></button>
+          <button data-tab="HAL-01" class="halo-tab"><i><img src="assets/HALORING_super_symbol_copper.png" alt=""></i><span>Halo</span></button>
+          <button data-tab="RHY-01"><i>◔</i><span>节律</span></button>
+          <button data-tab="MY-01"><i>◇</i><span>我的</span></button>
+        </nav>
+      </div>
+      <p class="prototype-note">可点击原型 · 会员 v1.19、Halo Select 与角色门控渠道经营已整合</p>
+    </section>
+
+    <aside class="inspector" aria-label="开发审阅信息">
+      <p class="section-kicker">PAGE DECISION</p>
+      <h2 id="inspect-title">今日首页</h2>
+      <dl id="inspect-data"></dl>
+      <div id="review-controls"></div>
+      <div class="legend"><span></span> 当前 App 1.0 冻结范围</div>
+    </aside>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+  <script src="pages-data.js"></script>
+  <script src="commercial-pages.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
