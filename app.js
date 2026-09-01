@@ -381,24 +381,84 @@
     const back = roots.includes(item.id) ? "" : `<button class="back" data-action="previous">← 返回</button>`;
     const deviceRoots = ["TOD-01", "NIG-01", "HAL-01", "RHY-01", "MY-01"];
     const deviceAction = deviceRoots.includes(item.id) ? haloStatus(state.deviceStatus, "compact") : "";
-    return `<header class="screen-head"><div>${back}<span class="eyebrow">${esc(eyebrow || item.group)}</span><h1>${esc(item.name)}</h1></div><div class="head-actions">${deviceAction}${action || ""}</div></header>`;
+    const actionLabels = { "NIG-10": "查看最近夜间记录", "HAL-08": "打开 Halo 会话设置", "RHY-04": "打开节律设置" };
+    const headAction = Object.entries(actionLabels).reduce((html, [route, label]) => html.replace(`data-action="go:${route}"`, `data-action="go:${route}" aria-label="${label}"`), action || "");
+    return `<header class="screen-head"><div>${back}<span class="eyebrow">${esc(eyebrow || item.group)}</span><h1>${esc(item.name)}</h1></div><div class="head-actions">${deviceAction}${headAction}</div></header>`;
   }
   function card(title, body, meta, action) {
     const tag = action ? "button" : "section";
     return `<${tag} class="card${action ? " card-button" : ""}"${action ? ` data-action="${esc(action)}"` : ""}><div class="card-top"><span>${esc(meta || "HALO")}</span>${action ? "<strong>›</strong>" : ""}</div><h3>${esc(title)}</h3>${body ? `<p>${esc(body)}</p>` : ""}</${tag}>`;
   }
   function notice(title, body, tone) { return `<section class="notice ${tone || ""}"><strong>${esc(title)}</strong><p>${esc(body)}</p></section>`; }
-  function metrics(items) { return `<div class="${items.length === 3 ? "three-column" : "two-column"}">${items.map(([label, value, sub]) => `<section class="metric-card"><small>${esc(label)}</small><b>${esc(value)}</b><span>${esc(sub || "")}</span></section>`).join("")}</div>`; }
+  function domainIcon(kind) {
+    const paths = {
+      sleep: '<path d="M15.5 3.8a6.8 6.8 0 1 0 4.7 11.7A7.6 7.6 0 0 1 15.5 3.8Z"/>',
+      energy: '<path d="M3 13h4l2.2-5.4 3.2 9 2.1-5H21"/>',
+      activity: '<path d="M4 18 10 12l3 3 7-8"/><path d="M15 7h5v5"/>',
+      heart: '<path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z"/>',
+      breath: '<path d="M3 8h11c3 0 3-4 .5-4-1.5 0-2.3 1-2.5 2"/><path d="M3 12h16c3 0 3 4 .5 4-1.5 0-2.3-1-2.5-2"/>',
+      oxygen: '<circle cx="12" cy="12" r="7"/><path d="M9 12h6M12 9v6"/>',
+      temperature: '<path d="M10 5a2 2 0 0 1 4 0v8.2a4 4 0 1 1-4 0Z"/><path d="M12 8v7"/>',
+      reward: '<path d="m12 3 2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2Z"/>',
+      time: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+      status: '<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8" opacity=".35"/>',
+    };
+    return `<svg class="domain-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind] || paths.status}</svg>`;
+  }
+  function visualMeta(label = "") {
+    const text = String(label);
+    const kind = /睡眠|夜晚|夜间/.test(text) ? "sleep"
+      : /能量|HRV|恢复/.test(text) ? "energy"
+      : /活动|步数|热量|佩戴/.test(text) ? "activity"
+      : /心率/.test(text) ? "heart"
+      : /呼吸/.test(text) ? "breath"
+      : /血氧|覆盖|质量/.test(text) ? "oxygen"
+      : /温度/.test(text) ? "temperature"
+      : /Points|积分|成长|奖励/.test(text) ? "reward"
+      : /时间|日期|到期/.test(text) ? "time"
+      : "status";
+    return [kind, domainIcon(kind)];
+  }
+  function miniSparkline(values = [42, 54, 48, 64, 58, 72, 68], tone = "sage", label = "近期趋势") {
+    const safe = values.map((value) => Number(value) || 0);
+    const min = Math.min(...safe);
+    const max = Math.max(...safe);
+    const range = Math.max(1, max - min);
+    const points = safe.map((value, index) => `${(index / Math.max(1, safe.length - 1)) * 100},${30 - ((value - min) / range) * 24}`).join(" ");
+    return `<svg class="mini-sparkline ${esc(tone)}" viewBox="0 0 100 34" role="img" aria-label="${esc(label)}"><path d="M0 30H100"/><polyline points="${points}"/><circle cx="100" cy="${30 - ((safe.at(-1) - min) / range) * 24}" r="2.4"/></svg>`;
+  }
+  function metrics(items) { return `<div class="${items.length === 3 ? "three-column" : "two-column"}">${items.map(([label, value, sub]) => { const [kind, glyph] = visualMeta(label); return `<section class="metric-card visual-metric" data-kind="${kind}"><div class="metric-label"><i aria-hidden="true">${glyph}</i><small>${esc(label)}</small></div><b>${esc(value)}</b><span>${esc(sub || "")}</span></section>`; }).join("")}</div>`; }
   function rows(items) { return `<section class="card">${items.map(([label, value]) => `<div class="status-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join("")}</section>`; }
+  function radialProgress(value, valueLabel, title, note = "") {
+    const safe = Math.max(0, Math.min(100, Number(value) || 0));
+    return `<section class="radial-progress-card"><div class="radial-progress" style="--radial-progress:${safe}%"><span><strong>${esc(valueLabel)}</strong><small>${safe}%</small></span></div><div><span>${esc(title)}</span>${note ? `<p>${esc(note)}</p>` : ""}</div></section>`;
+  }
+  function baselineBand(title, value, position, left = "低于常态", right = "高于常态") {
+    const safe = Math.max(4, Math.min(96, Number(position) || 50));
+    return `<section class="baseline-band"><div><span>${esc(title)}</span><strong>${esc(value)}</strong></div><div class="baseline-track" role="img" aria-label="${esc(`${title}：${value}`)}"><i style="left:${safe}%"></i></div><footer><span>${esc(left)}</span><b>个人常见范围</b><span>${esc(right)}</span></footer></section>`;
+  }
+  function visualSignalCards(signals, empty = false) {
+    const routes = ["TOD-05", "TOD-06", "TOD-07"];
+    return `<div class="three-column visual-signals">${signals.map(([label, value], index) => { const [kind, glyph] = visualMeta(label); const levels = empty ? [18,18,18,18] : [[40,58,46,64],[54,68,62,76],[34,52,48,58]][index]; return `<button class="signal-card" data-kind="${kind}" data-action="go:${routes[index]}"><span class="signal-head"><i aria-hidden="true">${glyph}</i><em>${esc(label)}</em></span><strong>${esc(value)}</strong><span class="micro-bars" aria-hidden="true">${levels.map((height, barIndex) => `<i class="${barIndex === levels.length - 1 ? "active" : ""}" style="height:${height}%"></i>`).join("")}</span></button>`; }).join("")}</div>`;
+  }
+  function weatherDistribution(items) {
+    const total = Math.max(1, items.reduce((sum, item) => sum + item[1], 0));
+    return `<section class="weather-distribution"><div class="weather-distribution-bar" role="img" aria-label="身体天气分布">${items.map(([label, value, tone]) => `<i class="${esc(tone)}" style="flex:${value}" title="${esc(`${label} ${value} 天`)}"></i>`).join("")}</div><div class="weather-distribution-legend">${items.map(([label, value, tone]) => `<span><i class="${esc(tone)}"></i><b>${esc(label)}</b><small>${value} 天 · ${Math.round(value / total * 100)}%</small></span>`).join("")}</div></section>`;
+  }
+  function activityMix(items) {
+    const total = Math.max(1, items.reduce((sum, item) => sum + item[1], 0));
+    return `<section class="activity-mix"><div class="activity-mix-head"><span>今日活动强度</span><strong>${total} 分钟</strong></div><div class="activity-mix-bar" role="img" aria-label="今日活动强度分布">${items.map(([label, value, tone]) => `<i class="${esc(tone)}" style="flex:${value}" title="${esc(`${label} ${value} 分钟`)}"></i>`).join("")}</div><div class="activity-mix-legend">${items.map(([label, value, tone]) => `<span><i class="${esc(tone)}"></i>${esc(label)} <b>${value}m</b></span>`).join("")}</div></section>`;
+  }
+  function waveform(active = true) { return `<div class="audio-wave ${active ? "active" : "paused"}" aria-hidden="true">${[32,52,76,44,68,88,58,38,72,48,64,34].map((height, index) => `<i style="height:${height}%;--delay:${index * 45}ms"></i>`).join("")}</div>`; }
   function buttons(items) { return `<div class="button-row">${items.map(([label, action, kind = "secondary", disabled = false]) => `<button class="${kind}" data-action="${esc(action)}" ${disabled ? "disabled" : ""}>${esc(label)}</button>`).join("")}</div>`; }
-  function setting(title, detail, action, value) { return `<button class="setting-row" data-action="${esc(action)}"><div><strong>${esc(title)}</strong><span>${esc(detail || "")}</span></div><i>${esc(value || "›")}</i></button>`; }
+  function setting(title, detail, action, value) { const [kind, glyph] = visualMeta(title); return `<button class="setting-row visual-setting" data-kind="${kind}" data-action="${esc(action)}"><span class="setting-glyph" aria-hidden="true">${glyph}</span><div><strong>${esc(title)}</strong><span>${esc(detail || "")}</span></div><i>${esc(value || "›")}</i></button>`; }
   function toggle(key, title, detail) { return `<section class="setting-row"><div><strong>${esc(title)}</strong><span>${esc(detail || "")}</span></div><button class="switch ${state.toggles[key] ? "on" : ""}" data-action="toggle:${esc(key)}" aria-label="切换${esc(title)}"></button></section>`; }
   function choice(key, value, title, body) { return `<button class="choice-row ${state[key] === value ? "selected" : ""}" data-action="choose:${esc(key)}:${esc(value)}"><span><strong>${esc(title)}</strong><p>${esc(body)}</p></span><i></i></button>`; }
   function quality(source = "Halo Ring", qualityText = "数据可用", updated = "08:42 更新") { return `<button class="quality-strip" data-action="info:data-quality" aria-label="查看数据来源、质量和更新时间"><div><span>来源</span><strong>${esc(source)}</strong></div><div><span>质量</span><strong>${esc(qualityText)}</strong></div><div><span>时间</span><strong>${esc(updated)}</strong></div></button>`; }
   function lifecycle(stage = state.dataLifecycle, title = "当前数据状态", override = {}) {
     const data = { ...(DATA_LIFECYCLE[stage] || DATA_LIFECYCLE.interpretable), ...override };
     const stages = Object.entries(DATA_LIFECYCLE);
-    return `<section class="lifecycle-card"><div class="lifecycle-heading"><span>DATA STATUS</span><strong>${esc(title)}</strong><b>${esc(data.label)}</b></div><div class="lifecycle-summary"><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><p>${esc(data.reason)}</p></div><div class="lifecycle-track">${stages.map(([key, value]) => `<button class="${stage === key ? "active" : ""}" data-action="lifecycle:${key}" title="${esc(value.label)}"><i></i><span>${esc(value.label)}</span></button>`).join("")}</div><dl><div><dt>为什么是这个状态</dt><dd>${esc(data.reason)}</dd></div><div><dt>还需要</dt><dd>${esc(data.needed)}</dd></div><div><dt>现在可以做什么</dt><dd>${esc(data.next)}</dd></div></dl></section>`;
+    return `<section class="lifecycle-card compact-lifecycle"><div class="lifecycle-heading"><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(title)}</strong><small>${esc(data.label)}</small></div></div><div class="lifecycle-track">${stages.map(([key, value]) => `<button class="${stage === key ? "active" : ""}" data-action="lifecycle:${key}" title="${esc(value.label)}"><i></i><span>${esc(value.label)}</span></button>`).join("")}</div><dl><div><dt>原因</dt><dd>${esc(data.reason)}</dd></div><div><dt>还需</dt><dd>${esc(data.needed)}</dd></div><div><dt>现在</dt><dd>${esc(data.next)}</dd></div></dl></section>`;
   }
   function isHardwareActive() { return state.membershipHardwareState === "active"; }
   function setMembershipState(value) {
@@ -471,7 +531,7 @@
     return `${content}<div class="record-editor"><span class="section-label">补充今天的感受</span>${subjectiveMarkers()}</div>`;
   }
   function monthlyReport() {
-    return `<section class="monthly-report"><div class="monthly-report-head"><div><span>MONTHLY REPORT</span><h3>8 月状态月报</h3></div><strong>覆盖 87%</strong></div>${rows([["有效佩戴", "26 / 30 天"], ["有效夜晚", "24 / 30 晚"], ["相比上个 30 天", "覆盖 +3 天 · 状态更稳定"]])}<div class="monthly-changes"><span class="section-label">主要变化摘要 · 3 条</span><ol><li>睡眠连续性比上一窗口更稳定，波动主要集中在月初。</li><li>缓行日多出现在日间压力信号较高的一周，也常与“疲惫、晚睡”记录同时出现。</li><li>修复日后的第二天，状态较前一日更平稳；这只是同期变化，不表示因果。</li></ol></div><p class="caption">4 天因佩戴中断或关键时段缺口未纳入解释；摘要不展示敏感单次健康数值，也不宣称记录与变化存在因果。</p></section>`;
+    return `<section class="monthly-report"><div class="monthly-report-head"><div><span>MONTHLY REPORT</span><h3>8 月状态月报</h3></div><strong>覆盖 87%</strong></div>${radialProgress(87, "26 / 30", "有效佩戴", "24 个有效夜晚")}<div class="monthly-change-grid"><article><i aria-hidden="true">◒</i><strong>睡眠更连贯</strong><span>波动集中在月初</span></article><article><i aria-hidden="true">∿</i><strong>缓行日较集中</strong><span>常与疲惫、晚睡同时出现</span></article><article><i aria-hidden="true">↗</i><strong>修复后更平稳</strong><span>同期变化，不代表因果</span></article></div><details class="visual-disclosure compact-note"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>覆盖与解释范围</strong><small>4 天未纳入</small></div><i aria-hidden="true">＋</i></summary><p>佩戴中断或关键时段缺口未纳入；不展示敏感单次健康数值。</p></details></section>`;
   }
   function sleepGoalPanel() {
     const goal = state.sleepGoal;
@@ -504,7 +564,9 @@
       ? notice("趋势还没形成", `${dataState.needed}。继续正常佩戴，完成同步后会自动更新。`)
       : `${segmented([["7", "7 天"], ["14", "14 天"], ["30", "30 天"]], state.trendPeriod, "trend")}${config.trend}`;
     const currentActions = canInterpret ? config.actions : dataStageActions(stage);
-    return `${head(item, config.eyebrow)}<article class="unified-health-detail" data-detail-page="${esc(item.id)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}"><span>${esc(dataState.label)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${detailSection("为什么这样", `<p>${esc(why)}</p>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection("关键数据", dataContent)}${detailSection("个人基线与趋势", trendContent)}${detailSection("数据质量与来源", `${lifecycle(stage, config.lifecycleTitle, config.lifecycleOverride)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">Halo Ring 是主要来源；已授权的其他来源会单独标注，同一时段不会重复计算。</p>`)}${detailSection("补充今天的感受", subjectiveMarkers(), "subjective-section")}${detailSection("今天能做什么", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">用于日常健康管理参考，不替代医疗诊断或专业医疗建议。</p>`;
+    const [detailKind, detailGlyph] = visualMeta(item.name);
+    const sourceSummary = `${config.source || "Halo Ring"} · ${config.quality || "数据可用"} · ${config.updated || "刚刚更新"}`;
+    return `${head(item, config.eyebrow)}<article class="unified-health-detail visual-health-detail" data-detail-page="${esc(item.id)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}" data-kind="${detailKind}"><i class="conclusion-glyph" aria-hidden="true">${detailGlyph}</i><span>${esc(dataState.label)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${detailSection("主要参考", `<div class="insight-strip" data-kind="${detailKind}"><i aria-hidden="true">${detailGlyph}</i><p>${esc(why)}</p></div>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection("关键数据", dataContent)}${detailSection("个人基线与趋势", trendContent)}${detailSection("数据与来源", `<details class="visual-disclosure"><summary><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(dataState.label)}</strong><small>${esc(sourceSummary)}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(stage, config.lifecycleTitle, config.lifecycleOverride)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">以 Halo Ring 为主；其他来源单独标注并按时段去重。</p></div></details>`)}${detailSection("用户记录", `<details class="visual-disclosure user-record-disclosure"><summary><span class="record-glyph" aria-hidden="true">＋</span><div><strong>补充今天的感受</strong><small>${state.subjectiveMarkers.length ? `已记录 ${state.subjectiveMarkers.length} 项` : "可选，不改变设备数据"}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${subjectiveMarkers()}</div></details>`, "subjective-section")}${detailSection("下一步", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">日常健康参考，不替代医疗诊断。</p>`;
   }
   function unboundHealthDetail(item) {
     const copy = membershipCopy();
@@ -512,7 +574,7 @@
     return `${head(item, "MEMBER MODE")}<article class="unified-health-detail unbound-detail"><section class="detail-conclusion unbound"><span>${esc(copy.label)}</span><h2>这里还没有身体数据</h2><p>没有足够数据时，Halo 不会给出猜测结论。</p></section>${detailSection("为什么还没有", `<p>${retained ? "当前没有已激活的 Halo Ring。历史会员资产和记录仍在，新的身体数据与成长暂时停止。" : "你已经是 Halo Member。绑定并激活 Halo Ring 后，才会开始记录身体数据。"}</p>`)}${detailSection("已保留的用户记录", retainedUserRecords(), "retained-user-records")}${detailSection("现在仍可使用", `<ul class="availability-list"><li>会员、Halo Points、商城、订单、推荐与客服</li><li>不读取身体数据的 Halo 对话，每日最多发送 10 条消息</li><li>手动节律、情绪和睡眠感受记录</li><li>Studio 浏览、预约与基础参与</li><li>3 项基础睡前内容</li></ul>`)}${detailSection("激活 Halo Ring 后", `<ul class="availability-list"><li>查看 Body Weather 和健康数据详情</li><li>使用个性化夜间建议、入睡渐弱与次日解释</li><li>查看 7 / 14 / 30 天趋势和身体报告</li><li>开始会员任务、HALO成长值、徽章和升级</li></ul>`)}${detailSection("现在可以做什么", buttons([[retained ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"], ["使用基础睡前内容", "go:NIG-01", "secondary"]]), "detail-action")}</article>`;
   }
   function unboundToday(item) {
-    return `${head(item, "TODAY · MEMBER MODE")}<div class="stack"><button class="body-weather unbound-weather" data-action="go:TOD-03"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · 身体天气</span><h2>还没有今天的 Body Weather</h2><p>绑定并激活 Halo Ring 后，完成有效佩戴就会在这里出现。</p></button><div class="three-column"><button class="signal-card" data-action="go:TOD-05"><span>睡眠恢复</span><strong>等待设备数据</strong><i></i></button><button class="signal-card" data-action="go:TOD-06"><span>身体能量</span><strong>等待设备数据</strong><i></i></button><button class="signal-card" data-action="go:TOD-07"><span>活动安排</span><strong>先按身体感受</strong><i></i></button></div>${buttons([[state.membershipHardwareState === "unbound-retained" ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"]])}${setting("记录今天的感受", state.subjectiveMarkers.length ? `已保留 ${state.subjectiveMarkers.length} 项用户记录` : "不需要绑定设备", "go:TOD-02")}${dailyInspirationCard()}${card("今晚可选", "可以手动选择 3 项基础睡前内容。", "PUBLIC CONTENT", "go:NIG-01")}${setting("Halo", "不读取身体数据 · 今日可发送 10 条消息", "go:HAL-01")}${setting("Halo Studio", "浏览、预约与基础参与", "go:STU-08")}</div>`;
+    return `${head(item, "TODAY · MEMBER MODE")}<div class="stack"><button class="body-weather unbound-weather" data-action="go:TOD-03"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · 等待数据</span><h2>还没有今天的 Body Weather</h2><p>激活 Halo Ring 后开始积累。</p></button>${visualSignalCards([["睡眠恢复","等待数据"],["身体能量","等待数据"],["活动安排","按感受进行"]], true)}${buttons([[state.membershipHardwareState === "unbound-retained" ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"]])}${setting("记录今天的感受", state.subjectiveMarkers.length ? `已保留 ${state.subjectiveMarkers.length} 项用户记录` : "不需要绑定设备", "go:TOD-02")}${dailyInspirationCard()}${card("今晚可选", "3 项基础睡前内容", "PUBLIC CONTENT", "go:NIG-01")}${setting("Halo", "无身体数据 · 今日 10 条消息", "go:HAL-01")}${setting("Halo Studio", "浏览与预约", "go:STU-08")}</div>`;
   }
   function unboundNight(item) {
     return `${head(item, "PUBLIC NIGHT")}<div class="night-screen"><section class="night-hero"><span>HALO MEMBER</span><h2>今晚可手动选择</h2><p>这些基础内容不读取身体数据，由你自行选择和播放。</p></section><div class="stack public-night-list">${setting("5 分钟睡前呼吸", "手动播放 · 5 分钟", "public-play:睡前呼吸")}${setting("10 分钟身体扫描", "手动播放 · 10 分钟", "public-play:身体扫描")}${setting("15 分钟安睡音频", "手动播放 · 15 分钟", "public-play:安睡音频")}${notice("基础内容说明", "仅支持手动播放和计时，完成后不计入会员任务或奖励。绑定 Halo Ring 后，才能使用入睡检测和个性化夜间建议。")}</div></div>`;
@@ -575,8 +637,26 @@
   function showSharePreview() {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal share-preview-modal"><div class="modal-title-row"><h2>分享预览</h2><button class="text-button" data-action="close-modal">关闭</button></div>${shareCard("preview")}${notice("隐私已保护", "分享卡不会显示心率、HRV、血氧、温度或其他敏感健康数值。", "sage")}<div class="button-row"><button class="primary" data-action="share-system">分享</button><button class="secondary" data-action="share-save">保存图片</button></div></section></div>`;
   }
-  function lineChart(kind = "sage") { return `<svg viewBox="0 0 320 118" role="img" aria-label="趋势图"><path class="grid-line" d="M0 24H320M0 59H320M0 94H320"/><path class="area" d="M0 80 C36 72 47 42 82 50 S134 90 169 63 S220 34 252 53 S291 77 320 38 V118 H0Z"/><path class="plot ${kind}" d="M0 80 C36 72 47 42 82 50 S134 90 169 63 S220 34 252 53 S291 77 320 38"/></svg>`; }
-  function chartCard(title, summary, kind) { return `<section class="chart-card"><div class="data-heading"><strong>${esc(title)}</strong><span>${esc(summary)}</span></div>${lineChart(kind)}</section>`; }
+  function lineChart(visualKind = "status", title = "个人趋势", summary = "", tone = "sage") {
+    const valuesByKind = {
+      sleep: [62,58,64,55,67,70,68],
+      energy: [48,54,51,60,58,63,61],
+      activity: [44,61,53,68,57,64,59],
+      heart: [66,59,62,56,60,57,58],
+      breath: [55,54,58,56,57,55,56],
+      oxygen: [69,70,68,71,70,72,71],
+      temperature: [49,52,50,54,53,55,54],
+      status: [58,54,67,61,72,65,69],
+    };
+    const values = valuesByKind[visualKind] || valuesByKind.status;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = Math.max(1, max - min);
+    const points = values.map((value, index) => `${Math.round(index / (values.length - 1) * 320)},${Math.round(96 - (value - min) / range * 68)}`).join(" ");
+    const lastPoint = points.split(" ").at(-1).split(",");
+    return `<svg viewBox="0 0 320 118" role="img" aria-label="${esc(`${title}：${summary}`)}"><title>${esc(title)}</title><desc>${esc(`最近一段时间的个人趋势。${summary}。起点 ${values[0]}，当前 ${values.at(-1)}，范围 ${min} 至 ${max}。`)}</desc><path class="grid-line" d="M0 24H320M0 59H320M0 94H320"/><polygon class="area" points="0,108 ${points} 320,108"/><polyline class="plot ${esc(tone || "sage")}" points="${points}"/><circle class="current-point ${esc(tone || "sage")}" cx="${lastPoint[0]}" cy="${lastPoint[1]}" r="4"/></svg>`;
+  }
+  function chartCard(title, summary, tone) { const [visualKind, glyph] = visualMeta(title); return `<section class="chart-card visual-chart" data-kind="${visualKind}"><div class="data-heading"><span class="chart-glyph" aria-hidden="true">${glyph}</span><div><strong>${esc(title)}</strong><span>${esc(summary)}</span></div></div>${lineChart(visualKind, title, summary, tone)}<div class="chart-axis"><span>较早</span><b>个人趋势</b><span>现在</span></div></section>`; }
   function generic(item) {
     return head(item, item.group) + `<div class="stack">${notice("本页任务", item.function || item.note, "sage")}${card("页面内容", item.layout || item.note, item.id)}${rows([["主要交互", item.interaction], ["数据与状态", item.data], ["异常处理", item.exception]])}${buttons([["完成并继续", nextId(item.id), "primary"], ["返回上一页", "previous", "secondary"]])}</div>`;
   }
@@ -622,7 +702,7 @@
     const mainAction = canInterpret ? "查看今天的安排" : "查看数据进度";
     const tonightTitle = canInterpret ? weather.nightTitle : "今晚先按熟悉的节奏";
     const tonightBody = canInterpret ? weather.nightBody : "身体状态还没准备好，可以先选择熟悉的睡前内容。";
-    return `${head(item, "WED · 26 AUG")}<div class="stack"><button class="body-weather" data-action="go:TOD-03"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · ${esc(canInterpret ? `${weather.label} · ${weather.english}` : dataState.label)}</span><h2>${esc(title)}</h2><p>${esc(body)}</p></button><div class="three-column">${signals.map(([label, value], index) => `<button class="signal-card" data-action="go:${["TOD-05", "TOD-06", "TOD-07"][index]}"><span>${esc(label)}</span><strong>${esc(value)}</strong><i></i></button>`).join("")}</div>${buttons([[mainAction, "go:TOD-03", "primary"]])}${dailyInspirationCard()}${card(tonightTitle, tonightBody, canInterpret ? "HALO SUGGESTS" : "TONIGHT", "go:NIG-01")}${setting("健康数据", "心率、呼吸、主动测量、血氧与皮肤温度", "go:HLT-00")}${setting("Halo Studio", "查看预约、扫码或进入最近体验", "go:STU-08")}</div>`;
+    return `${head(item, "WED · 26 AUG")}<div class="stack"><button class="body-weather visual-weather" data-action="go:TOD-03"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · ${esc(canInterpret ? weather.label : dataState.label)}</span><h2>${esc(title)}</h2><p>${esc(body)}</p>${miniSparkline([58,54,67,61,72,65,69], "gold", "最近 7 天 Body Weather 变化")}</button>${visualSignalCards(signals)}${buttons([[mainAction, "go:TOD-03", "primary"]])}${dailyInspirationCard()}${card(tonightTitle, canInterpret ? "12 分钟 · 身体扫描" : "3 项基础内容", canInterpret ? "HALO SUGGESTS" : "TONIGHT", "go:NIG-01")}${setting("健康数据", "6 项趋势与测量", "go:HLT-00")}${setting("Halo Studio", "预约与最近体验", "go:STU-08")}</div>`;
   }
 
   function today(item) {
@@ -647,7 +727,7 @@
         actionBody: currentBodyWeather().actionBody,
         actions: [["查看今晚建议", "go:NIG-01", "primary"], ["和 Halo 聊聊", "go:HAL-01", "secondary"]],
       }),
-      "TOD-04": () => { const days = Number(state.trendPeriod); const bars = days === 30 ? [56,62,52,66,64,71,68,72,69,74] : days === 14 ? [58,63,55,66,61,70,68,72,65,76,71,74,73,78] : [62,48,76,58,83,70,78]; const labels = days === 7 ? ["四","五","六","日","一","二","今"] : bars.map((_,i)=> i === bars.length - 1 ? "今" : `${i+1}`); return `${head(item, `${days} DAY TREND`)}<div class="stack">${segmented([["7","7 天"],["14","14 天"],["30","30 天"]], state.trendPeriod, "trend")}${chartCard("身体天气", `最近 ${days} 天，平衡日和缓行日较多`, "gold")}${trendRecordControl(days)}<div class="trend-chart-wrap"><div class="bar-chart">${bars.map((h,i)=>`<span class="${i===bars.length-1?"active":""}" style="height:${h}%"><i>${labels[i]}</i></span>`).join("")}</div>${trendRecordNodes(days)}</div>${rows(days === 30 ? [["修复日","4 天"],["缓行日","10 天"],["平衡日","11 天"],["活力日","5 天"]] : [["修复日","1 天"],["缓行日",days===14?"5 天":"3 天"],["平衡日",days===14?"6 天":"2 天"],["活力日",days===14?"2 天":"1 天"]])}${days === 30 ? monthlyReport() : ""}${notice("把趋势当作生活参考", "它帮助你回看近期节奏，不代表疾病风险，也不是训练成绩。")}</div>`; },
+      "TOD-04": () => { const days = Number(state.trendPeriod); const bars = days === 30 ? [56,62,52,66,64,71,68,72,69,74] : days === 14 ? [58,63,55,66,61,70,68,72,65,76,71,74,73,78] : [62,48,76,58,83,70,78]; const labels = days === 7 ? ["四","五","六","日","一","二","今"] : bars.map((_,i)=> i === bars.length - 1 ? "今" : `${i+1}`); const distribution = days === 30 ? [["修复",4,"restore"],["缓行",10,"slow"],["平衡",11,"balance"],["活力",5,"active"]] : [["修复",1,"restore"],["缓行",days===14?5:3,"slow"],["平衡",days===14?6:2,"balance"],["活力",days===14?2:1,"active"]]; return `${head(item, `${days} DAY TREND`)}<div class="stack">${segmented([["7","7 天"],["14","14 天"],["30","30 天"]], state.trendPeriod, "trend")}${chartCard("身体天气", `最近 ${days} 天 · 平衡与缓行为主`, "gold")}${weatherDistribution(distribution)}${trendRecordControl(days)}<div class="trend-chart-wrap"><div class="bar-chart">${bars.map((h,i)=>`<span class="${i===bars.length-1?"active":""}" style="height:${h}%"><i>${labels[i]}</i></span>`).join("")}</div>${trendRecordNodes(days)}</div>${days === 30 ? monthlyReport() : ""}<p class="health-boundary">趋势用于回看生活节奏，不代表疾病风险或训练成绩。</p></div>`; },
       "TOD-05": () => healthDetail(item, {
         eyebrow: "LAST NIGHT",
         conclusion: "昨晚时长尚可，连续性仍可改善",
@@ -668,7 +748,7 @@
         conclusion: "今天的身体能量仍有余量",
         summary: "结合个人常见范围和连续趋势，看看今天还有多少活动余量。",
         why: "夜间 HRV 接近个人常见范围，静息心率稳定，但睡眠连续性略有不足。",
-        data: metrics([["夜间 HRV", "42 ms", "个人基线 39-47"], ["静息心率", "58 bpm", "近 7 天稳定"], ["有效采样", "91%", "已剔除体动"]]),
+        data: `${baselineBand("夜间 HRV", "42 ms", 54)}${metrics([["静息心率", "58 bpm", "近 7 天稳定"], ["有效采样", "91%", "已剔除体动"]])}`,
         trend: chartCard(`最近 ${state.trendPeriod} 天 HRV`, "接近个人基线"),
         lifecycleTitle: "身体能量数据状态",
         source: "Halo Ring",
@@ -683,7 +763,7 @@
         conclusion: "今天更适合轻量活动",
         summary: "今天保持轻量活动即可，不需要为了目标数字额外加码。",
         why: "结合近 7 天活动量、昨晚睡眠和今天的身体能量，当前更适合保持轻量活动。",
-        data: `${metrics([["步数", "4,862", "日常活动"], ["活动消耗", "284", "千卡"], ["中高强度", "18 分钟", "今日"]])}${rows([["基础消耗", "1,252 千卡"], ["轻强度", "46 分钟"], ["久坐提醒", "1 次"]])}`,
+        data: `${metrics([["步数", "4,862", "日常活动"], ["活动消耗", "284", "千卡"], ["久坐提醒", "1 次", "今日"]])}${activityMix([["轻量",46,"light"],["中等",14,"medium"],["较高",4,"high"]])}`,
         trend: chartCard(`最近 ${state.trendPeriod} 天活动`, "中低强度为主", "gold"),
         lifecycleTitle: "活动数据状态",
         lifecycleOverride: { needed: "当前已完成 5 / 7 个有效佩戴日；继续积累日间活动记录。", next: "保持日常佩戴，完成同步后会更新活动趋势。" },
@@ -695,9 +775,9 @@
         actions: [["记录完成感受", "go:TOD-02", "primary"], ["查看身体天气", "go:TOD-03", "secondary"]],
       }),
       "TOD-08": () => `${head(item, "LAST NIGHT SUMMARY")}<div class="stack">${notice("昨晚的夜间内容已完成", "系统记录到可能入睡后，音频逐渐变轻，并在 00:18 结束。", "sage")}${rows([["内容", "安静身体扫描 · 12 分钟"], ["渐弱方式", "入睡后渐弱"], ["可能入睡", "00:06"], ["唤醒", "07:12 · 浅睡窗口内"]])}${setting("查看睡眠详情", "阶段、连续性和夜间信号", "go:TOD-05")}${setting("14 晚进度", "已完成 9 个有效夜晚", "go:TOD-09")}</div>`,
-      "TOD-09": () => `${head(item, "REPORTS")}<div class="stack"><section class="body-weather" style="min-height:190px"><span class="label">14 NIGHT REPORT · 报告积累中</span><h2>9 / 14 晚</h2><p>7 日个人基线已建立，日常状态已经可以解释；首轮修正报告尚未生成。</p></section>${lifecycle("baseline", "14 晚报告状态", { label: "报告积累中", reason: "7 日个人基线已建立，日常状态已经可以解释；首轮修正报告尚未生成。", needed: "当前 9 / 14 个有效夜晚，还差 5 个。", next: "继续正常夜间佩戴，完成同步后自动更新。" })}${rows([["个人基线", "已建立"], ["报告进度", "9 / 14 晚"], ["有效佩戴", "平均 91%"]])}${chartCard("睡眠与能量变化", "趋势继续积累")}${card("8 月状态月报", "完成 30 天有效趋势后生成；报告解释变化，不堆叠敏感指标。", "30 DAY REPORT", "go:TOD-04")}${buttons([["查看昨夜", "go:TOD-08", "primary"]])}</div>`,
+      "TOD-09": () => `${head(item, "REPORTS")}<div class="stack">${radialProgress(64, "9 / 14", "首轮报告积累中", "基线已建立 · 还差 5 个有效夜晚")}<details class="visual-disclosure"><summary><span class="data-symbol baseline" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>报告积累中</strong><small>日常状态已可解释</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle("baseline", "14 晚报告状态", { label: "报告积累中", reason: "7 日个人基线已建立；首轮修正报告尚未生成。", needed: "还差 5 个有效夜晚。", next: "继续夜间佩戴，完成同步后自动更新。" })}</div></details>${metrics([["个人基线","已建立","7 个有效佩戴日"],["有效覆盖","91%","最近 9 晚"]])}${chartCard("睡眠与能量", "趋势继续积累")}${card("8 月状态月报", "完成 30 天趋势后生成", "30 DAY REPORT", "go:TOD-04")}${buttons([["查看昨夜", "go:TOD-08", "primary"]])}</div>`,
       "TOD-10": () => `${head(item, "SHARE CARD")}<div class="stack">${shareCard()}<section class="share-editor"><span class="section-label">背景</span>${segmented([["mist","雾白"],["night","深夜"],["photo","相册"]], state.shareBackground, "share-bg")}${state.shareBackground === "photo" ? `<input id="share-photo-input" type="file" accept="image/*" hidden><button class="secondary" data-action="share-photo">选择相册图片</button>` : ""}<label class="field-label">缩放 <input id="share-zoom" type="range" min="80" max="125" value="${esc(state.shareZoom)}"></label><p class="caption">卡片只保留状态名称和一句状态说明，不显示心率、HRV、血氧、温度等敏感数值。</p></section>${buttons([["预览并分享", "share-preview", "primary"], ["复制文字", "toast:文字已复制", "secondary"]])}</div>`,
-      "TOD-11": () => `${head(item, "DATA QUALITY")}<div class="stack">${lifecycle(state.dataLifecycle, "今天的数据状态")}${quality("Halo Ring", state.dataLifecycle === "limited" ? "昨晚一段记录缺失" : "睡眠与夜间信号可用", "08:42 更新")}${rows([["睡眠", "Halo Ring · 有效覆盖 93%"], ["HRV", "Halo Ring · 夜间记录可用"], ["活动", "Halo Ring + 手机 · 已避免重复"], ["用户记录", state.subjectiveMarkers.length ? state.subjectiveMarkers.join("、") : "本次未带入"]])}${notice("这些数据来自哪里", "Halo Ring 是主要来源。主动测量、Apple 健康、Health Connect 和用户记录会单独标明，同一时段不会重复计算。", "sage")}${notice("为什么会有缺口", "短时断连、摘下戒指或运动干扰都可能造成缺口。戒指仍与账号绑定时，7 天内完成有效同步，进度会补记到记录发生当天。")}${education("为什么需要个人基线", "Halo 先了解你的常见范围，再解释今天的变化，避免用同一标准评判每个人。")}${buttons([["重新同步", "toast:已开始重新同步", "secondary"], ["查看设备状态", "go:DEV-10", "secondary"]])}${notice("健康说明", "所有状态解释仅供日常健康管理参考，不替代医疗诊断。")}</div>`,
+      "TOD-11": () => `${head(item, "DATA QUALITY")}<div class="stack">${lifecycle(state.dataLifecycle, "今天的数据状态")}${quality("Halo Ring", state.dataLifecycle === "limited" ? "昨晚一段记录缺失" : "睡眠与夜间信号可用", "08:42 更新")}<section class="source-grid"><span><i>${domainIcon("sleep")}</i><b>睡眠</b><small>93%</small></span><span><i>${domainIcon("energy")}</i><b>HRV</b><small>可用</small></span><span><i>${domainIcon("activity")}</i><b>活动</b><small>已去重</small></span><span><i>${domainIcon("status")}</i><b>用户记录</b><small>${state.subjectiveMarkers.length ? `${state.subjectiveMarkers.length} 项` : "未带入"}</small></span></section><details class="visual-disclosure"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>来源、缺口与个人基线</strong><small>按需查看说明</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${rows([["睡眠", "Halo Ring · 有效覆盖 93%"], ["HRV", "Halo Ring · 夜间记录可用"], ["活动", "Halo Ring + 手机 · 已避免重复"], ["用户记录", state.subjectiveMarkers.length ? state.subjectiveMarkers.join("、") : "本次未带入"]])}${notice("来源", "Halo Ring 为主；主动测量、Apple 健康、Health Connect 和用户记录会单独标明，同一时段不重复计算。", "sage")}${notice("数据缺口", "短时断连、摘下或运动干扰都可能造成缺口。保持绑定时，7 天内有效同步会补记到实际发生日。")}${education("个人基线", "先了解你的常见范围，再解释变化。")}</div></details>${buttons([["重新同步", "toast:已开始重新同步", "secondary"], ["查看设备状态", "go:DEV-10", "secondary"]])}<p class="health-boundary">日常健康参考，不替代医疗诊断。</p></div>`,
     };
     return map[item.id]?.() || generic(item);
   }
@@ -705,7 +785,7 @@
   function health(item) {
     if (!isHardwareActive()) return unboundHealthDetail(item);
     const map = {
-      "HLT-00": () => `${head(item, "HEALTH DATA")}<div class="stack">${lifecycle(state.dataLifecycle, "Body Weather 基线进度")}${quality("Halo Ring", "睡眠与夜间信号可用", "刚刚同步")}${setting("24 小时心率", "全天趋势与个人基线", "go:HLT-01", "72 次/分")}${setting("夜间呼吸率", "有效时段与记录质量", "go:HLT-02", "15.2 次/分")}${setting("活动与消耗", "步数、热量与活动强度明细", "go:TOD-07", "今日")}${setting("主动测量", "心率 / HRV、血氧、皮肤温度", "go:HLT-03", "开始")}${setting("血氧", "查看夜间趋势与数据质量", "go:HLT-05", "98%")}${setting("皮肤温度", "相对个人基线展示", "go:HLT-06", "+0.2°C")}${education("为什么先看趋势", "单次数字容易受姿势、活动与佩戴影响，结合个人基线和连续趋势更有意义。")}${notice("健康管理参考", "这些数据帮助理解日常状态，不替代医疗诊断；持续不适时请及时寻求专业帮助。")}</div>`,
+      "HLT-00": () => `${head(item, "HEALTH DATA")}<div class="stack"><section class="health-overview-head"><div><span>整体数据质量</span><strong>6 项趋势可查看</strong></div>${miniSparkline([55,59,57,66,64,70,68], "sage", "整体数据质量趋势")}</section><details class="visual-disclosure"><summary><span class="data-symbol ${esc(state.dataLifecycle)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>Body Weather 基线</strong><small>睡眠与夜间信号可用 · 刚刚同步</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(state.dataLifecycle, "Body Weather 基线进度")}${quality("Halo Ring", "睡眠与夜间信号可用", "刚刚同步")}</div></details><section class="health-metric-list">${setting("24 小时心率", "全天趋势", "go:HLT-01", "72")}${setting("夜间呼吸率", "有效时段", "go:HLT-02", "15.2")}${setting("活动与消耗", "今日强度", "go:TOD-07", "今日")}${setting("主动测量", "心率 / HRV 等", "go:HLT-03", "开始")}${setting("血氧", "夜间趋势", "go:HLT-05", "98%")}${setting("皮肤温度", "相对基线", "go:HLT-06", "+0.2°")}</section><p class="health-boundary">先看连续趋势；日常健康参考，不替代医疗诊断。</p></div>`,
       "HLT-01": () => healthDetail(item, {
         eyebrow: "24H HEART RATE",
         conclusion: "今天心率变化与活动节奏基本一致",
@@ -780,10 +860,10 @@
   function night(item) {
     if (!isHardwareActive()) return unboundNight(item);
     const content = {
-      "NIG-01": () => `${head(item, "TONIGHT", `<button class="head-action" data-action="go:NIG-10">⌁</button>`)}<div class="night-hero"><div class="night-orbit"><span class="night-symbol-track" aria-hidden="true"></span><img src="${HALO_SYMBOL_IVORY}" alt=""><strong>CALM · 安静</strong></div><h2>今晚适合慢一点</h2><p>可以从 12 分钟的安静身体扫描开始；记录到可能入睡后，音频会逐渐变轻。</p></div>${card("安静身体扫描", "12 分钟 · 轻声引导 · 适合今晚", "HALO RECOMMENDS", "go:NIG-02")}${buttons([["开始播放", "go:NIG-04", "primary"], ["换一个", "go:NIG-03", "secondary"]])}${setting("智能睡眠联动", "入睡渐弱 · 浅睡窗口唤醒", "go:NIG-12", "已开启")}${setting("唤醒设置", "07:20 前 · 晨雾", "go:NIG-06")}`,
+      "NIG-01": () => `${head(item, "TONIGHT", `<button class="head-action" data-action="go:NIG-10">⌁</button>`)}<div class="night-hero visual-night-hero"><div class="night-orbit"><span class="night-symbol-track" aria-hidden="true"></span><img src="${HALO_SYMBOL_IVORY}" alt=""><strong>CALM · 安静</strong></div><h2>今晚适合慢一点</h2><p>12 分钟身体扫描</p><div class="night-facts"><span><i>12</i>分钟</span><span><i>◒</i>可能入睡后渐弱</span><span><i>⌁</i>浅睡窗口唤醒</span></div></div>${buttons([["开始播放", "go:NIG-04", "primary"], ["换一个", "go:NIG-03", "secondary"]])}${setting("智能睡眠联动", "入睡渐弱 · 浅睡窗口", "go:NIG-12", "已开启")}${setting("唤醒设置", "07:20 前 · 晨雾", "go:NIG-06")}`,
       "NIG-02": () => `${head(item, "CONTENT")}<div class="stack">${card("安静身体扫描", "让注意力从白天的任务回到当下，跟随声音逐段放松。", "12 MIN · GUIDED")}${rows([["形式", "身体扫描"], ["时长", "12 分钟"], ["适合今晚", "想慢下来、身体有些紧绷"], ["声音", "轻声引导 + 极简环境音"]])}${notice("使用提示", "这段内容用于日常放松，不是失眠或焦虑治疗。")}${buttons([["试听 30 秒", "toast:正在试听", "secondary"], ["加入今晚并开始", "go:NIG-04", "primary"]])}</div>`,
       "NIG-03": () => `${head(item, "CHOOSE ANOTHER")}<div class="stack">${choice("nightChoice", "scan", "安静身体扫描", "12 分钟 · 引导较少")}${choice("nightChoice", "breath", "呼吸慢下来", "8 分钟 · 呼吸节律")}${choice("nightChoice", "sound", "夜间白噪音", "30 分钟 · 无引导")}${buttons([["使用这个", "go:NIG-01", "primary"]])}</div>`,
-      "NIG-04": () => `${head(item, "NOW PLAYING")}<div class="player-orbit"><button data-action="toggle-player">${state.playing ? "Ⅱ" : "▶"}</button></div><div class="player-meta"><span class="eyebrow">12:00</span><h2>安静身体扫描</h2><p>${state.playing ? "正在播放 · 入睡后会逐渐变轻" : "已暂停"}</p></div><div class="progress" style="margin:22px 0"><i style="width:${state.playing ? 48 : 28}%"></i></div>${notice(state.playing ? "播放和睡眠联动已开启" : "播放已暂停", state.playing ? "锁屏后仍可继续播放；记录到可能入睡后，音量会逐渐降低。" : "继续播放后，会从当前进度恢复。", "sage")}${buttons([[state.playing ? "暂停" : "继续播放", "toggle-player", "primary"], ["结束今晚", "go:TOD-08", "secondary"]])}`,
+      "NIG-04": () => `${head(item, "NOW PLAYING")}<div class="player-orbit visual-player"><button data-action="toggle-player">${state.playing ? "Ⅱ" : "▶"}</button>${waveform(state.playing)}</div><div class="player-meta"><span class="eyebrow">05:46 / 12:00</span><h2>安静身体扫描</h2><p>${state.playing ? "正在播放 · 可能入睡后自动渐弱" : "已暂停"}</p></div><div class="progress" style="margin:18px 0"><i style="width:${state.playing ? 48 : 28}%"></i></div><div class="night-mode-strip"><span>锁屏播放</span><span>渐弱已开启</span><span>手机计时备用</span></div>${buttons([[state.playing ? "暂停" : "继续播放", "toggle-player", "primary"], ["结束今晚", "go:TOD-08", "secondary"]])}`,
       "NIG-05": () => `${head(item, "TONIGHT SEQUENCE")}<div class="stack">${rows([["先播放", "安静身体扫描 · 12 分钟"], ["接着播放", "无引导白噪音 · 20 分钟"]])}${notice("今晚的播放顺序", "第一段结束后会自动进入白噪音；你可以更换内容，也可以只保留一段。", "sage")}${buttons([["调整内容", "go:NIG-03", "secondary"], ["按这个顺序播放", "go:NIG-04", "primary"]])}</div>`,
       "NIG-06": () => `${head(item, "WAKE WINDOW")}<div class="stack"><label class="field-label">最晚唤醒时间<input class="field" type="time" value="07:20"></label><label class="field-label">浅睡窗口<select class="field"><option>前 30 分钟</option><option>前 20 分钟</option></select></label>${setting("唤醒声音", "支持试听", "go:NIG-07", state.alarmSound)}${toggle("wake", "智能唤醒", "优先在窗口内较浅睡眠时响起；最晚不会晚于设定时间")}${state.wakeSaved ? notice("唤醒设置已保存", "今晚会按 07:20 最晚唤醒时间和所选声音运行。", "sage") : ""}${buttons([[state.wakeSaved ? "已保存" : "保存设置", state.wakeSaved ? "" : "wake-save", "primary", state.wakeSaved]])}</div>`,
       "NIG-07": () => `${head(item, "WAKE SOUND")}<div class="stack">${["晨雾","微光","清泉","柔和铃音"].map((sound)=>`<button class="choice-row ${state.alarmSound===sound?"selected":""}" data-action="sound:${sound}"><span><strong>${sound}</strong><p>点击试听</p></span><i></i></button>`).join("")}${buttons([["使用所选声音", "go:NIG-06", "primary"]])}</div>`,
@@ -831,7 +911,7 @@
     const statusPage = rhythmStatePage(item);
     if (statusPage) return statusPage;
     const map = {
-      "RHY-01": () => `${head(item, "YOUR RHYTHM", `<button class="head-action" data-action="go:RHY-04">•••</button>`)}<div class="stack">${notice("这几天，身体可能更需要稳定节奏", "节律阶段可能与睡眠、情绪和能量变化同时出现，但不能单独解释当前感受。", "rose")}<div class="calendar">${Array.from({length:35},(_,i)=>`<span class="${i>=18&&i<=22?"active":""} ${i===25?"today":""}">${i<3?"":i-2}</span>`).join("")}</div><div class="rhythm-band"><span></span><span></span><span></span><span></span></div>${rows([["当前阶段", "节律后段"], ["睡眠", "可能更易波动"], ["情绪", "留意敏感与压力"], ["能量", "保持日常、减少突增"]])}${buttons([["查看阶段解释", "go:RHY-02", "primary"], ["和 Halo 看看这段变化", "go:RHY-06", "secondary"]])}</div>`,
+      "RHY-01": () => `${head(item, "YOUR RHYTHM", `<button class="head-action" data-action="go:RHY-04">•••</button>`)}<div class="stack"><section class="rhythm-hero"><span>节律后段</span><h2>这几天，更适合稳定节奏</h2><small>阶段可能与睡眠、情绪和能量同时变化</small></section><div class="calendar">${Array.from({length:35},(_,i)=>`<span class="${i>=18&&i<=22?"active":""} ${i===25?"today":""}">${i<3?"":i-2}</span>`).join("")}</div><div class="rhythm-band labeled"><span data-label="记录期"></span><span data-label="前段"></span><span data-label="中段"></span><span data-label="后段"></span></div><div class="rhythm-signal-grid"><span><i>◒</i><b>睡眠</b><small>可能波动</small></span><span><i>≈</i><b>情绪</b><small>留意压力</small></span><span><i>∿</i><b>能量</b><small>减少突增</small></span></div>${buttons([["查看阶段解释", "go:RHY-02", "primary"], ["和 Halo 看看变化", "go:RHY-06", "secondary"]])}<p class="health-boundary">节律不能单独解释当前感受。</p></div>`,
       "RHY-02": () => `${head(item, "STAGE EXPLANATION")}<div class="stack">${notice("这是一种可能关联", "睡眠、情绪或身体状态的变化，不能只用节律阶段来解释。", "rose")}${card("睡眠", "可能更容易出现入睡延后或夜间醒来。", "POSSIBLE LINK")}${card("情绪", "对压力和外界刺激的感受可能更明显。", "POSSIBLE LINK")}${card("身体能量", "能量起伏可能比平时更容易被察觉。", "POSSIBLE LINK")}${buttons([["带入 Halo 对话", "go:RHY-06", "primary"]])}</div>`,
       "RHY-03": () => `${head(item, "DAY & FEELING")}<div class="stack"><p class="caption">8 月 26 日 · 只做轻记录</p><div class="suggestions">${["睡得少","情绪敏感","身体轻松","有精神"].map((feeling)=>`<button class="${state.rhythmFeeling === feeling ? "active" : ""}" data-action="rhythm-feeling:${feeling}">${feeling}</button>`).join("")}</div>${state.rhythmFeeling ? notice("已选择", `${state.rhythmFeeling} · 将标注为用户记录`, "sage") : ""}${buttons([["保存", "rhythm-feeling-save", "primary", !state.rhythmFeeling]])}</div>`,
       "RHY-04": () => `${head(item, "RHYTHM SETTINGS")}<div class="stack"><label class="field-label">最近一次开始日<input class="field" type="date" value="2026-08-18"></label><label class="field-label">平均周期<input class="field" value="29 天"></label><label class="field-label">平均持续<input class="field" value="5 天"></label>${toggle("rhythmNotice", "节律轻提醒", "在可能发生变化时，给一句温和提醒")}${setting("暂停与删除", "管理节律展示和历史", "go:RHY-05")}</div>`,
@@ -855,7 +935,10 @@
       paused: ["经营已暂停", "可查看历史订单、账本与服务事项", "go:CHN-22"],
       terminated: ["体验顾问合作已结束", "查看历史结算与待处理事项", "go:CHN-22"],
     }[channelState] || ["申请体验顾问", "了解要求并提交申请", "go:CHN-01"];
-    return `${head(item, "ACCOUNT")}<div class="stack"><section class="halo-identity"><div class="halo-avatar">H</div><div><strong>你好，Halo 用户</strong><span>${isHardwareActive() ? "已连续佩戴 9 晚" : "Halo Member · 会员模式"}</span></div></section>${membershipPanel()}${setting("个人资料", "昵称、头像与生日", "go:ACC-01")}${setting("我的 Halo 硬件", `${copy.device} · 查看连接与设备状态`, "go:DEV-10")}${setting("会员说明", "等级、成长、Halo Points 与权益说明", "info:membership-rights")}${setting("会员中心", memberEntry, "go:MEM-01")}${setting("Halo Points", "余额、临期提醒、明细与兑换", "go:PTS-01")}${setting("Halo Select", "精选商品、购物车、订单与售后", "go:SEL-01")}${setting("会员推荐", "邀请朋友并查看奖励进度", "go:REF-01")}${setting(advisorEntry[0], advisorEntry[1], advisorEntry[2])}${setting("商城、推荐与体验顾问说明", "了解三类服务与订单来源", "commerce-entry")}${setting("Halo Studio", "预约、体验码与最近体验", "go:STU-08")}${setting("账号与安全", "登录设备与便捷注销", "go:ACC-02")}${setting("数据与隐私", "权限、本地记录与云摘要", "go:SET-01")}${setting("通知、夜间与睡眠目标", "工作日/休息日目标、睡前与报告提醒", "go:SET-02")}${setting("通用设置", "语言、显示、桌面小组件与 Halo 语气", "go:SET-03")}${setting("使用帮助", "FAQ、反馈与企业微信客服", "go:HELP-01")}${setting("关于与协议", "版本、主体与健康边界", "go:LEGAL-02")}</div>`;
+    const quickActions = `${setting("我的 Halo 硬件", copy.device, "go:DEV-10")}${setting("会员中心", memberEntry, "go:MEM-01")}${setting("Halo Points", "18,800 可用", "go:PTS-01")}${setting("Halo Select", "商品、订单与售后", "go:SEL-01")}${setting("Halo Studio", "预约与最近体验", "go:STU-08")}${setting(advisorEntry[0], advisorEntry[1], advisorEntry[2])}`;
+    const accountActions = `${setting("个人资料", "昵称、头像与生日", "go:ACC-01")}${setting("账号与安全", "登录设备与注销", "go:ACC-02")}${setting("数据与隐私", "权限、导出与删除", "go:SET-01")}${setting("通知与睡眠目标", "夜间、报告与提醒", "go:SET-02")}${setting("通用设置", "语言、显示与 Halo 语气", "go:SET-03")}`;
+    const serviceActions = `${setting("会员说明", "等级、成长与权益", "info:membership-rights")}${setting("会员推荐", "邀请与奖励进度", "go:REF-01")}${setting("服务与订单来源", "Select、推荐与体验顾问", "commerce-entry")}${setting("使用帮助", "FAQ、反馈与客服", "go:HELP-01")}${setting("关于与协议", "版本、主体与健康边界", "go:LEGAL-02")}`;
+    return `${head(item, "ACCOUNT")}<div class="stack"><section class="halo-identity"><div class="halo-avatar">H</div><div><strong>你好，Halo 用户</strong><span>${isHardwareActive() ? "已连续佩戴 9 晚" : "Halo Member · 会员模式"}</span></div></section>${membershipPanel()}<section class="me-quick-grid">${quickActions}</section><details class="visual-disclosure me-section"><summary><span class="record-glyph" aria-hidden="true">⌁</span><div><strong>账号与偏好</strong><small>资料、安全、隐私与通知</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${accountActions}</div></details><details class="visual-disclosure me-section"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>更多服务与说明</strong><small>推荐、帮助与协议</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${serviceActions}</div></details></div>`;
   }
   function me(item) {
     if (item.id === "MY-01") return myHome(item);
@@ -891,7 +974,7 @@
       "STU-03": () => `${head(item, "PREFLIGHT")}<div class="stack">${canReport ? `${rows([["本人戒指", "已绑定"], ["连接", "稳定"], ["电量", "76%"], ["当前状态", "可以开始记录"]])}${notice("报告仍取决于本次有效覆盖", "如有缺口，活动结束后会在报告状态中说明。", "sage")}` : notice("基础参与", "无需戒指检查，不生成个人健康报告。")}${buttons([["开始本次体验", "go:STU-04", "primary"]])}</div>`,
       "STU-04": () => `${head(item, "SESSION")}<div class="session-live"><div class="pulse"><i></i></div><h2>${state.sessionDone ? "记录完成" : "低打扰记录中"}</h2><p>${state.sessionDone ? "本次 60 分钟体验已保存。" : "不展示实时健康数值。短暂断连会标记缺口，不删除整段记录。"}</p></div>${state.sessionDone ? buttons([["查看报告状态", "go:STU-12", "primary"]]) : buttons([["结束本次体验", "studio-complete", "primary"]])}`,
       "STU-12": () => `${head(item, "REPORT STATUS")}<div class="stack">${canReport ? notice("课后轻报告已生成", "报告只对本人开放。", "sage") : notice("本次不生成个人报告", "基础参与、未授权或有效记录不足时不会生成个人报告。")}${buttons([[canReport ? "查看课后报告" : "查看活动权益", canReport ? "go:STU-05" : "go:STU-13", "primary"]])}</div>`,
-      "STU-05": () => `${head(item, "POST REPORT")}<div class="stack">${notice("活动后，心率与体动逐步回落", "这是本次记录中的方向性变化，不用于证明课程效果。", "sage")}${rows([["心率变化", "活动后逐步回落"], ["体动变化", "结束后逐步减少"], ["有效记录", "52 / 60 分钟"]])}${quality("Halo Ring", "有效覆盖 87%", "活动结束后生成")}${notice("身体能量", "本次记录不足以单独解释身体能量变化。")}${buttons([["次日再看看", "go:STU-06", "primary"]])}</div>`,
+      "STU-05": () => `${head(item, "POST REPORT")}<div class="stack"><section class="studio-report-hero"><span>本次记录</span><h2>心率与体动逐步回落</h2><small>方向性变化，不证明课程效果</small></section>${radialProgress(87, "52 / 60", "有效记录", "8 分钟缺口未纳入")}${chartCard("心率与体动", "活动后逐步回落")}${quality("Halo Ring", "有效覆盖 87%", "活动结束后生成")}${notice("身体能量暂不解释", "本次记录仍不足。")}${buttons([["次日再看看", "go:STU-06", "primary"]])}</div>`,
       "STU-06": () => `${head(item, "NEXT DAY")}<div class="stack">${notice("把昨晚与今天放在一起看", "这里并列展示昨晚睡眠与今日 Body Weather；Studio 记录不会改变已经生成的状态。", "sage")}${rows([["昨晚睡眠", "6 小时 48 分 · 连续性略低"], ["今日 Body Weather", state.dataLifecycle === "interpretable" ? currentBodyWeather().label : DATA_LIFECYCLE[state.dataLifecycle].label], ["Studio 记录", "已单独标注"]])}${buttons([["领取活动权益", "go:STU-13", "primary"]])}</div>`,
       "STU-13": () => `${head(item, "BENEFIT")}<div class="stack">${metrics([["本次权益", "30", "Halo Points"]])}${rows([["获得条件", "完成本次活动"], ["发放状态", state.studioBenefitClaimed ? "已领取 · 今天 21:12 到账" : "可领取"]])}${notice("每次活动只到账一次", "同一场活动不会重复发放相同权益。")}${buttons([[state.studioBenefitClaimed ? "已领取" : "领取权益", state.studioBenefitClaimed ? "" : "studio-claim-benefit", "primary", state.studioBenefitClaimed], ["查看本次体验", "go:STU-15", "secondary"]])}</div>`,
       "STU-14": () => `${head(item, "CONTACT")}<div class="stack">${toggle("studioContact", "允许机构发送本次活动服务消息", "消息由 Halo 转发，不会向机构开放手机号、微信号或账号 ID")}${toggle("studioMarketing", "机构后续活动消息", "单独授权，拒绝不影响报告与权益")}${notice("联系边界", "机构不能导出个人名单、个人健康值或个人报告。")}</div>`,
@@ -970,6 +1053,10 @@
     renderInspector(item);
     renderTabs(item);
     screen.innerHTML = pageBody(item);
+    const playerButton = screen.querySelector('[data-action="toggle-player"]');
+    if (playerButton) playerButton.setAttribute("aria-label", state.playing ? "暂停播放" : "继续播放");
+    const chatSendButton = screen.querySelector('[data-action="send-chat"]');
+    if (chatSendButton) chatSendButton.setAttribute("aria-label", "发送消息");
     screen.scrollTop = 0;
     requestAnimationFrame(() => nav.querySelector(".nav-item.active")?.scrollIntoView({ block: "nearest", inline: "nearest" }));
   }
