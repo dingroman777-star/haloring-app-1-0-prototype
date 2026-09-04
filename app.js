@@ -16,6 +16,26 @@
     "经期不适": { date: "8 月 25 日", time: "09:20", original: "今天有经期不适。", daysAgo: 6 },
   };
   const DEFAULT_SLEEP_GOAL = { duration: "8", workdayBedtime: "23:15", workdayWake: "07:15", restBedtime: "23:45", restWake: "08:00" };
+  const DEFAULT_AI_CORRECTION = { status: "none", reason: "", reasonLabel: "", note: "", memoryReview: false, savedAt: "" };
+  const DEFAULT_NIGHT_REVIEW = { execution: "", helpfulness: "", factors: [], saved: false, counted: false, observationCount: 2 };
+  const AI_CORRECTION_REASONS = {
+    less: "我没有这里说得这么累",
+    more: "我实际比这里更累",
+    cause: "数据可能对，但原因不像",
+    other: "还有别的地方不准确",
+  };
+  const JOURNEY_THEMES = {
+    boundary: [
+      { title: "睡前把工作留在床外", action: "睡前用一段内容结束工作状态", detail: "12 分钟 · 按原计划" },
+      { title: "先离开工作消息 5 分钟", action: "打开勿扰，把手机放到伸手够不到的地方", detail: "5 分钟 · 更容易开始" },
+      { title: "只做 1 分钟的结束动作", action: "扣下手机，慢慢呼吸 6 次就可以停", detail: "1 分钟 · 最轻版本" },
+    ],
+    pause: [
+      { title: "白天给自己留一个短暂停顿", action: "午后离开屏幕，站起来喝几口水", detail: "5 分钟 · 新主题" },
+      { title: "先离开屏幕 2 分钟", action: "看向远处，让肩膀松下来", detail: "2 分钟 · 更容易开始" },
+      { title: "只做一次抬头和放松", action: "放下手里的事，慢慢呼气一次", detail: "不到 1 分钟 · 最轻版本" },
+    ],
+  };
   function readStoredJson(key, fallback) {
     try {
       const value = JSON.parse(localStorage.getItem(key));
@@ -82,8 +102,14 @@
     studioCode: "HALO-STUDIO-2026",
     studioCodeError: "",
     memoryProposalConfirmed: false,
+    aiCorrection: { ...DEFAULT_AI_CORRECTION },
     journeyPaused: false,
     journeyProgress: 2,
+    journeyTheme: "boundary",
+    journeyVariant: 0,
+    journeyMissCount: 1,
+    journeyDecision: "active",
+    journeyReason: "",
     wakeSaved: false,
     snoozeUntil: "",
     profileSaved: false,
@@ -95,6 +121,7 @@
     rhythmSettingsSaved: false,
     nightChoice: "scan",
     nightHistory: [],
+    nightReview: { ...DEFAULT_NIGHT_REVIEW },
     publicNightChoice: "",
     conversationQuery: "",
     activeConversationId: "today-energy",
@@ -108,9 +135,9 @@
     "healthDeletionStatus", "studioDeletionStatus", "accountDeletionStatus", "studioBenefitClaimed",
     "studioBenefitStatus", "studioReportStatus", "selectedStudioEventId", "selectedStudioHistoryId",
     "studioScannerOpen", "studioCode",
-    "memoryProposalConfirmed", "journeyPaused", "journeyProgress", "wakeSaved", "snoozeUntil",
+    "memoryProposalConfirmed", "aiCorrection", "journeyPaused", "journeyProgress", "journeyTheme", "journeyVariant", "journeyMissCount", "journeyDecision", "journeyReason", "wakeSaved", "snoozeUntil",
     "profileSaved", "profile", "feedbackSubmitted", "helpQuery", "previewSound", "rhythmFeeling", "rhythmSettings", "rhythmSettingsSaved",
-    "nightChoice", "nightHistory", "publicNightChoice", "conversationQuery", "activeConversationId",
+    "nightChoice", "nightHistory", "nightReview", "publicNightChoice", "conversationQuery", "activeConversationId",
     "conversationStatus", "signedIn", "authCodeRequested", "authVerified",
   ];
   if (storedAppProgress && typeof storedAppProgress === "object") {
@@ -120,6 +147,12 @@
     if (storedAppProgress.toggles && typeof storedAppProgress.toggles === "object") {
       state.toggles = { ...state.toggles, ...storedAppProgress.toggles };
     }
+    state.aiCorrection = { ...DEFAULT_AI_CORRECTION, ...(state.aiCorrection && typeof state.aiCorrection === "object" ? state.aiCorrection : {}) };
+    state.nightReview = { ...DEFAULT_NIGHT_REVIEW, ...(state.nightReview && typeof state.nightReview === "object" ? state.nightReview : {}) };
+    state.nightReview.factors = Array.isArray(state.nightReview.factors) ? state.nightReview.factors : [];
+    if (!JOURNEY_THEMES[state.journeyTheme]) state.journeyTheme = "boundary";
+    state.journeyVariant = Math.max(0, Math.min(2, Number(state.journeyVariant) || 0));
+    state.journeyMissCount = Math.max(0, Number(state.journeyMissCount) || 0);
     state.profile = { nickname: "Halo 用户", birthday: "1992-08-26", height: "165", weight: "55", ...(state.profile || {}) };
   }
   window.HALO_STUDIO_BENEFIT_CLAIMED = state.studioBenefitStatus === "posted" || state.studioBenefitClaimed;
@@ -641,6 +674,17 @@
     const closeButton = action === "close-modal" ? "" : '<button class="text-button" data-action="close-modal">关闭</button>';
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal"><h2>${esc(title)}</h2><p>${esc(message)}</p><div class="button-row"><button class="primary" data-action="${esc(action)}">${esc(confirmLabel)}</button>${closeButton}</div></section></div>`;
   }
+  function showAiCorrectionModal() {
+    trackPrototypeEvent("ai_interpretation_correction_started", { source_page: state.current });
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal correction-modal" role="dialog" aria-modal="true" aria-labelledby="correction-title"><div class="modal-title-row"><div><span class="modal-eyebrow">你的感受更重要</span><h2 id="correction-title">哪里和你不太一样？</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><p>这不会改动戒指记录，只会纠正 Halo 对今天的解释。</p><div class="correction-options">${Object.entries(AI_CORRECTION_REASONS).map(([value, label]) => `<button class="choice-row" data-action="ai-correction-select:${value}"><span><strong>${esc(label)}</strong></span><i aria-hidden="true"></i></button>`).join("")}</div></section></div>`;
+  }
+  function showAiCorrectionConfirm(reason) {
+    const label = AI_CORRECTION_REASONS[reason] || AI_CORRECTION_REASONS.other;
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal correction-modal" role="dialog" aria-modal="true" aria-labelledby="correction-confirm-title"><div class="modal-title-row"><div><span class="modal-eyebrow">确认纠正</span><h2 id="correction-confirm-title">${esc(label)}</h2></div><button class="text-button" data-action="close-modal">关闭</button></div>${notice("戒指数据保持原样", "Halo 会把你的反馈作为用户纠正单独保存，不再把原来的解释当作你的实际感受。", "sage")}<label class="field-label">想补充的话（选填）<textarea id="ai-correction-note" class="field" placeholder="例如：今天精神还可以，只是身体有点酸。">${esc(state.aiCorrection.note || "")}</textarea></label>${buttons([["保存这次纠正", `ai-correction-save:${reason}:current`, "primary"], ["保存并检查 Halo 记忆", `ai-correction-save:${reason}:memory`, "secondary"], ["返回重选", "ai-correction:open", "text-button"]])}</section></div>`;
+  }
+  function showJourneyDeferModal() {
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal journey-decision-modal" role="dialog" aria-modal="true" aria-labelledby="journey-defer-title"><div class="modal-title-row"><div><span class="modal-eyebrow">今天先不做也可以</span><h2 id="journey-defer-title">这一步卡在哪里？</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><p>只用来帮你调整下一步，不评价是否坚持。</p><div class="correction-options">${[["time","今天没时间"],["hard","这一步还是太难"],["timing","现在不是合适的时候"],["mood","今天不想做"]].map(([value, label]) => `<button class="choice-row" data-action="journey-defer:${value}"><span><strong>${label}</strong></span><i aria-hidden="true"></i></button>`).join("")}</div></section></div>`;
+  }
   function showExportModal() {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal export-modal" data-export-step="choose"><div class="modal-title-row"><div><span class="modal-eyebrow">DATA EXPORT</span><h2>选择导出方式</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><p>导出包含你的健康记录、用户记录和必要来源说明。完整健康数据不会通过普通邮件发送。</p><div class="export-choice-grid"><button class="export-choice" data-action="export:local"><span>保存在当前设备</span><strong>本地文件</strong><small>生成受保护的 ZIP 文件，由你自行保存或转移。</small></button><button class="export-choice" data-action="export:secure"><span>在其他设备取回</span><strong>限时安全链接</strong><small>创建后 24 小时失效，可随时撤销并查看访问记录。</small></button></div>${notice("导出前确认", "继续前需要验证你的身份；安全链接不会放在普通邮件正文中。", "sage")}</section></div>`;
   }
@@ -898,15 +942,74 @@
     if (stage === "baseline") return [["查看数据进度", "go:TOD-11", "primary"], ["记录今天的感受", "go:TOD-02", "secondary"]];
     return [["查看佩戴与同步", "go:DEV-10", "primary"], ["记录今天的感受", "go:TOD-02", "secondary"]];
   }
+  function interpretationCorrectionCard() {
+    if (state.aiCorrection.status !== "saved") {
+      return `<button class="interpretation-feedback" data-action="ai-correction:open"><span aria-hidden="true">≠</span><span><strong>和我现在的感受不太一样</strong><small>纠正这次解释，不改动戒指数据</small></span><i aria-hidden="true">›</i></button>`;
+    }
+    const note = state.aiCorrection.note ? ` · ${state.aiCorrection.note}` : "";
+    return `<section class="correction-result" role="status"><span class="correction-result-icon" aria-hidden="true">✓</span><div><small>已按你的反馈调整</small><strong>${esc(state.aiCorrection.reasonLabel)}${esc(note)}</strong><p>原解释不会继续作为你的实际感受，也不会自动写入 Halo 记忆。</p><button class="text-button" data-action="ai-correction:open">重新纠正</button></div></section>`;
+  }
+  function currentJourneyStep() {
+    const theme = JOURNEY_THEMES[state.journeyTheme] || JOURNEY_THEMES.boundary;
+    return theme[Math.max(0, Math.min(theme.length - 1, state.journeyVariant))];
+  }
+  function journeyPage(item) {
+    const completed = state.journeyProgress >= 7;
+    const step = currentJourneyStep();
+    const themeTitle = state.journeyTheme === "pause" ? "白天留一个短暂停顿" : "晚上别把工作带上床";
+    if (state.journeyDecision === "unsuitable") {
+      return `${head(item, "JOURNEYS")}<div class="stack">${notice("这个主题已经停下", "Halo 不会再提醒你做这组练习。进度仍然保留，你可以换一个方向。", "sage")}<section class="journey-summary-card"><span class="journey-state-label">已标记为不适合</span><h2>${esc(themeTitle)}</h2><p>${esc(state.journeyReason || "这组练习不符合你现在的需要。")}</p></section>${buttons([["换成白天短暂停顿", "journey-replace-theme", "primary"], ["保留记录，返回 Halo", "go:HAL-01", "secondary"]])}</div>`;
+    }
+    const adjusted = state.journeyVariant > 0;
+    const statusTitle = completed ? "这个主题已经完成" : state.journeyDecision === "deferred" ? "今天先放下，没关系" : state.journeyPaused ? "这个主题已暂停" : adjusted ? "这一步已经变简单" : "每天只做一件小事";
+    const statusBody = completed
+      ? "你完成了 7 天练习，可以回看哪些做法更适合自己。"
+      : state.journeyDecision === "deferred"
+      ? `${state.journeyReason || "今天不做。"} 下次从更轻的一步开始。`
+      : state.journeyPaused
+      ? "之前的进度还在，想继续时再回来。"
+      : adjusted
+      ? "Halo 根据你的选择降低了难度；不追求连续打卡。"
+      : "不追求连续打卡，做完今天这一小步就好。";
+    const activeActions = completed
+      ? [["重新开始这个主题", "journey-reset", "primary"]]
+      : state.journeyDecision === "deferred"
+      ? [["现在想做了", "journey-resume-today", "primary"], ["再换一个更容易的", "journey-replace", "secondary"], ["这个主题不适合我", "journey-unsuitable", "text-button"]]
+      : state.journeyPaused
+      ? [["继续这个主题", "journey-resume", "primary"], ["这个主题不适合我", "journey-unsuitable", "text-button"]]
+      : [["完成今天这一小步", "journey-step", "primary"], ["换一个更容易的", "journey-replace", "secondary"], ["今天先不做", "journey-defer-open", "text-button"], ["这个主题不适合我", "journey-unsuitable", "text-button"]];
+    return `${head(item, "JOURNEYS")}<div class="stack">${notice(statusTitle, statusBody, "sage")}<section class="journey-summary-card"><div class="journey-summary-head"><span>第 ${Math.min(7, state.journeyProgress + 1)} / 7 天</span><small>${adjusted ? step.detail : "按你的节奏"}</small></div><h2>${esc(step.title)}</h2><p>${esc(step.action)}</p><div class="journey-progress-dots" aria-label="已完成 ${state.journeyProgress} 天">${Array.from({ length: 7 }, (_, index) => `<i class="${index < state.journeyProgress ? "done" : index === state.journeyProgress ? "current" : ""}"></i>`).join("")}</div></section>${completed ? rows([["最常完成", "睡前不处理工作消息"], ["你记下的变化", "更容易按时结束一天"], ["下一步", "保留最有用的一项"]]) : `${state.journeyMissCount ? `<p class="journey-history-note">最近有 ${state.journeyMissCount} 次没有完成。Halo 只会调整难度，不会催你补做。</p>` : ""}`}${buttons(activeActions)}${!completed && state.journeyDecision !== "deferred" && !state.journeyPaused ? `<button class="journey-pause-link" data-action="journey-pause">暂停整个主题</button>` : ""}</div>`;
+  }
+  function nightReviewPage(item) {
+    const latest = state.nightHistory[0];
+    const selected = latest || { title: currentNightContent().title, detail: `${currentNightContent().duration} 分钟 · 昨晚 00:18 结束`, status: "已完成" };
+    const review = state.nightReview;
+    const executionLabels = { complete: "完整做了", partial: "做了一部分", none: "没有执行" };
+    const helpfulnessLabels = { helpful: "自己觉得有帮助", neutral: "没什么感觉", unhelpful: "不太适合", unknown: "无法判断" };
+    const factorLabels = { late: "比平时晚睡", exercise: "当天有运动", alcohol: "有饮酒", emotion: "情绪有起伏", none: "没有明显变化" };
+    if (review.saved) {
+      const factorText = review.factors.length ? review.factors.map((value) => factorLabels[value]).filter(Boolean).join("、") : "没有补充";
+      const observationText = review.execution === "none"
+        ? "昨晚没有执行，因此不会把今天的任何变化和这段内容联系起来。"
+        : review.observationCount < 3
+        ? `目前只有 ${review.observationCount} 次记录，先继续观察，不判断是否有效。`
+        : `已有 ${review.observationCount} 次记录；主观感受和设备变化会分开看，仍不把同时发生当作因果。`;
+      return `${head(item, "LAST NIGHT SUMMARY")}<div class="stack">${notice("昨晚的复盘已记下", "Halo 会把执行、你的感受和设备观察分开保存。", "sage")}${rows([["听了什么", `${selected.title} · ${selected.detail.split(" · ")[0]}`], ["实际执行", executionLabels[review.execution]], ["你的感受", helpfulnessLabels[review.helpfulness] || "无法判断"], ["同期变化", factorText]])}<section class="evidence-separation"><span>设备观察</span><strong>睡眠比前一晚多 18 分钟，夜醒少 6 分钟</strong><p>这只是同一晚出现的变化，不能说明由音频或练习造成。</p></section>${notice("现在能说到哪一步", observationText)}${buttons([["修改本次复盘", "night-review-edit", "secondary"], ["查看身体天气", "go:TOD-03", "primary"]])}</div>`;
+    }
+    const canRateHelp = review.execution && review.execution !== "none";
+    const canSave = Boolean(review.execution) && (review.execution === "none" || Boolean(review.helpfulness));
+    return `${head(item, "LAST NIGHT SUMMARY")}<div class="stack">${notice("昨晚的内容已经结束", "先确认你实际做了多少，再记录自己的感受。设备变化会单独显示。", "sage")}${rows([["听了什么", selected.title], ["播放记录", selected.detail], ["声音怎么停", "可能睡着后渐弱"], ["今天唤醒", "07:12 · 设定时间前"]])}<section class="reflection-block"><span class="section-label">1 · 昨晚实际做到多少？</span><div class="reflection-options">${[["complete","完整做了"],["partial","做了一部分"],["none","没有执行"]].map(([value, label]) => `<button class="${review.execution === value ? "active" : ""}" data-action="night-review-execution:${value}" aria-pressed="${review.execution === value}">${label}</button>`).join("")}</div></section>${canRateHelp ? `<section class="reflection-block"><span class="section-label">2 · 你自己觉得呢？</span><div class="reflection-options">${[["helpful","有帮助"],["neutral","没什么感觉"],["unhelpful","不太适合"]].map(([value, label]) => `<button class="${review.helpfulness === value ? "active" : ""}" data-action="night-review-help:${value}" aria-pressed="${review.helpfulness === value}">${label}</button>`).join("")}</div></section>` : ""}<section class="reflection-block"><span class="section-label">3 · 昨天还有什么不同？（可多选）</span><div class="reflection-options factors">${[["late","晚睡"],["exercise","有运动"],["alcohol","饮酒"],["emotion","情绪起伏"],["none","没有明显变化"]].map(([value, label]) => `<button class="${review.factors.includes(value) ? "active" : ""}" data-action="night-review-factor:${value}" aria-pressed="${review.factors.includes(value)}">${label}</button>`).join("")}</div></section>${notice("为什么要分开记录", "点击、实际执行、自己觉得有帮助和设备变化是四件不同的事。Halo 不会用一次变化证明某项建议有效。")}${buttons([["保存本次复盘", "night-review-save", "primary", !canSave], ["先不复盘", "go:TOD-01", "secondary"]])}</div>`;
+  }
   function healthDetail(item, config) {
     if (!isHardwareActive()) return unboundHealthDetail(item);
     const stage = state.dataLifecycle;
     const dataState = currentDataLifecycle(stage);
     const canInterpret = stage === "interpretable";
     const canShowMeasuredData = stage !== "none";
-    const conclusion = canInterpret ? config.conclusion : dataState.headline;
-    const summary = canInterpret ? config.summary : dataState.summary;
-    const why = canInterpret ? config.why : dataState.reason;
+    const isCorrectedBodyWeather = item.id === "TOD-03" && canInterpret && state.aiCorrection.status === "saved";
+    const conclusion = canInterpret ? (isCorrectedBodyWeather ? "今天先按你的真实感受来" : config.conclusion) : dataState.headline;
+    const summary = canInterpret ? (isCorrectedBodyWeather ? `你说“${state.aiCorrection.reasonLabel}”。Halo 不再把原来的解读当作你的实际状态。` : config.summary) : dataState.summary;
+    const why = canInterpret ? (isCorrectedBodyWeather ? `${config.why} 这些戒指记录保持不变，但不能替代你对当下状态的感受。` : config.why) : dataState.reason;
     const dataContent = canShowMeasuredData ? config.data : emptyHealthData();
     const trendContent = ["none", "accumulating"].includes(stage)
       ? notice("趋势还没形成", `${dataState.needed}。继续正常佩戴，完成同步后会自动更新。`)
@@ -923,7 +1026,8 @@
       limited: "昨晚少了一段",
     }[stage] || dataState.label;
     const copyVariant = canInterpret ? config.copyVariant : dataState.copyVariant;
-    return `${head(item, config.eyebrow)}<article class="unified-health-detail visual-health-detail" data-detail-page="${esc(item.id)}" data-copy-variant="${esc(copyVariant)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}" data-kind="${detailKind}"><i class="conclusion-glyph" aria-hidden="true">${detailGlyph}</i><span>${esc(statusLabel)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${detailSection(config.whyTitle || "为什么这么说", `<div class="insight-strip" data-kind="${detailKind}"><i aria-hidden="true">${detailGlyph}</i><p>${esc(why)}</p></div>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection(config.dataTitle || "今天的几个重点", dataContent)}${detailSection(config.trendTitle || "和你平时比", trendContent)}${detailSection("数据说明", `<details class="visual-disclosure"><summary><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(dataSummaryLabel)}</strong><small>${esc(sourceSummary)}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(stage, config.lifecycleTitle, config.lifecycleOverride)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">Halo Ring 是主要来源；其他来源会单独标明，同一时段不会重复计算。</p></div></details>`)}${detailSection("记下你的感受", `<details class="visual-disclosure user-record-disclosure"><summary><span class="record-glyph" aria-hidden="true">＋</span><div><strong>补充今天的感受</strong><small>${state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "保存为用户记录，不会改写戒指数据"}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${subjectiveMarkers()}</div></details>`, "subjective-section")}${detailSection(config.actionSectionTitle || "今天可以怎么做", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p>`;
+    const correction = canInterpret && config.allowCorrection ? interpretationCorrectionCard() : "";
+    return `${head(item, config.eyebrow)}<article class="unified-health-detail visual-health-detail" data-detail-page="${esc(item.id)}" data-copy-variant="${esc(copyVariant)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}" data-kind="${detailKind}"><i class="conclusion-glyph" aria-hidden="true">${detailGlyph}</i><span>${esc(isCorrectedBodyWeather ? "已根据你的反馈调整" : statusLabel)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${correction}${detailSection(config.whyTitle || "为什么这么说", `<div class="insight-strip" data-kind="${detailKind}"><i aria-hidden="true">${detailGlyph}</i><p>${esc(why)}</p></div>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection(config.dataTitle || "今天的几个重点", dataContent)}${detailSection(config.trendTitle || "和你平时比", trendContent)}${detailSection("数据说明", `<details class="visual-disclosure"><summary><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(dataSummaryLabel)}</strong><small>${esc(sourceSummary)}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(stage, config.lifecycleTitle, config.lifecycleOverride)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">Halo Ring 是主要来源；其他来源会单独标明，同一时段不会重复计算。</p></div></details>`)}${detailSection("记下你的感受", `<details class="visual-disclosure user-record-disclosure"><summary><span class="record-glyph" aria-hidden="true">＋</span><div><strong>补充今天的感受</strong><small>${state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "保存为用户记录，不会改写戒指数据"}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${subjectiveMarkers()}</div></details>`, "subjective-section")}${detailSection(config.actionSectionTitle || "今天可以怎么做", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p>`;
   }
   function unboundHealthDetail(item) {
     const copy = membershipCopy();
@@ -961,6 +1065,10 @@
       const pill = `<button class="context-pill" data-action="remove-halo-context">参考你的记录：${esc(state.haloFeeling)}　×</button>`;
       return reveal(pill, notice("这次感受已带入", "它会和设备数据分开显示，只表示你此刻的记录。", "sage"));
     }
+    if (state.haloContext === "correction" && state.aiCorrection.status === "saved") {
+      const pill = `<button class="context-pill" data-action="switch-halo-context:body">参考：你对今天解释的纠正　×</button>`;
+      return reveal(pill, `${notice("先按你说的来", `你说“${state.aiCorrection.reasonLabel}”。我不会继续把原解释当成你的实际感受，戒指数据仍会单独保留。`, "sage")}<div class="suggestions"><button data-action="ask:按我的真实感受重新安排今天">按我的真实感受重新安排今天</button><button data-action="ask:这次纠正会怎么保存？">这次纠正会怎么保存？</button><button data-action="go:HAL-03">检查 Halo 记忆</button></div>`);
+    }
     if (!hasBodyContext() || state.haloContext === "none") {
       const reason = state.dataLifecycle === "none" ? "目前还没有可用身体数据，所以 Halo 不会猜测你的状态。" : state.dataLifecycle !== "interpretable" ? "身体数据还不能稳定解释，所以这次不会带入健康数值或趋势。" : "你已关闭本次身体状态参考。";
       if (compact) return `<button class="context-pill" data-action="go:HAL-07">本次不参考身体状态　设置 ›</button>`;
@@ -970,7 +1078,7 @@
     const canInterpret = state.dataLifecycle === "interpretable";
     const dataState = currentDataLifecycle();
     const pill = `<button class="context-pill" data-action="remove-halo-context">参考今天的 Body Weather · 08:42　×</button>`;
-    return reveal(pill, `${notice(canInterpret ? weather.homeTitle : dataState.headline, canInterpret ? weather.homeBody : dataState.summary, "sage")}<div class="suggestions">${canInterpret ? `<button data-action="ask:为什么建议我今天别冲强度？">为什么建议我今天别冲强度？</button><button data-action="ask:下午事情很多，怎么安排？">下午事情很多，怎么安排？</button><button data-action="ask:今晚怎么早点停下来？">今晚怎么早点停下来？</button>` : `<button data-action="ask:还差几天才能看 Body Weather？">还差几天才能看 Body Weather？</button><button data-action="ask:怎样让今晚的记录更完整？">怎样让今晚的记录更完整？</button><button data-action="ask:今天先怎么安排？">今天先怎么安排？</button>`}<button data-action="ask:先听我说一会儿">先听我说一会儿</button></div>`);
+    return reveal(pill, `${notice(canInterpret ? weather.homeTitle : dataState.headline, canInterpret ? weather.homeBody : dataState.summary, "sage")}${canInterpret ? `<button class="interpretation-feedback compact" data-action="ai-correction:open"><span aria-hidden="true">≠</span><span><strong>和我的感受不太一样</strong><small>告诉 Halo 哪里不准确</small></span><i aria-hidden="true">›</i></button>` : ""}<div class="suggestions">${canInterpret ? `<button data-action="ask:为什么建议我今天别冲强度？">为什么建议我今天别冲强度？</button><button data-action="ask:下午事情很多，怎么安排？">下午事情很多，怎么安排？</button><button data-action="ask:今晚怎么早点停下来？">今晚怎么早点停下来？</button>` : `<button data-action="ask:还差几天才能看 Body Weather？">还差几天才能看 Body Weather？</button><button data-action="ask:怎样让今晚的记录更完整？">怎样让今晚的记录更完整？</button><button data-action="ask:今天先怎么安排？">今天先怎么安排？</button>`}<button data-action="ask:先听我说一会儿">先听我说一会儿</button></div>`);
   }
   function segmented(options, selected, prefix) {
     return `<div class="segmented">${options.map(([value, label]) => `<button class="${String(selected) === String(value) ? "active" : ""}" data-action="${esc(prefix)}:${esc(value)}">${esc(label)}</button>`).join("")}</div>`;
@@ -1088,6 +1196,7 @@
       "TOD-02": () => `${head(item, "QUICK CHECK-IN")}<div class="stack">${notice("此刻更接近哪些感受？", "可多选，只做轻记录，不评价你今天做得好不好。记录在解绑和重新绑定后仍保留。", "sage")}${subjectiveMarkers()}${state.subjectiveMarkers.length ? rows([["已选用户记录", state.subjectiveMarkers.join("、")], ["数据作用", "趋势回看 · 不改写设备数据"]]) : ""}${buttons([["保存并返回", "record-save", "primary"], ["返回今日", "go:TOD-01", "secondary"]])}</div>`,
       "TOD-03": () => healthDetail(item, {
         eyebrow: "BODY WEATHER",
+        allowCorrection: true,
         copyVariant: currentBodyWeather().copyVariant,
         statusLabel: currentBodyWeather().label,
         conclusion: currentBodyWeather().homeTitle,
@@ -1160,7 +1269,7 @@
         actionBody: "散步、拉伸或轻松瑜伽都可以。今天不需要为了完成数字再加练。",
         actions: [["记录完成感受", "go:TOD-02", "primary"], ["查看身体天气", "go:TOD-03", "secondary"]],
       }),
-      "TOD-08": () => `${head(item, "LAST NIGHT SUMMARY")}<div class="stack">${notice("昨晚的内容播放完成", "00:06 左右检测到你可能已经睡着，声音随后慢慢变轻，并在 00:18 结束。", "sage")}${rows([["听了什么", "安静身体扫描 · 12 分钟"], ["声音怎么停", "可能睡着后渐弱"], ["可能睡着", "00:06"], ["今天唤醒", "07:12 · 设定时间前"]])}${setting("昨晚睡得怎么样", "查看睡眠阶段和夜醒", "go:TOD-05")}${setting("首份报告还差几晚", "已完成 9 / 14 晚", "go:TOD-09")}</div>`,
+      "TOD-08": () => nightReviewPage(item),
       "TOD-09": () => `${head(item, "REPORTS")}<div class="stack">${radialProgress(64, "9 / 14", "首份 14 晚报告", "还差 5 个完整夜晚")}<details class="visual-disclosure"><summary><span class="data-symbol baseline" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>Body Weather 已经可以看</strong><small>更完整的睡眠回顾还差 5 晚</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle("baseline", "14 晚报告进度", { label: "报告积累中", reason: "已经有 7 天记录，可以生成每天的 Body Weather；14 晚回顾还没有完成。", needed: "还差 5 个完整夜晚。", next: "继续戴着戒指睡觉，早上同步后会自动更新。" })}</div></details>${metrics([["日常状态","已可查看","已有 7 天记录"],["最近 9 晚","91%","记录完整度"]])}${chartCard("睡眠与夜间状态", "还在积累更长的趋势")}${card("8 月回顾", "有 30 天记录后生成", "30 DAY REPORT", "go:TOD-04")}${buttons([["回看昨晚", "go:TOD-08", "primary"]])}</div>`,
       "TOD-10": () => `${head(item, "SHARE CARD")}<div class="stack">${shareCard()}<section class="share-editor"><span class="section-label">背景</span>${segmented([["mist","雾白"],["night","深夜"],["photo","相册"]], state.shareBackground, "share-bg")}${state.shareBackground === "photo" ? `<input id="share-photo-input" type="file" accept="image/*" hidden><button class="secondary" data-action="share-photo">选择相册图片</button>` : ""}<label class="field-label">缩放 <input id="share-zoom" type="range" min="80" max="125" value="${esc(state.shareZoom)}"></label><p class="caption">卡片只保留状态名称和一句状态说明，不显示心率、HRV、血氧、温度等敏感数值。</p></section>${buttons([["预览并分享", "share-preview", "primary"], ["复制文字", "toast:文字已复制", "secondary"]])}</div>`,
       "TOD-11": () => `${head(item, "DATA QUALITY")}<div class="stack">${lifecycle(state.dataLifecycle, "今天的数据进度")}${quality("Halo Ring", state.dataLifecycle === "limited" ? "昨晚缺少一段" : "昨晚记录完整", "08:42")}<section class="source-grid"><span><i>${domainIcon("sleep")}</i><b>睡眠</b><small>记录 93%</small></span><span><i>${domainIcon("energy")}</i><b>HRV</b><small>可查看</small></span><span><i>${domainIcon("activity")}</i><b>活动</b><small>已去重</small></span><span><i>${domainIcon("status")}</i><b>用户记录</b><small>${state.subjectiveMarkers.length ? `${state.subjectiveMarkers.length} 项` : "未带入"}</small></span></section><details class="visual-disclosure"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>这些数据从哪来</strong><small>查看缺少的时段和计算方式</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${rows([["睡眠", "Halo Ring · 记录完整度 93%"], ["HRV", "Halo Ring · 夜间记录可查看"], ["活动", "Halo Ring + 手机 · 重复时段只算一次"], ["用户记录", state.subjectiveMarkers.length ? state.subjectiveMarkers.join("、") : "这次没有带入"]])}${notice("主要来自 Halo Ring", "主动测量、Apple 健康、Health Connect 和用户记录会单独标明，同一时段不会重复计算。", "sage")}${notice("为什么会少一段", "戒指暂时断连、摘下或运动干扰都可能造成缺口。只要没有解绑，7 天内同步成功后会补回实际发生的日期。")}${education("为什么要先了解你的平时水平", "同一个数字对每个人意义不同。Halo 会先看你的常见范围，再说今天有没有变化。")}</div></details>${buttons([["重新同步", "toast:已开始重新同步", "secondary"], ["看看戒指怎么了", "go:DEV-10", "secondary"]])}<p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p></div>`,
@@ -1296,8 +1405,9 @@
   }
   function haloJourneyNudge() {
     const resumableConversation = ["active", "paused"].includes(state.conversationStatus);
-    if (state.chat.length || resumableConversation || state.journeyPaused || state.journeyProgress <= 0 || state.journeyProgress >= 7) return "";
-    return `<button class="halo-journey-nudge" data-action="go:HAL-06"><span class="journey-nudge-icon" aria-hidden="true">${domainIcon("activity")}</span><span><small>今天的小练习 · 第 ${state.journeyProgress + 1} / 7 天</small><strong>睡前把工作留在床外</strong></span><i>继续</i></button>`;
+    if (state.chat.length || resumableConversation || state.journeyPaused || state.journeyDecision === "unsuitable" || state.journeyProgress <= 0 || state.journeyProgress >= 7) return "";
+    const step = currentJourneyStep();
+    return `<button class="halo-journey-nudge" data-action="go:HAL-06"><span class="journey-nudge-icon" aria-hidden="true">${domainIcon("activity")}</span><span><small>${state.journeyDecision === "deferred" ? "今天已先放下" : `今天的小练习 · 第 ${state.journeyProgress + 1} / 7 天`}</small><strong>${esc(step.title)}</strong></span><i>${state.journeyDecision === "deferred" ? "查看" : "继续"}</i></button>`;
   }
   function haloToolsMenu() {
     if (!state.haloToolsOpen) return "";
@@ -1305,6 +1415,15 @@
   }
   function haloComposer(placeholder = "和 Halo 说说") {
     return `${haloToolsMenu()}<div class="composer halo-composer"><button class="composer-tool" data-action="halo-tools-toggle" aria-label="打开对话工具" aria-expanded="${state.haloToolsOpen}" aria-controls="halo-tools">＋</button><label class="sr-only" for="chat-input">发给 Halo 的消息</label><input id="chat-input" class="field" placeholder="${esc(placeholder)}"><button class="composer-send" data-action="send-chat">↑</button></div>`;
+  }
+  function haloMemoryPage(item) {
+    const correctionBlock = state.aiCorrection.status === "saved"
+      ? `<section class="memory-correction-card"><span>今天的用户纠正</span><strong>${esc(state.aiCorrection.reasonLabel)}</strong><p>原解释已停止作为你的实际感受，也不会自动成为跨会话记忆。</p>${state.aiCorrection.memoryReview ? `<div class="memory-check-result"><i aria-hidden="true">✓</i><div><b>相关记忆已检查</b><small>没有把“今天更容易累”保存成已确认事实；现有偏好记忆不会参与这次身体判断。</small></div></div>` : `<button class="secondary" data-action="ai-correction-check-memory">检查有没有相关记忆</button>`}<button class="text-button" data-action="ai-correction-reset">撤销这次纠正</button></section>`
+      : "";
+    const memories = state.haloMemoryCleared
+      ? notice("还没有 Halo 记忆", "新的内容只有在你确认后，才会跨会话使用。", "sage")
+      : `${card("你更喜欢简短、直接的建议", "来自 3 次对话，由你确认。", "已确认")}${card("晚上压力大时更偏好无引导声音", state.memoryProposalConfirmed ? "你已确认，会在之后的对话中使用。" : "待你确认后才会成为记忆。", state.memoryProposalConfirmed ? "已确认" : "记忆提案")}${buttons([[state.memoryProposalConfirmed ? "已确认" : "确认这条记忆", state.memoryProposalConfirmed ? "" : "memory-confirm", "primary", state.memoryProposalConfirmed], ["清空全部记忆", "danger:清空 Halo 记忆:这会删除已确认的跨会话偏好，不会删除原始健康记录。:确认清空", "danger-button"]])}`;
+    return `${head(item, "MEMORY")}<div class="stack">${toggle("memory", "允许 Halo 使用已确认记忆", "只有你确认过的内容会跨会话使用")}${correctionBlock}${memories}</div>`;
   }
   function halo(item) {
     const haloCopy = currentHaloCopy();
@@ -1316,10 +1435,10 @@
     const map = {
       "HAL-01": () => `${head(item, "YOUR HALO", haloHeaderActions())}${haloPresence(haloCopy.boundOpening, hasBodyContext() ? haloCopy.boundSubtitle : haloCopy.unboundSubtitle)}<div class="stack halo-conversation">${haloRecentConversation()}${haloContextPanel()}${haloJourneyNudge()}<div id="chat-messages" class="stack">${state.chat.map((m)=>`<div class="message ${m.role}">${esc(m.text)}</div>`).join("")}</div>${haloComposer()}</div>`,
       "HAL-02": () => { const labels = { active: "可继续", paused: "已暂停", archived: "已归档" }; const conversations = [["today-energy","为什么今天更容易累？","今天 08:46","active"],["night-stop","最近睡前总是停不下来","昨天 22:38","paused"],["weekly-energy","这周的能量变化","8 月 22 日","archived"]].filter(([id,title]) => title.includes(state.conversationQuery) && !(id === state.activeConversationId && state.conversationStatus === "deleted")); return `${head(item, "CONVERSATIONS")}<div class="stack"><input id="conversation-search" class="field" placeholder="搜索会话" value="${esc(state.conversationQuery)}">${conversations.map(([id,title,date,status])=>{ const visibleStatus = id === state.activeConversationId ? state.conversationStatus : status; return card(title, `${date} · ${labels[visibleStatus] || "可继续"}`, id === state.activeConversationId ? "当前会话" : "会话", `open-conversation:${id}`); }).join("") || notice("没有找到会话", "换一个关键词试试。", "sage")}${state.conversationStatus === "deleted" ? notice("会话已删除", "这条会话不会再出现在列表中。", "sage") : buttons([[state.conversationStatus === "paused" ? "继续当前会话" : "暂停当前会话", state.conversationStatus === "paused" ? "conversation-state:active" : "conversation-state:paused", "secondary"], ["归档当前会话", "conversation-state:archived", "secondary"], ["删除当前会话", "conversation-state:deleted", "danger-button"]])}</div>`; },
-      "HAL-03": () => `${head(item, "MEMORY")}<div class="stack">${toggle("memory", "允许 Halo 使用已确认记忆", "只有你确认过的内容会跨会话使用")}${state.haloMemoryCleared ? notice("还没有 Halo 记忆", "新的内容只有在你确认后，才会跨会话使用。", "sage") : `${card("你更喜欢简短、直接的建议", "来自 3 次对话，由你确认。", "已确认")}${card("晚上压力大时更偏好无引导声音", state.memoryProposalConfirmed ? "你已确认，会在之后的对话中使用。" : "待你确认后才会成为记忆。", state.memoryProposalConfirmed ? "已确认" : "记忆提案")}${buttons([[state.memoryProposalConfirmed ? "已确认" : "确认这条记忆", state.memoryProposalConfirmed ? "" : "memory-confirm", "primary", state.memoryProposalConfirmed], ["清空全部记忆", "danger:清空 Halo 记忆:这会删除已确认的跨会话偏好，不会删除原始健康记录。:确认清空", "danger-button"]])}`}</div>`,
+      "HAL-03": () => haloMemoryPage(item),
       "HAL-04": () => `${head(item, "PROACTIVE SUPPORT")}<div class="stack">${toggle("proactive", "允许 Halo 主动陪伴", "默认关闭，可分别开启早晨与睡前")}${toggle("morningPrompt", "早晨状态提示", "只在有明确状态变化时出现")}${toggle("nightPrompt", "睡前轻提醒", "帮助进入今晚页面，不强制打开 App")}<label class="field-label">静默时间<input class="field" value="23:30 - 08:00"></label>${notice("通知独立授权", "关闭主动陪伴不影响闹钟、设备和报告类必要通知。")}</div>`,
       "HAL-05": () => `${head(item, "FEELINGS")}<div class="stack"><p class="caption">此刻更接近哪些感受？</p><div class="suggestions">${["平静","疲惫","紧张","低落","有力量"].map((feeling)=>`<button class="${state.haloFeeling === feeling ? "active" : ""}" data-action="halo-feeling:${feeling}">${feeling}</button>`).join("")}</div><label class="field-label">身体感受<textarea id="halo-feeling-note" class="field" placeholder="例如：肩颈有些紧，呼吸偏浅">${esc(state.haloFeeling && !["平静","疲惫","紧张","低落","有力量"].includes(state.haloFeeling) ? state.haloFeeling : "")}</textarea></label>${state.haloContext === "feeling" ? notice("已保存为用户记录", "这次感受已带入当前对话，并与设备数据分开显示。", "sage") : ""}${buttons([["保存并带入对话", "save-halo-feeling", "primary"], ["返回对话", "go:HAL-01", "secondary"]])}</div>`,
-      "HAL-06": () => { const completed = state.journeyProgress >= 7; return `${head(item, "JOURNEYS")}<div class="stack">${notice(completed ? "这个主题已经完成" : state.journeyPaused ? "这个主题已暂停" : "每天只做一件小事", completed ? "你完成了 7 天练习，可以回看哪些做法最适合自己。" : state.journeyPaused ? "之前的进度还在，想继续时再回来。" : "不追求连续打卡，做完今天这一小步就好。", "sage")}<section class="card"><div class="journey-step"><i>${completed ? "✓" : state.journeyProgress}</i><div><h3>晚上别把工作带上床</h3><p>7 天 · ${completed ? "已完成" : state.journeyPaused ? `已暂停在第 ${state.journeyProgress} 天` : `已完成 ${state.journeyProgress} / 7 天`}</p></div></div></section>${completed ? rows([["最常完成", "睡前不处理工作消息"], ["你记下的变化", "更容易按时结束一天"], ["下一步", "保留最有用的一项"]]) : setting("今晚的练习", "睡前用一段内容结束工作状态", "go:NIG-01")}${buttons([[completed ? "重新开始这个主题" : state.journeyPaused ? "继续这个主题" : "完成今天这一小步", completed ? "journey-reset" : state.journeyPaused ? "journey-resume" : "journey-step", "primary"], ["先暂停", "journey-pause", "secondary", state.journeyPaused || completed]])}</div>`; },
+      "HAL-06": () => journeyPage(item),
       "HAL-07": () => `${head(item, "DATA & PRIVACY")}<div class="stack">${toggle("haloBody", "允许参考今天的身体状态", "仅在数据可以解释时带入；关闭后会立即从本次对话移除")}${toggle("memory", "允许使用已确认记忆", "可单条删除或全部清空")}${rows([["本次参考", hasBodyContext() ? "Body Weather · 08:42" : "未参考身体状态"], ["云端保存", "必要会话摘要"], ["完整健康明细", "优先保存在手机本地"]])}${!hasBodyContext() ? notice(state.dataLifecycle === "interpretable" ? "身体状态已从本次对话移除" : "目前没有可带入的身体状态", state.dataLifecycle === "interpretable" ? "后续回复不会使用 Body Weather；重新开启前不会自动恢复。" : "数据可以解释前，Halo 不会显示或使用健康值与趋势。", "sage") : ""}${state.haloDataDeletionStatus === "submitted" ? notice("Halo 数据删除申请已提交", "处理进度会在这里更新；戒指健康记录不会随这次申请删除。", "sage") : buttons([[hasBodyContext() ? "不再参考本次身体状态" : "重新允许参考身体状态", hasBodyContext() ? "remove-halo-context" : "restore-halo-context", "secondary", state.dataLifecycle !== "interpretable"], ["删除 Halo 数据", "danger:删除 Halo 数据:将提交云端会话摘要与记忆删除请求，不会自动删除戒指健康记录。:提交删除", "danger-button"]])}</div>`,
       "HAL-08": () => `${head(item, "HALO SETTINGS")}<div class="stack">${setting("最近会话", "继续、暂停、归档与删除", "go:HAL-02")}${setting("记录此刻感受", "作为用户记录带入 Halo", "go:HAL-05")}${setting("我的小计划", "查看进度或继续下一步", "go:HAL-06")}${toggle("haloVoice", "语音回复", "默认关闭")}${toggle("inspiration", "今日灵感", "首页展示每日固定的文化灵感，可随时关闭")}${setting("今日灵感个性化", "未填写生日时使用通用内容", "info:inspiration", "通用")}${setting("主动陪伴", "早晨、睡前与静默时间", "go:HAL-04")}${setting("Halo 记忆", "查看、纠正与删除", "go:HAL-03")}${setting("数据与隐私", "来源、权限与撤回", "go:HAL-07")}${setting("人工帮助", "安全问题与服务支持", "go:HELP-03")}</div>`,
     };
@@ -1523,7 +1642,7 @@
 
   function handleAction(action) {
     if (!action) return;
-    if (action === "go:HAL-01") { state.haloContext = hasBodyContext() ? "body" : "none"; state.haloToolsOpen = false; state.chat = []; return go("HAL-01"); }
+    if (action === "go:HAL-01") { state.haloContext = hasBodyContext() ? (state.aiCorrection.status === "saved" ? "correction" : "body") : "none"; state.haloToolsOpen = false; state.chat = []; return go("HAL-01"); }
     if (action === "halo-rhythm-context") { state.haloContext = "rhythm"; state.haloToolsOpen = false; state.chat = []; return go("HAL-01"); }
     if (action === "halo-tools-toggle") {
       state.haloToolsOpen = !state.haloToolsOpen;
@@ -1553,6 +1672,48 @@
       trackPrototypeEvent("halo_user_record_saved", { source: "user-record" });
       go("HAL-01");
       return flash("已保存为用户记录，并带入这次对话");
+    }
+    if (action === "ai-correction:open") return showAiCorrectionModal();
+    if (action.startsWith("ai-correction-select:")) {
+      const reason = action.slice(21);
+      state.aiCorrection.reason = reason;
+      state.aiCorrection.reasonLabel = AI_CORRECTION_REASONS[reason] || AI_CORRECTION_REASONS.other;
+      return showAiCorrectionConfirm(reason);
+    }
+    if (action.startsWith("ai-correction-save:")) {
+      const [, reason, mode] = action.split(":");
+      const reasonLabel = AI_CORRECTION_REASONS[reason] || AI_CORRECTION_REASONS.other;
+      state.aiCorrection = {
+        status: "saved",
+        reason,
+        reasonLabel,
+        note: document.getElementById("ai-correction-note")?.value.trim() || "",
+        memoryReview: mode === "memory",
+        savedAt: new Date().toISOString(),
+      };
+      state.haloContext = "correction";
+      state.chat = [];
+      trackPrototypeEvent("ai_interpretation_correction_saved", { correction_type: reason, memory_review_requested: mode === "memory" });
+      closeModal();
+      if (mode === "memory") {
+        go("HAL-03");
+        return flash("已纠正，并完成相关记忆检查");
+      }
+      render();
+      return flash("已按你的感受调整这次解释");
+    }
+    if (action === "ai-correction-check-memory") {
+      state.aiCorrection.memoryReview = true;
+      trackPrototypeEvent("ai_correction_memory_checked", { related_confirmed_memory_found: false });
+      render();
+      return flash("相关记忆已检查");
+    }
+    if (action === "ai-correction-reset") {
+      state.aiCorrection = { ...DEFAULT_AI_CORRECTION };
+      state.haloContext = hasBodyContext() ? "body" : "none";
+      trackPrototypeEvent("ai_interpretation_correction_withdrawn");
+      render();
+      return flash("这次纠正已撤销");
     }
     if (action.startsWith("rhythm-state:")) { state.rhythmStatus = action.slice(13); if (state.rhythmStatus === "empty") state.rhythmDeleted = true; return render(); }
     if (action === "open-inspiration") { state.haloContext = "inspiration"; state.haloToolsOpen = false; state.chat = []; return go("HAL-01"); }
@@ -1637,10 +1798,52 @@
     }
     if (action === "wake-save") { state.wakeSaved = true; render(); return flash("唤醒设置已保存"); }
     if (action === "memory-confirm") { state.memoryProposalConfirmed = true; render(); return flash("记忆已确认"); }
-    if (action === "journey-pause") { state.journeyPaused = true; return render(); }
-    if (action === "journey-resume") { state.journeyPaused = false; return render(); }
-    if (action === "journey-step") { state.journeyPaused = false; state.journeyProgress = Math.min(7, state.journeyProgress + 1); trackPrototypeEvent("halo_journey_step_completed", { progress: state.journeyProgress }); return render(); }
-    if (action === "journey-reset") { state.journeyPaused = false; state.journeyProgress = 0; trackPrototypeEvent("halo_journey_restarted"); return render(); }
+    if (action === "journey-pause") { state.journeyPaused = true; state.journeyDecision = "active"; trackPrototypeEvent("halo_journey_paused"); return render(); }
+    if (action === "journey-resume") { state.journeyPaused = false; state.journeyDecision = "active"; trackPrototypeEvent("halo_journey_resumed"); return render(); }
+    if (action === "journey-resume-today") { state.journeyPaused = false; state.journeyDecision = "active"; return render(); }
+    if (action === "journey-replace") {
+      if (state.journeyVariant < 2) state.journeyVariant += 1;
+      else { state.journeyTheme = state.journeyTheme === "boundary" ? "pause" : "boundary"; state.journeyVariant = 1; }
+      state.journeyDecision = "active";
+      state.journeyPaused = false;
+      trackPrototypeEvent("halo_journey_action_replaced", { theme: state.journeyTheme, difficulty: state.journeyVariant });
+      render();
+      return flash("已经换成更容易开始的一步");
+    }
+    if (action === "journey-defer-open") return showJourneyDeferModal();
+    if (action.startsWith("journey-defer:")) {
+      const reason = action.slice(14);
+      const reasons = { time: "今天没时间。", hard: "这一步还是太难。", timing: "现在不是合适的时候。", mood: "今天不想做。" };
+      state.journeyMissCount += 1;
+      state.journeyReason = reasons[reason] || "今天先不做。";
+      state.journeyDecision = "deferred";
+      state.journeyPaused = false;
+      if (reason === "hard" || state.journeyMissCount >= 2) state.journeyVariant = Math.min(2, Math.max(1, state.journeyVariant + 1));
+      trackPrototypeEvent("halo_journey_action_deferred", { reason, miss_count: state.journeyMissCount, difficulty_adjusted: state.journeyVariant > 0 });
+      closeModal();
+      return render();
+    }
+    if (action === "journey-unsuitable") return showInfoModal("停用这个主题？", "停用后不会再提醒你做这组练习，已有进度会保留。你可以换一个方向。", "停用并换主题", "journey-unsuitable-confirm");
+    if (action === "journey-unsuitable-confirm") {
+      state.journeyDecision = "unsuitable";
+      state.journeyReason = "你已选择“这个主题不适合我”。";
+      state.journeyPaused = false;
+      trackPrototypeEvent("halo_journey_marked_unsuitable", { theme: state.journeyTheme });
+      closeModal();
+      return render();
+    }
+    if (action === "journey-replace-theme") {
+      state.journeyTheme = state.journeyTheme === "boundary" ? "pause" : "boundary";
+      state.journeyVariant = 1;
+      state.journeyDecision = "active";
+      state.journeyReason = "";
+      state.journeyMissCount = 0;
+      state.journeyPaused = false;
+      trackPrototypeEvent("halo_journey_theme_replaced", { theme: state.journeyTheme });
+      return render();
+    }
+    if (action === "journey-step") { state.journeyPaused = false; state.journeyDecision = "active"; state.journeyMissCount = 0; state.journeyProgress = Math.min(7, state.journeyProgress + 1); trackPrototypeEvent("halo_journey_step_completed", { progress: state.journeyProgress, theme: state.journeyTheme, difficulty: state.journeyVariant }); return render(); }
+    if (action === "journey-reset") { state.journeyPaused = false; state.journeyProgress = 0; state.journeyTheme = "boundary"; state.journeyVariant = 0; state.journeyMissCount = 0; state.journeyDecision = "active"; state.journeyReason = ""; trackPrototypeEvent("halo_journey_restarted"); return render(); }
     if (action.startsWith("open-conversation:")) { state.activeConversationId = action.slice(18); state.conversationStatus = "active"; state.haloToolsOpen = false; state.chat = haloConversationStarter(state.activeConversationId); return go("HAL-01"); }
     if (action.startsWith("conversation-state:")) { state.conversationStatus = action.slice(19); trackPrototypeEvent("halo_conversation_state_changed", { conversation_id: state.activeConversationId, status: state.conversationStatus }); return render(); }
     if (action.startsWith("rhythm-feeling:")) { state.rhythmFeeling = action.slice(15); return render(); }
@@ -1708,7 +1911,35 @@
     if (action === "public-night-end") { state.playing = false; state.publicNightChoice = ""; return render(); }
     if (action === "night-preview") { state.playing = !state.playing; return render(); }
     if (action === "night-start") { state.playing = true; trackPrototypeEvent("night_content_started", { content_id: state.nightChoice, title: currentNightContent().title }); return go("NIG-04"); }
-    if (action === "night-end") { const selected = currentNightContent(); state.playing = false; state.nightHistory = [{ title: selected.title, detail: `${selected.duration} 分钟 · 今晚 23:18 结束`, status: "已完成", contentId: state.nightChoice }, ...state.nightHistory.filter((entry) => entry.contentId !== state.nightChoice)].slice(0, 12); trackPrototypeEvent("night_content_completed", { content_id: state.nightChoice }); return go("NIG-10"); }
+    if (action === "night-end") { const selected = currentNightContent(); state.playing = false; state.nightHistory = [{ title: selected.title, detail: `${selected.duration} 分钟 · 今晚 23:18 结束`, status: "已完成", contentId: state.nightChoice }, ...state.nightHistory.filter((entry) => entry.contentId !== state.nightChoice)].slice(0, 12); state.nightReview = { ...DEFAULT_NIGHT_REVIEW, observationCount: state.nightReview.observationCount }; trackPrototypeEvent("night_content_completed", { content_id: state.nightChoice }); return go("NIG-10"); }
+    if (action.startsWith("night-review-execution:")) {
+      const execution = action.slice(23);
+      state.nightReview.execution = execution;
+      state.nightReview.saved = false;
+      if (execution === "none") state.nightReview.helpfulness = "unknown";
+      else if (state.nightReview.helpfulness === "unknown") state.nightReview.helpfulness = "";
+      return render();
+    }
+    if (action.startsWith("night-review-help:")) { state.nightReview.helpfulness = action.slice(18); state.nightReview.saved = false; return render(); }
+    if (action.startsWith("night-review-factor:")) {
+      const factor = action.slice(20);
+      if (factor === "none") state.nightReview.factors = state.nightReview.factors.includes("none") ? [] : ["none"];
+      else {
+        const current = state.nightReview.factors.filter((value) => value !== "none");
+        state.nightReview.factors = current.includes(factor) ? current.filter((value) => value !== factor) : [...current, factor];
+      }
+      return render();
+    }
+    if (action === "night-review-save") {
+      const review = state.nightReview;
+      if (!review.execution || (review.execution !== "none" && !review.helpfulness)) return flash("请先完成前两项");
+      if (!review.counted) review.observationCount += 1;
+      review.saved = true;
+      review.counted = true;
+      trackPrototypeEvent("night_reflection_saved", { execution: review.execution, helpfulness: review.helpfulness, factor_count: review.factors.length, observation_count: review.observationCount });
+      return render();
+    }
+    if (action === "night-review-edit") { state.nightReview.saved = false; return render(); }
     if (action === "wake-snooze") { state.snoozeUntil = "07:17"; trackPrototypeEvent("smart_wake_snoozed", { minutes: 5 }); return render(); }
     if (action.startsWith("device-status:")) {
       const value = action.slice(14);
@@ -1756,6 +1987,8 @@
         ? "你最近几晚睡得不太连贯，也正处在节律后段。两件事可以一起观察，但不能据此认定原因。你此刻最明显的是累、烦，还是身体不舒服？"
         : state.haloContext === "feeling"
         ? `我看到了你记下的“${state.haloFeeling}”。这会作为用户记录单独保存。先从这次感受说起吧。`
+        : state.haloContext === "correction"
+        ? `我会按你说的“${state.aiCorrection.reasonLabel}”重新安排这次对话，不再沿用原来的主观解释。戒指记录不会被改动。`
         : `${weatherCopy.why} ${weatherCopy.actionBody}`;
       state.chat.push({ role: "user", text: action.slice(4) }, { role: "halo", text: reply });
       if (state.chat.length > 100) state.chat = state.chat.slice(-100);
@@ -1779,6 +2012,8 @@
         ? "我会把节律、睡眠和你的感受分开看，不把任何一项当成唯一原因。"
         : state.haloContext === "feeling"
         ? `“${state.haloFeeling}”会作为用户记录单独保存。你愿意的话，再说说它是从什么时候开始的。`
+        : state.haloContext === "correction"
+        ? `收到。我会以你纠正后的感受为准，不把原解释继续当作事实。${state.aiCorrection.note ? `你补充的“${state.aiCorrection.note}”也只作为用户记录使用。` : ""}`
         : haloCopy.bodyTypedReply;
       state.chat.push({ role: "user", text }, { role: "halo", text: reply });
       if (state.chat.length > 100) state.chat = state.chat.slice(-100);
@@ -1882,7 +2117,7 @@
   });
   modalRoot.addEventListener("click", (event) => handleAction(event.target.closest("[data-action]")?.dataset.action));
   document.querySelector(".inspector")?.addEventListener("click", (event) => handleAction(event.target.closest("[data-action]")?.dataset.action));
-  tabbar.addEventListener("click", (event) => { const button = event.target.closest("[data-tab]"); if (!button) return; if (button.dataset.tab === "HAL-01") state.haloContext = hasBodyContext() ? "body" : "none"; go(button.dataset.tab); });
+  tabbar.addEventListener("click", (event) => { const button = event.target.closest("[data-tab]"); if (!button) return; if (button.dataset.tab === "HAL-01") state.haloContext = hasBodyContext() ? (state.aiCorrection.status === "saved" ? "correction" : "body") : "none"; go(button.dataset.tab); });
   search.addEventListener("input", () => { state.query = search.value.trim(); const first = filteredPages()[0]; if (first && !filteredPages().some((item) => item.id === state.current)) state.current = first.id; render(); });
   document.getElementById("previous").addEventListener("click", () => go(previousId(state.current)));
   document.getElementById("next").addEventListener("click", () => handleAction(nextId(state.current)));
