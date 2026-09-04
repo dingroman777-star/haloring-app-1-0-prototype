@@ -239,7 +239,7 @@
       reason: "还没有收到一段完整的戒指记录。",
       needed: "目前 0 / 7 天；完成第一晚后开始积累",
       next: "今晚照常佩戴，起床后打开 App 完成同步。",
-      signals: [["睡眠", "等待记录"], ["夜间状态", "等待记录"], ["今天怎么动", "按感受"]],
+      signals: [["睡眠", "等待记录"], ["身体能量", "等待记录"], ["今天怎么动", "按感受"]],
       variants: [
         { headline: "今晚先完成第一晚记录", summary: "戴着戒指睡一晚，明早同步后就会开始积累。", next: "今晚正常佩戴，睡醒后打开 App 看看进度。" },
         { headline: "Body Weather 还在等第一晚数据", summary: "有一晚完整记录后，这里就会告诉你还差几天。", next: "先完成一次夜间佩戴，不需要改变平时作息。" },
@@ -253,7 +253,7 @@
       reason: "现在有 3 天完整记录，还不足以看出你的平常范围。",
       needed: "目前 3 / 7 天，还差 4 天",
       next: "照常佩戴就好，不用为了记录改变作息。",
-      signals: [["睡眠", "已有 3 晚"], ["夜间状态", "继续观察"], ["今天怎么动", "按感受"]],
+      signals: [["睡眠", "已有 3 晚"], ["身体能量", "继续观察"], ["今天怎么动", "按感受"]],
       variants: [
         { headline: "还在认识你的平常状态", summary: "已经有 3 天完整记录，再完成 4 天就能开始比较。", next: "继续按平时的方式戴，不需要为数据调整生活。" },
         { headline: "再记录 4 天，Body Weather 就能开始", summary: "前 3 天的数据都在，Halo 还需要几天确认你的常见范围。", next: "每天照常佩戴和同步，进度会自己更新。" },
@@ -267,7 +267,7 @@
       reason: "已有 5 天完整记录，可以初步比较，但个人范围还没有稳定。",
       needed: "目前 5 / 7 天，还差 2 天；之后会继续用 14 个有效夜晚校准",
       next: "继续按平时的方式佩戴和生活。",
-      signals: [["睡眠", "初步范围"], ["夜间状态", "还在校准"], ["今天怎么动", "按感受"]],
+      signals: [["睡眠", "初步范围"], ["身体能量", "还在校准"], ["今天怎么动", "按感受"]],
       variants: [
         { headline: "再完成 2 天，就能看到第一版", summary: "已经能看见一些规律，还差两天确认你的常见范围。", next: "照常佩戴，别为了记录刻意早睡或增加活动。" },
         { headline: "你的平时范围快建立好了", summary: "目前完成 5 / 7 天。再有两天完整记录，就能开始每天比较。", next: "继续过平常的生活，让记录更接近真实日常。" },
@@ -295,7 +295,7 @@
       reason: "最近一次同步未完成，昨晚 02:10–03:00 的记录缺失。",
       needed: "重新同步，或完成下一晚完整记录",
       next: "先试一次同步；仍没有更新，再检查戒指连接。",
-      signals: [["睡眠", "缺少 50 分钟"], ["夜间状态", "暂不下结论"], ["今天怎么动", "按感受"]],
+      signals: [["睡眠", "缺少 50 分钟"], ["身体能量", "暂不下结论"], ["今天怎么动", "按感受"]],
       variants: [
         { headline: "昨晚的记录缺了 50 分钟", summary: "今天先不做太细的判断，活动安排以你的感受为准。", next: "先重新同步一次；没有补回时再检查连接。" },
         { headline: "今天有一段数据没同步完整", summary: "Halo 会少说一点，避免用不完整记录给出确定结论。", next: "重新同步后再回来看看；日常活动可以照常。" },
@@ -309,7 +309,7 @@
       english: "RESTORE DAY",
       homeTitle: "今天先别勉强自己",
       homeBody: "昨晚比平时少睡了不少，夜里也醒得多。日常安排可以继续，运动和加班都先收一点。",
-      signals: [["睡眠", "没睡够"], ["夜间状态", "比平时低"], ["今天怎么动", "轻松一点"]],
+      signals: [["睡眠", "没睡够"], ["身体能量", "比平时低"], ["今天怎么动", "轻松一点"]],
       detailSummary: "昨晚恢复得不够完整。今天正常过就好，别再给自己加一段高强度。",
       why: "昨晚比平时少睡 1 小时 12 分，夜里醒了 3 次；HRV 也低于你近两周的常见范围。",
       pressure: "白天很少真正放松下来",
@@ -357,7 +357,7 @@
       english: "SLOW DAY",
       homeTitle: "今天别把安排塞太满",
       homeBody: "昨晚睡得不够连贯。工作和日常出门可以照常，运动先别冲强度。",
-      signals: [["睡眠", "夜里醒了 2 次"], ["夜间状态", "接近平时"], ["今天怎么动", "轻量即可"]],
+      signals: [["睡眠", "夜里醒了 2 次"], ["身体能量", "接近平时"], ["今天怎么动", "轻量即可"]],
       detailSummary: "昨晚睡眠被打断了两次。今天照常安排，运动先别冲强度。",
       why: "昨晚比平时少睡 36 分钟，中间醒了 2 次；HRV 和静息心率仍在你的常见范围内。",
       pressure: "白天大多比较平稳",
@@ -405,7 +405,7 @@
       english: "BALANCE DAY",
       homeTitle: "今天按平时的节奏来",
       homeBody: "昨晚的睡眠和夜间信号都接近你的平常水平。工作、出门和运动照常即可。",
-      signals: [["睡眠", "接近平时"], ["夜间状态", "比较稳定"], ["今天怎么动", "照常"]],
+      signals: [["睡眠", "接近平时"], ["身体能量", "比较稳定"], ["今天怎么动", "照常"]],
       detailSummary: "昨晚的几个信号都接近平时。今天不用特意加量，也不用刻意收着。",
       why: "睡眠时长、HRV 和静息心率都在你近两周的常见范围内，没有持续偏离。",
       pressure: "没有看到持续变化",
@@ -453,7 +453,7 @@
       english: "ACTIVE DAY",
       homeTitle: "今天状态不错，可以动起来",
       homeBody: "昨晚睡得比较完整，HRV 比近期高一些，静息心率也回到你平时较低的水平。想运动的话，可以按原计划进行。",
-      signals: [["睡眠", "睡得比较完整"], ["夜间状态", "高于近期"], ["今天怎么动", "按计划"]],
+      signals: [["睡眠", "睡得比较完整"], ["身体能量", "高于近期"], ["今天怎么动", "按计划"]],
       detailSummary: "昨晚睡得比较完整，夜间信号也比近期好。今天有想做的运动，可以按计划进行。",
       why: "睡眠连续性较好，HRV 高于近两周平均，静息心率也回到你的常见较低区间。",
       pressure: "白天大多比较平稳",
@@ -841,6 +841,9 @@
     const total = Math.max(1, items.reduce((sum, item) => sum + item[1], 0));
     return `<section class="activity-mix"><div class="activity-mix-head"><span>今日活动强度</span><strong>${total} 分钟</strong></div><div class="activity-mix-bar" role="img" aria-label="今日活动强度分布">${items.map(([label, value, tone]) => `<i class="${esc(tone)}" style="flex:${value}" title="${esc(`${label} ${value} 分钟`)}"></i>`).join("")}</div><div class="activity-mix-legend">${items.map(([label, value, tone]) => `<span><i class="${esc(tone)}"></i>${esc(label)} <b>${value}m</b></span>`).join("")}</div></section>`;
   }
+  function hrvExplainer() {
+    return `<details class="visual-disclosure hrv-disclosure"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>42 ms 代表什么</strong><small>先看它和你平时相比</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body"><section class="hrv-meaning-card"><span>昨晚 · 42 ms</span><strong>接近你的平时</strong><p>昨晚心跳间隔的变化没有明显偏离近期。只看这一项，不需要改变今天的安排。</p><div class="hrv-meaning-scale" role="img" aria-label="昨晚 HRV 估算接近个人常见范围"><small>比平时低</small><b><i style="left:54%"></i></b><small>比平时高</small></div></section><p class="hrv-plain-definition">在同一个人、同一种测量条件下，数值较大，表示相邻心跳间隔的变化更大；数值较小，表示心跳节奏更均匀。</p><div class="hrv-direction-grid"><article class="higher"><span>高于平时</span><strong>身体可能恢复得不错</strong><p>这常和睡得比较好、压力较小或运动后恢复充分一起出现。</p></article><article class="lower"><span>低于平时</span><strong>身体可能还在恢复</strong><p>没睡够、压力大、饮酒、身体不舒服或前一天运动较重时，都可能偏低。</p></article></div><section class="hrv-medicine-card"><span class="record-glyph" aria-hidden="true">i</span><div><small>一点医学知识</small><strong>它和自主神经有关</strong></div><p>自主神经会自动调节心跳。休息时，迷走神经等副交感调节通常会让心跳间隔出现更多细微变化；紧张、活动或身体负担增加时，这种变化可能减少。</p></section>${notice("不是越高越好", "HRV 的个体差异很大。突然大幅偏高或偏低，也可能和呼吸节奏、记录质量或心律变化有关。连续几晚的方向，比单次数字更有参考价值。")}${notice("身体能量不只看 HRV", "Halo 还会结合静息心率、睡眠连续性和近期活动。HRV 接近平时，不代表昨晚一定睡得好。") }<p class="health-boundary compact">HRV 不能单独判断压力、恢复或疾病。如果同时有持续心慌、胸闷、晕厥或明显不适，请及时寻求专业帮助。</p></div></details>`;
+  }
   function waveform(active = true) { return `<div class="audio-wave ${active ? "active" : "paused"}" aria-hidden="true">${[32,52,76,44,68,88,58,38,72,48,64,34].map((height, index) => `<i style="height:${height}%;--delay:${index * 45}ms"></i>`).join("")}</div>`; }
   function buttons(items) { return `<div class="button-row">${items.map(([label, action, kind = "secondary", disabled = false]) => `<button class="${kind}" data-action="${esc(action)}" ${disabled ? "disabled" : ""}>${esc(label)}</button>`).join("")}</div>`; }
   function setting(title, detail, action, value) { const [kind, glyph] = visualMeta(title); return `<button class="setting-row visual-setting" data-kind="${kind}" data-action="${esc(action)}"><span class="setting-glyph" aria-hidden="true">${glyph}</span><div><strong>${esc(title)}</strong><span>${esc(detail || "")}</span></div><i>${esc(value || "›")}</i></button>`; }
@@ -1027,7 +1030,7 @@
     }[stage] || dataState.label;
     const copyVariant = canInterpret ? config.copyVariant : dataState.copyVariant;
     const correction = canInterpret && config.allowCorrection ? interpretationCorrectionCard() : "";
-    return `${head(item, config.eyebrow)}<article class="unified-health-detail visual-health-detail" data-detail-page="${esc(item.id)}" data-copy-variant="${esc(copyVariant)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}" data-kind="${detailKind}"><i class="conclusion-glyph" aria-hidden="true">${detailGlyph}</i><span>${esc(isCorrectedBodyWeather ? "已根据你的反馈调整" : statusLabel)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${correction}${detailSection(config.whyTitle || "为什么这么说", `<div class="insight-strip" data-kind="${detailKind}"><i aria-hidden="true">${detailGlyph}</i><p>${esc(why)}</p></div>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection(config.dataTitle || "今天的几个重点", dataContent)}${detailSection(config.trendTitle || "和你平时比", trendContent)}${detailSection("数据说明", `<details class="visual-disclosure"><summary><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(dataSummaryLabel)}</strong><small>${esc(sourceSummary)}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(stage, config.lifecycleTitle, config.lifecycleOverride)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">Halo Ring 是主要来源；其他来源会单独标明，同一时段不会重复计算。</p></div></details>`)}${detailSection("记下你的感受", `<details class="visual-disclosure user-record-disclosure"><summary><span class="record-glyph" aria-hidden="true">＋</span><div><strong>补充今天的感受</strong><small>${state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "保存为用户记录，不会改写戒指数据"}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${subjectiveMarkers()}</div></details>`, "subjective-section")}${detailSection(config.actionSectionTitle || "今天可以怎么做", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p>`;
+    return `${head(item, config.eyebrow)}<article class="unified-health-detail visual-health-detail" data-detail-page="${esc(item.id)}" data-copy-variant="${esc(copyVariant)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}" data-kind="${detailKind}"><i class="conclusion-glyph" aria-hidden="true">${detailGlyph}</i><span>${esc(isCorrectedBodyWeather ? "已根据你的反馈调整" : statusLabel)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${correction}${detailSection(config.whyTitle || "为什么这么说", `<div class="insight-strip" data-kind="${detailKind}"><i aria-hidden="true">${detailGlyph}</i><p>${esc(why)}</p></div>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection(config.dataTitle || "今天的几个重点", dataContent)}${config.educationExtra ? detailSection(config.educationTitle || "读懂这个指标", config.educationExtra, "education-section") : ""}${detailSection(config.trendTitle || "和你平时比", trendContent)}${detailSection("数据说明", `<details class="visual-disclosure"><summary><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(dataSummaryLabel)}</strong><small>${esc(sourceSummary)}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(stage, config.lifecycleTitle, config.lifecycleOverride)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">Halo Ring 是主要来源；其他来源会单独标明，同一时段不会重复计算。</p></div></details>`)}${detailSection("记下你的感受", `<details class="visual-disclosure user-record-disclosure"><summary><span class="record-glyph" aria-hidden="true">＋</span><div><strong>补充今天的感受</strong><small>${state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "保存为用户记录，不会改写戒指数据"}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${subjectiveMarkers()}</div></details>`, "subjective-section")}${detailSection(config.actionSectionTitle || "今天可以怎么做", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p>`;
   }
   function unboundHealthDetail(item) {
     const copy = membershipCopy();
@@ -1035,7 +1038,7 @@
     return `${head(item, "MEMBER MODE")}<article class="unified-health-detail unbound-detail"><section class="detail-conclusion unbound"><span>${esc(copy.label)}</span><h2>这里还没有身体数据</h2><p>没有足够记录时，Halo 不会猜你的身体状态。</p></section>${detailSection("还差什么", `<p>${retained ? "目前没有已激活的 Halo Ring。以前的会员资产和用户记录还在；重新绑定后，才会继续记录新的身体数据和成长。" : "你已经是 Halo Member。绑定并激活 Halo Ring 后，戴着它完成夜间记录，才会开始生成 Body Weather。"}</p>`)}${detailSection("你记下的感受", retainedUserRecords(), "retained-user-records")}${detailSection("现在可以用", `<ul class="availability-list"><li>会员、Halo Points、Halo Select、订单、推荐和客服</li><li>每天 10 条不读取身体数据的 Halo 对话</li><li>手动记录节律、情绪和睡眠感受</li><li>浏览和预约 Studio，播放 3 项基础睡前内容</li></ul>`)}${detailSection("绑定戒指后会多什么", `<ul class="availability-list"><li>Body Weather 和健康数据详情</li><li>根据身体状态推荐的夜间内容</li><li>7 / 14 / 30 天趋势与身体报告</li><li>会员成长任务、徽章和升级</li></ul>`)}${detailSection("现在先做什么", buttons([[retained ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"], ["先听基础睡前内容", "go:NIG-01", "secondary"]]), "detail-action")}</article>`;
   }
   function unboundToday(item) {
-    return `${head(item, "TODAY · MEMBER MODE")}<div class="stack"><button class="body-weather unbound-weather" data-action="go:TOD-03"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · 等待数据</span><h2>还没有今天的 Body Weather</h2><p>绑定并激活戒指后，戴着它完成夜间记录。</p></button>${visualSignalCards([["睡眠","等待戒指记录"],["夜间状态","等待戒指记录"],["今天怎么动","按感受"]], true)}${buttons([[state.membershipHardwareState === "unbound-retained" ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"]])}${setting("记下今天的感受", state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "不用绑定戒指", "go:TOD-02")}${dailyInspirationCard()}${card("今晚先听一段", "3 项基础睡前内容", "PUBLIC CONTENT", "go:NIG-01")}${setting("和 Halo 聊聊", "不读取身体数据 · 今天 10 条", "go:HAL-01")}${setting("Halo Studio", "浏览与预约", "go:STU-08")}</div>`;
+    return `${head(item, "TODAY · MEMBER MODE")}<div class="stack"><button class="body-weather unbound-weather" data-action="go:TOD-03"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · 等待数据</span><h2>还没有今天的 Body Weather</h2><p>绑定并激活戒指后，戴着它完成夜间记录。</p></button>${visualSignalCards([["睡眠","等待戒指记录"],["身体能量","等待戒指记录"],["今天怎么动","按感受"]], true)}${buttons([[state.membershipHardwareState === "unbound-retained" ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"]])}${setting("记下今天的感受", state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "不用绑定戒指", "go:TOD-02")}${dailyInspirationCard()}${card("今晚先听一段", "3 项基础睡前内容", "PUBLIC CONTENT", "go:NIG-01")}${setting("和 Halo 聊聊", "不读取身体数据 · 今天 10 条", "go:HAL-01")}${setting("Halo Studio", "浏览与预约", "go:STU-08")}</div>`;
   }
   function unboundNight(item) {
     const publicContent = { breath: ["5 分钟睡前呼吸", "5 分钟"], scan: ["10 分钟身体扫描", "10 分钟"], sound: ["15 分钟安睡音频", "15 分钟"] };
@@ -1238,14 +1241,16 @@
         eyebrow: "BODY ENERGY",
         statusLabel: "今日状态",
         conclusion: "今天可以照常安排",
-        summary: "HRV 和静息心率都接近平时。昨晚睡得不够连贯，所以运动别把强度排得太死。",
-        why: "昨晚 HRV 为 42 毫秒，静息心率 58 次/分，都在你的常见范围内；睡眠比平时少 36 分钟。",
-        data: `${baselineBand("夜间 HRV", "42 ms", 54)}${metrics([["静息心率", "58 bpm", "和最近几天接近"], ["记录完整", "91%", "运动干扰未计入"]])}`,
+        summary: "夜间 HRV 估算和静息心率都接近平时。昨晚睡得不够连贯，今天按计划进行，累了再减量。",
+        why: "昨晚的夜间 HRV 估算为 42 毫秒，静息心率 58 次/分，都在你的常见范围内；睡眠比平时少 36 分钟。",
+        data: `${baselineBand("夜间 HRV 估算", "42 ms", 54)}${metrics([["静息心率", "58 bpm", "和最近几天接近"], ["有效片段", "91%", "已排除明显体动"]])}`,
         dataTitle: "昨晚的几个信号",
-        trend: chartCard(`最近 ${state.trendPeriod} 天 HRV`, "大多在你的常见范围内"),
+        educationTitle: "HRV 怎么看",
+        educationExtra: hrvExplainer(),
+        trend: chartCard(`最近 ${state.trendPeriod} 天 HRV 估算`, "只和你自己的夜间记录相比"),
         lifecycleTitle: "身体能量数据状态",
         source: "Halo Ring",
-        quality: "夜间记录完整 91%",
+        quality: "夜间有效记录 91%",
         updated: "07:22",
         actionTitle: "先按原计划，累了就减量",
         actionBody: "工作和日常活动照常即可。如果下午明显疲惫，把高强度训练换成散步或拉伸。",

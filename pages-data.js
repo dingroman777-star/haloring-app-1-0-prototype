@@ -403,10 +403,10 @@ window.HALO_V5_PAGES = [
     "priority": "P0",
     "parent": "TOD-03",
     "function": "理解身体能量",
-    "layout": "状态解释、HRV 数值、基线、趋势",
-    "data": "HRV、静息心率、个人基线、质量",
-    "interaction": "查看趋势和来源",
-    "logic": "首页只表达状态；数值仅在详情",
+    "layout": "状态解释、夜间 HRV 估算、个人基线、高低含义、自主神经科普、适用边界、趋势",
+    "data": "signal_type、metric_type、interval_type、value_ms、window_seconds、night_aggregation、valid_intervals_pct、artifact_filter、algorithm_version、静息心率、个人基线",
+    "interaction": "查看趋势和来源；展开了解数值较高、接近平时或较低时通常代表什么",
+    "logic": "首页只表达身体能量状态；R01 光学戒指得到 PPI/PRV 估算而非 ECG RR/NN；生产值必须标明具体指标、窗口、筛选、夜间汇总与算法版本；仅与同算法同场景的个人历史比较",
     "exception": "建立中、部分数据、过期、同步失败、未连接",
     "ios": "已有基础，需逐页验收",
     "android": "已有基础，需调整",
@@ -415,7 +415,7 @@ window.HALO_V5_PAGES = [
     "backend": "状态规则/报告",
     "owner": "产品+算法+双端",
     "source": "docs/product/app-specs/03、04",
-    "note": "六段详情；首页只说状态，本页显示 HRV、个人基线、质量和行动"
+    "note": "用户侧只解释数值含义、个人基线、自主神经和使用边界，不展示公式或算法流程。R01 协议单值只写 HRV(ms)，未定义 RMSSD/SDNN；Donni API可返回两者但当前未获生产放行，正式单值口径仍需算法与供应商确认"
   },
   {
     "id": "TOD-07",
