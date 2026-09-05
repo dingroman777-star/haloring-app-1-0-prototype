@@ -502,6 +502,14 @@
     message: "今天给自己留十分钟，不安排事情，也不急着做决定。",
     action: "把一件不着急的事放到明天。",
     color: "鼠尾草绿",
+    outfitColor: "大吉 · 黄 / 棕 / 咖 / 卡其",
+    outfits: [
+      { level: "大吉", colors: "黄色、棕色、咖色、卡其色", meaning: "温暖的大地色，文化寓意是得到支持、心情轻松、做事顺意。", swatches: ["#d6b84c", "#8a6548", "#5f4638", "#b69b72"] },
+      { level: "中吉", colors: "红色、粉红色", meaning: "明快的红粉色，文化寓意是更容易靠近彼此、展开交流与合作。", swatches: ["#b95f59", "#d99a9e"] },
+      { level: "小吉", colors: "黑色、深蓝色、深灰色", meaning: "沉稳的深色，文化寓意是专注投入、稳步推进，也适合把事情收好尾。", swatches: ["#282725", "#34465f", "#5c5e61"] },
+    ],
+    outfitQuestion: "今天的大地色旺运穿衣怎么搭？",
+    outfitReply: "今天可以用黄色、棕色、咖色或卡其色做主色：比如卡其外套配米白内搭，或用咖色包和鞋做小面积呼应。把它当作文化穿搭灵感就好，优先穿你已有、舒服，也符合今天场合的衣服。",
     number: "6",
   };
   const NIGHT_COPY = {
@@ -673,6 +681,10 @@
   function showInfoModal(title, message, confirmLabel = "知道了", action = "close-modal") {
     const closeButton = action === "close-modal" ? "" : '<button class="text-button" data-action="close-modal">关闭</button>';
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal"><h2>${esc(title)}</h2><p>${esc(message)}</p><div class="button-row"><button class="primary" data-action="${esc(action)}">${esc(confirmLabel)}</button>${closeButton}</div></section></div>`;
+  }
+  function showOutfitInspirationModal() {
+    const tierCards = DAILY_INSPIRATION.outfits.map((outfit) => `<article class="outfit-tier"><div class="outfit-tier-head"><span>${esc(outfit.level)}</span><div class="outfit-swatches" aria-label="${esc(outfit.colors)}">${outfit.swatches.map((color) => `<i style="--outfit-swatch:${esc(color)}" aria-hidden="true"></i>`).join("")}</div></div><strong>${esc(outfit.colors)}</strong><p>${esc(outfit.meaning)}</p></article>`).join("");
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal outfit-modal" role="dialog" aria-modal="true" aria-labelledby="outfit-title"><div class="modal-title-row"><div><span class="modal-eyebrow">五行穿衣 · 文化灵感</span><h2 id="outfit-title">今天的旺运穿衣</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><p>想借颜色给今天换个心情，可以从下面三组里选一组。</p><div class="outfit-tier-list">${tierCards}</div><p class="inspiration-modal-note">这是文化寓意，不预测贵人、合作或收益结果，也不读取健康数据。穿你已有、舒服并适合场合的衣服就好。</p>${buttons([["和 Halo 聊穿搭", "outfit-inspiration-chat", "primary"], ["返回今日", "close-modal", "secondary"]])}</section></div>`;
   }
   function showAiCorrectionModal() {
     trackPrototypeEvent("ai_interpretation_correction_started", { source_page: state.current });
@@ -1047,14 +1059,14 @@
   }
   function dailyInspirationCard() {
     if (!state.toggles.inspiration) return "";
-    return `<section class="daily-inspiration"><div class="inspiration-heading"><div><span>DAILY HALO</span><h3>今日灵感</h3></div><button class="inspiration-info" data-action="info:inspiration" aria-label="了解今日灵感">i</button></div><div class="inspiration-keyword"><span>今日关键词</span><strong>${esc(DAILY_INSPIRATION.keyword)}</strong></div><p>${esc(DAILY_INSPIRATION.message)}</p><span class="daily-cues-label">今日小线索 · DAILY CUES</span><div class="daily-cues"><div class="daily-cue"><span class="cue-swatch" aria-hidden="true"></span><span class="daily-cue-copy"><small>今日色彩</small><strong>${esc(DAILY_INSPIRATION.color)}</strong></span></div><div class="daily-cue"><span class="cue-number">${esc(DAILY_INSPIRATION.number)}</span><span class="daily-cue-copy"><small>今日数字</small><strong>保持简单</strong></span></div></div><div class="inspiration-action"><small>轻行动</small><strong>${esc(DAILY_INSPIRATION.action)}</strong></div><button class="inspiration-link" data-action="open-inspiration">和 Halo 聊聊 <span>›</span></button><small class="inspiration-disclaimer">文化灵感内容，仅作自我探索参考</small></section>`;
+    return `<section class="daily-inspiration"><div class="inspiration-heading"><div><span>DAILY HALO</span><h3>今日灵感</h3></div><button class="inspiration-info" data-action="info:inspiration" aria-label="了解今日灵感">i</button></div><div class="inspiration-keyword"><span>今日关键词</span><strong>${esc(DAILY_INSPIRATION.keyword)}</strong></div><p>${esc(DAILY_INSPIRATION.message)}</p><span class="daily-cues-label">今日小线索 · DAILY CUES</span><div class="daily-cues"><div class="daily-cue"><span class="cue-swatch" aria-hidden="true"></span><span class="daily-cue-copy"><small>今日色彩</small><strong>${esc(DAILY_INSPIRATION.color)}</strong></span></div><div class="daily-cue"><span class="cue-number">${esc(DAILY_INSPIRATION.number)}</span><span class="daily-cue-copy"><small>今日数字</small><strong>保持简单</strong></span></div><button class="daily-cue daily-cue-button outfit-cue" data-action="open-outfit-inspiration" aria-label="查看今日旺运穿衣：${esc(DAILY_INSPIRATION.outfitColor)}"><span class="cue-palette" aria-hidden="true"><i style="--offset:0px;--swatch:#d6b84c"></i><i style="--offset:8px;--swatch:#8a6548"></i><i style="--offset:16px;--swatch:#5f4638"></i><i style="--offset:24px;--swatch:#b69b72"></i></span><span class="daily-cue-copy"><small>旺运穿衣</small><strong>${esc(DAILY_INSPIRATION.outfitColor)}</strong></span><span class="cue-chevron" aria-hidden="true">›</span></button></div><div class="inspiration-action"><small>轻行动</small><strong>${esc(DAILY_INSPIRATION.action)}</strong></div><button class="inspiration-link" data-action="open-inspiration">和 Halo 聊聊 <span>›</span></button><small class="inspiration-disclaimer">五行穿衣与文化灵感仅供参考，不预测结果、不读取健康数据</small></section>`;
   }
   function haloContextPanel() {
     const compact = state.chat.length > 0;
     const reveal = (pill, content) => compact ? pill : `${pill}${content}`;
     if (state.haloContext === "inspiration") {
       const pill = `<button class="context-pill inspiration-context" data-action="switch-halo-context:body">正在聊：今日灵感　×</button>`;
-      return reveal(pill, `${notice(`今天的词：${DAILY_INSPIRATION.keyword}`, DAILY_INSPIRATION.message, "sage")}<div class="suggestions"><button data-action="ask:怎么把它用在今天？">怎么把它用在今天？</button><button data-action="ask:给我一个十分钟能做的行动">给我一个十分钟能做的行动</button><button data-action="ask:换个更实际的说法">换个更实际的说法</button><button data-action="switch-halo-context:body">聊聊今天的状态</button></div>`);
+      return reveal(pill, `${notice(`今天的词：${DAILY_INSPIRATION.keyword}`, DAILY_INSPIRATION.message, "sage")}<div class="suggestions"><button data-action="ask:${esc(DAILY_INSPIRATION.outfitQuestion)}">今天的颜色怎么穿？</button><button data-action="ask:怎么把它用在今天？">怎么把它用在今天？</button><button data-action="ask:给我一个十分钟能做的行动">给我一个十分钟能做的行动</button><button data-action="switch-halo-context:body">聊聊今天的状态</button></div>`);
     }
     if (state.haloContext === "rhythm") {
       if (state.dataLifecycle !== "interpretable") {
@@ -1721,7 +1733,22 @@
       return flash("这次纠正已撤销");
     }
     if (action.startsWith("rhythm-state:")) { state.rhythmStatus = action.slice(13); if (state.rhythmStatus === "empty") state.rhythmDeleted = true; return render(); }
-    if (action === "open-inspiration") { state.haloContext = "inspiration"; state.haloToolsOpen = false; state.chat = []; return go("HAL-01"); }
+    if (action === "open-outfit-inspiration") {
+      trackPrototypeEvent("daily_outfit_inspiration_open", { palette: DAILY_INSPIRATION.outfitColor, source_page: state.current });
+      return showOutfitInspirationModal();
+    }
+    if (action === "outfit-inspiration-chat") {
+      state.haloContext = "inspiration";
+      state.haloToolsOpen = false;
+      state.chat = [
+        { role: "user", text: DAILY_INSPIRATION.outfitQuestion },
+        { role: "halo", text: DAILY_INSPIRATION.outfitReply },
+      ];
+      trackPrototypeEvent("daily_outfit_halo_open", { palette: DAILY_INSPIRATION.outfitColor, source_page: state.current });
+      closeModal();
+      return go("HAL-01");
+    }
+    if (action === "open-inspiration") { state.haloContext = "inspiration"; state.haloToolsOpen = false; state.chat = []; trackPrototypeEvent("daily_inspiration_halo_open", { source_page: state.current }); return go("HAL-01"); }
     if (action === "auth-code-requested") {
       state.authCodeRequested = true;
       state.authVerified = false;
@@ -1973,7 +2000,7 @@
     }
     if (action === "info:stress") { const weather = currentBodyWeather(); return showInfoModal("今天什么时候比较紧绷", `今天${weather.pressure}。Halo 会结合清醒时的 HRV、心率和活动来区分安静、紧绷与运动；运动时心率升高不会被算成压力。\n\n这些记录只用于回看日常变化，不能用于诊断。`, "知道了"); }
     if (action === "info:education") return showInfoModal("Halo 怎样看这些数据", "同一个数字对每个人意义不同。Halo 会先了解你的平时水平，再看连续几天有没有变化，不会因为一次高低就下结论。这些内容用于日常健康管理，不替代医疗诊断。");
-    if (action === "info:inspiration") return showInfoModal("关于今日灵感", "这是一份每日固定的文化灵感，不是预测，也不会读取或解释你的健康数据。未填写生日时使用通用内容；授权生日后可以生成更贴近你的表达。它不用于医疗、投资、消费或其他重要决定。");
+    if (action === "info:inspiration") { trackPrototypeEvent("daily_inspiration_info_open", { source_page: state.current }); return showInfoModal("关于今日灵感", "这是一份每日固定的文化灵感，不是预测，也不会读取或解释你的健康数据。旺运穿衣借用五行穿衣的文化表达，颜色分组和吉级只是象征性提示，不保证改变心情、贵人、合作、收益或办事结果，也不会要求你购买新衣服。未填写生日时使用通用内容；授权生日后可以生成更贴近你的表达。它不用于医疗、投资、消费或其他重要决定。"); }
     if (action === "info:agreement") return showInfoModal("用户协议", "当前版本：2026 年 9 月 1 日。这里说明账号使用、服务边界、用户责任和争议处理方式。核心规则发生变化时，会按适用要求提前公示。");
     if (action === "info:privacy-policy") return showInfoModal("隐私政策", "这里说明设备、健康、会员、订单和服务数据的使用范围、保存方式，以及访问、更正、导出和删除入口。法定留存数据不会继续用于运营或个性化。");
     if (action === "info:health-ai-boundary") return showInfoModal("Halo 能做什么、不能做什么", "Halo 可以帮你读懂日常记录，给出生活和运动上的参考；它不会诊断疾病、开处方或处理医疗急症，也不能替代医生和其他专业医疗人员。");
@@ -1984,10 +2011,11 @@
       if (!isHardwareActive() && used >= 10) return flash("今天的 10 条消息已用完，明日 00:00 恢复");
       const haloCopy = currentHaloCopy();
       const weatherCopy = currentBodyWeather();
+      const question = action.slice(4);
       const reply = !hasBodyContext() || state.haloContext === "none"
         ? haloCopy.noBodyQuickReply
         : state.haloContext === "inspiration"
-        ? "别把它当成预测。今天可以先留十分钟，不处理消息，也不急着给一件不紧急的事答复。"
+        ? (question.includes("颜色") || question.includes("穿") ? DAILY_INSPIRATION.outfitReply : "别把它当成预测。今天可以先留十分钟，不处理消息，也不急着给一件不紧急的事答复。")
         : state.haloContext === "rhythm"
         ? "你最近几晚睡得不太连贯，也正处在节律后段。两件事可以一起观察，但不能据此认定原因。你此刻最明显的是累、烦，还是身体不舒服？"
         : state.haloContext === "feeling"
@@ -1995,7 +2023,7 @@
         : state.haloContext === "correction"
         ? `我会按你说的“${state.aiCorrection.reasonLabel}”重新安排这次对话，不再沿用原来的主观解释。戒指记录不会被改动。`
         : `${weatherCopy.why} ${weatherCopy.actionBody}`;
-      state.chat.push({ role: "user", text: action.slice(4) }, { role: "halo", text: reply });
+      state.chat.push({ role: "user", text: question }, { role: "halo", text: reply });
       if (state.chat.length > 100) state.chat = state.chat.slice(-100);
       state.haloToolsOpen = false;
       render();
