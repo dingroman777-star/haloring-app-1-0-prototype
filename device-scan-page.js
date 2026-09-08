@@ -5,13 +5,24 @@
     const outcomes = [["single", "一枚戒指"], ["multiple", "多枚戒指"], ["weak", "信号较弱"], ["empty", "未找到"], ["failed", "查找失败"], ["bluetooth-off", "蓝牙关闭"], ["denied", "权限撤回"]];
     let timer = null, reviewOutcome = "single";
     const account = () => String(state.authPhone || state.authForm?.phone || "local-demo");
+    function demoFixture(id) {
+      if (/^ring-demo-[1-9]\d{0,7}$/.test(id)) fixtures[id] = { id, suffix: `D${id.slice(10).padStart(4, "0")}`, signal: "strong", simulated: true };
+    }
+    // Rebuild only known synthetic descriptors; ownership remains in the binding ledger.
+    [...Object.keys(state.deviceBindings || {}), ...(Array.isArray(state.deviceScan?.results) ? state.deviceScan.results : [])].forEach(demoFixture);
     function defaultResults() {
       // Demo discovery must not strand a second test account on the first account's ring.
       // Never transfer ownership: the binding page still checks the selected device.
       const ids = Object.keys(fixtures), inventory = state.deviceBindings || {};
       const own = ids.find(id => inventory[id]?.accountRef === account());
       const available = ids.find(id => !inventory[id]);
-      return own || available ? [own || available] : ids;
+      if (own || available) return [own || available];
+      // The static prototype has no physical inventory limit. Never reuse another owner's device.
+      let number = 1;
+      while (inventory[`ring-demo-${number}`]) number++;
+      const id = `ring-demo-${number}`;
+      demoFixture(id);
+      return [id];
     }
     const saved = state.deviceScan;
     state.deviceScan = saved?.version === 1 && ["idle", "scanning", "found", "empty", "failed", "cancelled", "interrupted"].includes(saved.status)
@@ -63,7 +74,7 @@
         else if (["denied", "bluetooth-off"].includes(request.outcome)) {
           state.connectionIntro.permission = request.outcome; state.toggles.bluetooth = false; interrupt(request.outcome);
         } else {
-          scan().results = ({ single: defaultResults(), multiple: ["ring7a21", "ring8c54", "ring2f09"], weak: ["ring2f09"] })[request.outcome] || [];
+          scan().results = request.outcome === "single" ? defaultResults() : ({ multiple: ["ring7a21", "ring8c54", "ring2f09"], weak: ["ring2f09"] })[request.outcome] || [];
           scan().status = request.outcome === "failed" ? "failed" : scan().results.length ? "found" : "empty";
           // A delayed/cold-start callback must not turn old nearby-device results into fresh ones.
           scan().finishedAt = request.readyAt;

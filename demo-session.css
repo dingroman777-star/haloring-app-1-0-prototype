@@ -1,0 +1,10 @@
+/* Outside the phone: these are prototype controls, not proposed App features. */
+#demo-tools { min-height: 40px; min-width: 44px; padding: 6px 9px; background: white; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 12px; }
+#demo-dialog { width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; padding: 24px; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); background: var(--paper); box-shadow: var(--shadow); }
+#demo-dialog::backdrop { background: rgb(0 0 0 / .4); }
+#demo-dialog h2 { margin: 0 0 16px; font-size: 22px; }
+#demo-dialog p { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+#demo-dialog button { display: block; width: 100%; min-height: 44px; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 14px; }
+#demo-dialog #demo-new { background: var(--ink); color: white; }
+#demo-dialog [hidden] { display: none; }
+@media (max-width: 760px) { .stage-header > div:first-child { min-width: 0; } .stage-header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .stage-tools { flex-shrink: 0; } }

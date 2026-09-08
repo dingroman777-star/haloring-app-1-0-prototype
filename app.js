@@ -1,4 +1,5 @@
 (function () {
+  if (new URLSearchParams(location.search).has("demo") && !window.HaloDemoSessionReady) throw new Error("独立演示尚未加载，请重新加载页面；旧记录未改变。");
   const pages = window.HALO_V5_PAGES || [];
   const groups = ["全部", "首次使用", "设备", "今日", "健康数据", "夜间", "Halo AI", "节律", "我的", "会员与积分", "Halo Select", "渠道经营", "Halo Studio"];
   const MEMBERSHIP_STATE_KEY = "membershipHardwareState";

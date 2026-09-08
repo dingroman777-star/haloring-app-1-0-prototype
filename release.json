@@ -1,6 +1,6 @@
 {
-  "version": "6.5.2-dev03",
-  "sourceCommit": "3140a02981358946c988db2d6c01d7bdea426b0f",
+  "version": "6.5.3-demo",
+  "sourceCommit": "7bd0b848d0c04b642903e27a3942ead2f178d383",
   "date": "2026-09-08",
   "files": {
     "about-legal-page.css": "e744ba3e23bc17960f7199b23783d20ed4ce3d2dfb1b219cbbebdc16b68b9f52",
@@ -10,7 +10,7 @@
     "account-personal-scope.js": "73060cfa44ea3386550980a00c7a0f44f1cf7c8b49fab296d866846476ec1b22",
     "account-security-page.css": "2e241c698eea51bd5a0071c7f3e67675431b1cc33b44cbc101286f50174eeb45",
     "account-security-page.js": "7154b096c7070bd770f332631aaa732b2481bd29a0c63293d0a3dba7286e2cb2",
-    "app.js": "542e2bf7572d96a87215baa7719789d96a1d23523c8f17acafa255aa806d6169",
+    "app.js": "70b6e56d41ce1e077839019881f98b62bc4ce2af679c8a6875baf465ade1c706",
     "basic-profile-page.css": "41e683b3de3d2a44f22097cff89405c8a92c5ccf1268c33a32cdd7fe719922cf",
     "basic-profile-page.js": "3b24b6aa0e5e68f073a91544138f5ba619d812781755d95eb2544cc6ed7502dd",
     "body-weather-intro.css": "b7158c5242d798db4e725db22b468a173915dab905e035d3ee8525b128cbf1e9",
@@ -64,7 +64,7 @@
     "device-initial-sync-page.js": "0e88aa6e4ed042d7267ac495f1a531f753c09553a58ae1c2fe9c14170ec981ec",
     "device-maintenance-page.css": "39df81c728f2e8d4973cdf4536d3f32e50f1ee8c049fc59ec16c3085e8e13733",
     "device-maintenance-page.js": "8526986eab1a18d88b1f56b499cb45b7bebcd6cb3d1d934979984dd36f700a6f",
-    "device-scan-page.js": "b285b8459b00601dc1b096c7b4a027cf8a50767674ab71a74b2236797555b83c",
+    "device-scan-page.js": "706603bf9c4a7e2fe920cf2f298a0231733ee33d2c82fdc562203490d8502d5f",
     "device-wear-page.js": "170e7232a9e3a5891c74f6614e08cb53b4410c24571cd2078e29dfdda206630b",
     "feedback-page.css": "513b40e02423e728ecc7c569d8ac8fd5320cd4a7387f3b48a35eef9440d93140",
     "feedback-page.js": "79b425cd9bf5f3ff7d31a59926f4e8bf27b21f6c2784625562415268b3f176fe",
@@ -89,7 +89,7 @@
     "heart-trend.js": "f7512c7bdeaedf84ac7a9763204f7ae840f2215c8ad34f0a53169868637671a6",
     "help-center-page.css": "21c1c944bd112057b7bb06753c625b1bd41d736ba843353ea8ed237be4f80ad5",
     "help-center-page.js": "19a7e1b7ba9611ec4724a290481bba0e62becbffba313eac48df2f9ba7e928f0",
-    "index.html": "c4e64267127d2f55da29737dc9005ac876b8a5f5b9dfae70ba6d6823ef94aac9",
+    "index.html": "02d3df0401eca0062a8557bcf258068b0ed44aab697c62fbb6fc4589660c8c74",
     "measurement-center.css": "36b6e981d1836a1a542812de6886e192dfc6f0fb975252db61423937eecffead",
     "measurement-center.js": "daeedf6a0040d91615b548275d735c0f8d4bd588c2b76903f02a9c1a53175f4c",
     "member-badges-page.css": "779034ddc786dc2968df0a0ed9fa56078476ac7a30ee783e8949e9407922520d",
@@ -238,6 +238,8 @@
     "system-health-source.js": "5b1f787f4754dd4ed20d33dfff95835d2abfe7b0567f80753b76bfad4dafa46a",
     "temperature-trend.css": "41e1eb1c0fe13efa0a139445650255b18249938eb491306b81f25a56b22cb728",
     "temperature-trend.js": "b8b12a28dbb787eb7a26359969b9e642f13983e4952d13fbbb49b84ad7a55403",
-    "today-rhythm-storage.js": "bca8eed806611eada9ca06caffdfc607e7300f77d731430a0861d4cbf09a6194"
+    "today-rhythm-storage.js": "bca8eed806611eada9ca06caffdfc607e7300f77d731430a0861d4cbf09a6194",
+    "demo-session.js": "452ae0453fb6d327f4d50fdd97707adb7319843bfa15ebff4f6711630cf1cb64",
+    "demo-session.css": "0fe4ebe69e9412ab2907cb48e65e584f64700002aeab6c3a04a4234a809b0eb9"
   }
 }
