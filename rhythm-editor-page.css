@@ -1,0 +1,39 @@
+#screen[data-page="RHY-03"] { padding:0; overflow:hidden; }
+.rhythm-editor-page { height:100%; display:flex; flex-direction:column; min-height:0; color:#292522; }
+.rh-editor-scroll { overflow-y:auto; flex:1; min-height:0; padding:16px 20px 22px; overscroll-behavior:contain; }
+.rh-editor-header { margin-bottom:28px; }
+.rh-editor-header .back { min-height:44px; padding:0 8px 0 0; border:0; background:transparent; border-radius:8px; color:#67564a; font-size:13px; }
+.rh-editor-header h1 { margin:10px 0 15px; font-size:27px; line-height:1.35; letter-spacing:-.6px; }
+.rh-editor-header>div { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:13px; color:#6b584a; }
+.rh-editor-header>div>span { font-size:11px; color:#766659; }
+.rh-editor-feelings { border:0; padding:0; margin:0; min-width:0; }
+.rh-editor-feelings legend { padding:0; font-size:16px; font-weight:600; }
+.rh-editor-feelings>p { font-size:12px; line-height:1.7; color:#78685d; margin:7px 0 14px; }
+.rh-editor-feelings>div { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.rh-editor-feelings button { display:flex; align-items:center; text-align:left; gap:9px; min-height:62px; padding:10px 12px; border:1px solid #ded5ce; background:#fff; border-radius:13px; color:#5d5045; font-size:14px; }
+.rh-editor-feelings button svg { width:22px; height:22px; flex:0 0 22px; color:#8a6d55; }
+.rh-editor-feelings button>i { margin-left:auto; width:14px; font-size:13px; font-style:normal; }
+.rh-editor-feelings button[aria-pressed="true"] { background:#eadecf; border-color:#9b7b60; color:#513b2c; font-weight:600; box-shadow:inset 0 0 0 1px #9b7b60; }
+.rh-editor-writing { margin-top:28px; }
+.rh-editor-writing-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.rh-editor-writing label { display:block; font-size:15px; font-weight:600; }
+.rh-editor-writing-heading>span { font-size:11px; color:#7b6a5d; }
+.rh-editor-writing textarea { display:block; box-sizing:border-box; width:100%; min-height:142px; resize:vertical; border:1px solid #d9cfc6; border-radius:13px; padding:15px; background:#fff; color:#3e342c; font-family:inherit; font-size:16px; line-height:1.7; }
+.rh-editor-writing textarea::placeholder { color:#97887a; font-size:14px; }
+.rh-editor-writing textarea[readonly] { background:#f0ece7; }
+#rh-editor-count { white-space:nowrap; margin-left:auto; }
+.rh-editor-delete { border-top:1px solid #e5dcd4; padding-top:12px; margin-top:24px; }
+.rh-editor-delete button { min-height:44px; border:0; border-radius:8px; background:transparent; color:#a34633; padding:8px 0; font-size:13px; }
+.rh-editor-footer { flex-shrink:0; padding:13px 20px 11px; border-top:1px solid #e4dbd3; background:#f8f6f3; }
+.rh-editor-footer .primary,.rh-editor-blocked .primary { width:100%; min-height:48px; border:0; background:#403831; color:#fff; font-size:15px; }
+.rh-editor-footer .primary:disabled { background:#ded9d3; color:#877c72; opacity:1; }
+.rh-editor-footer .rhythm-editor-feedback { color:#9e3b25; font-size:12px; line-height:1.7; margin:0 0 10px; }
+.rh-editor-footer .rhythm-editor-feedback:empty { display:none; }
+#rh-editor-save-hint { font-size:11px; line-height:1.6; color:#7b6a5d; text-align:center; margin:8px 0 0; }
+.rh-editor-latest { min-height:44px; width:100%; margin:0 0 10px; border:1px solid #b99b83; border-radius:10px; background:white; color:#644832; font-size:13px; }
+.rh-editor-blocked { border:1px solid #e0d4ca; border-radius:15px; padding:18px; }
+.rh-editor-blocked h2 { font-size:18px; }
+.rh-editor-blocked p { font-size:14px; line-height:1.8; color:#75665c; }
+.rhythm-editor-page :is(button,textarea):focus-visible { outline:2px solid #8d642f; outline-offset:3px; }
+.device-shell:has(#screen[data-page="RHY-03"]) { min-height:0; }
+@media(max-width:350px) { .rh-editor-scroll { padding:12px 16px 20px; } .rh-editor-header h1 { font-size:25px; } .rh-editor-feelings button { gap:6px; padding:9px; font-size:13px; } .rh-editor-footer { padding:12px 16px 10px; } }

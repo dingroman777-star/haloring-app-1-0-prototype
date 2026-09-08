@@ -1,25 +1,158 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+  <link rel="stylesheet" href="coupon-wallet-page.css?v=6.5.1-c02ef3b">
   <meta charset="utf-8">
+  <script>
+    // A missing/older module must not leave the local review screen blank.
+    // Retry reloads resources only; no account or prototype records are cleared.
+    (() => {
+      function showLoadFailure() {
+        const screen = document.getElementById("screen");
+        if (!screen || screen.children.length || screen.textContent.trim()) return;
+        const panel = document.createElement("section");
+        panel.style.cssText = "padding:36px 20px;text-align:center;line-height:1.8";
+        const title = document.createElement("h1"); title.textContent = "页面暂未加载完成";
+        const copy = document.createElement("p"); copy.textContent = "请重新加载。已保存的记录不会被清除。";
+        const retry = document.createElement("button"); retry.type = "button"; retry.className = "primary"; retry.textContent = "重新加载";
+        retry.onclick = () => { const url = new URL(location.href); url.searchParams.set("reload", String(Date.now())); location.replace(url.href); };
+        panel.append(title, copy, retry); screen.append(panel);
+      }
+      function scheduleCheck() {
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", showLoadFailure, {once:true});
+        else setTimeout(showLoadFailure, 0);
+      }
+      window.addEventListener("error", event => { if (event.target === window || event.target?.tagName === "SCRIPT") scheduleCheck(); }, true);
+      window.addEventListener("unhandledrejection", scheduleCheck);
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Halo Ring App 1.0 High Fidelity v6.5 · 交互原型</title>
+  <title>Halo Ring App 1.0 High Fidelity v6.5.1 · 本地修复版</title>
   <link rel="icon" type="image/png" href="assets/HALORING_super_symbol_copper.png">
-  <link rel="stylesheet" href="styles.css?v=6.5.0">
+  <link rel="stylesheet" href="styles.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="startup-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="member-center-page.css?v=6.5.1-c02ef3b">
+  <script src="points-redemption-data.js?v=6.5.1-c02ef3b"></script>
+  <link rel="stylesheet" href="points-home-page.css?v=6.5.1-c02ef3b">
+  <script src="points-home-page.js?v=6.5.1-c02ef3b"></script>
+  <link rel="stylesheet" href="points-ledger-page.css?v=6.5.1-c02ef3b">
+  <script src="points-ledger-page.js?v=6.5.1-c02ef3b"></script>
+  <link rel="stylesheet" href="points-catalog-page.css?v=6.5.1-c02ef3b">
+  <script src="points-catalog-page.js?v=6.5.1-c02ef3b"></script>
+  <link rel="stylesheet" href="points-redemption-page.css?v=6.5.1-c02ef3b">
+  <script src="points-redemption-page.js?v=6.5.1-c02ef3b"></script>
+  <link rel="stylesheet" href="member-levels-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="member-upgrade-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="member-tasks-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="member-task-detail-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="referral-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="member-badges-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="member-benefits-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-detail.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-cart.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-checkout.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-address.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-payment.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-orders.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-order-detail.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-aftersale.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-aftersale-progress.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="select-coupon.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-application.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-application-detail.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-training.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-application-progress.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-supplement.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-rejection.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-withdrawal.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-approval.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-activation.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-home.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-orders.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-earning.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-ledger.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-payout.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-content.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-policy.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="channel-tools.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="device-home-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="device-initial-sync-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="basic-profile-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="body-weather-intro.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="device-info-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="device-maintenance-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="data-privacy-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="notification-settings-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="system-health-source.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="general-settings-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="help-center-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="feedback-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="support-contact-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="about-legal-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="account-security-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="account-deletion-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="halo-history-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="halo-memory-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="halo-proactive-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="halo-feeling-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="halo-journey-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="halo-privacy-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="halo-settings-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-preparation.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-review-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-home-page.css?v=6.5.1-c02ef3b">
+<link rel="stylesheet" href="night-combo-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-wake-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-sound-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-alarm-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-morning-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-history-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-support-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="night-fade-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="health-reports-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="state-share-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="data-quality-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-home-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-guide-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-editor-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-settings-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-setup-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-management-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-halo-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="rhythm-cycle-page.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="respiration-trend.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="oxygen-trend.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="temperature-trend.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="measurement-center.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="oxygen-day.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="oxygen-measurement.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-feeling.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-preflight.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-session.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-report.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-post-report.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-next-day.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-today-reminder.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-benefit.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-contact.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-history.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-record.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-code.css?v=6.5.1-c02ef3b">
+  <link rel="stylesheet" href="studio-confirm.css?v=6.5.1-c02ef3b">
 </head>
 <body>
   <main class="workspace">
     <aside class="rail" aria-label="页面导航">
       <div class="brand-lockup">
         <img class="brand-wordmark" src="assets/HALORING_wordmark_with_slogan_ink.png" alt="HALORING · IN TUNE WITH YOU">
-        <small>APP 1.0 · HIGH FIDELITY V6.5</small>
+        <small>APP 1.0 · HIGH FIDELITY V6.5.1</small>
       </div>
       <label class="search-field">
         <span>搜索页面</span>
         <input id="search" type="search" placeholder="ID / 名称 / 功能">
       </label>
-      <div class="scope-summary"><b id="page-count">140</b><span>个可交互页面 / 页面形态</span></div>
+      <div class="scope-summary"><b id="page-count">141</b><span>个可交互页面 / 页面形态</span></div>
       <nav id="group-nav" class="group-nav" aria-label="模块筛选"></nav>
       <nav id="page-nav" class="page-nav" aria-label="页面清单"></nav>
     </aside>
@@ -56,9 +189,128 @@
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="modal-root"></div>
-  <script src="pages-data.js?v=6.5.0"></script>
-  <script src="commercial-pages.js?v=6.5.0"></script>
-  <script src="share-assets.js?v=6.5.0"></script>
-  <script src="app.js?v=6.5.0"></script>
+<script src="pages-data.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-gallery.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-address-parser.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-address-view.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-address-controller.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-payment-view.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-orders-view.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-orders-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-order-detail-view.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-order-detail-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-aftersale-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-aftersale-progress.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-checkout-view.js?v=6.5.1-c02ef3b"></script>
+  <script src="select-coupon-view.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-account-store.js?v=6.5.1-c02ef3b"></script>
+  <script src="commercial-account-store.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-settlement.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-application-page.js?v=6.5.1-c02ef3b"></script>
+<script src="channel-training.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-application-progress.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-supplement-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-rejection-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-withdrawal-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-approval-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-activation-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-payout-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-content-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-policy-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="channel-tools-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-data.js?v=6.5.1-c02ef3b"></script>
+  <script src="coupon-wallet-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-task-ledger.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-task-recovery.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-center-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-levels-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-upgrade-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-tasks-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-task-detail-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="referral-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-badges-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="member-benefits-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-benefit-ledger.js?v=6.5.1-c02ef3b"></script>
+<script src="commercial-pages.js?v=6.5.1-c02ef3b"></script>
+  <script src="share-assets.js?v=6.5.1-c02ef3b"></script>
+  <script src="startup-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="basic-profile-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="body-weather-intro.js?v=6.5.1-c02ef3b"></script>
+  <script src="device-scan-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="device-bind-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="device-home-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="device-info-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="device-maintenance-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="data-privacy-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="notification-settings-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="system-health-source.js?v=6.5.1-c02ef3b"></script>
+  <script src="device-wear-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="device-initial-sync-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-payment-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-reservation-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-preparation-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-feeling-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-preflight-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-session-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-report-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-post-report-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-next-day-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-today-reminder.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-benefit-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-contact-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-history-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-record-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-code-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="studio-confirm-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-review-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-playlist.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-combo-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-wake-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-sound-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-morning-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-history-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-support-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="night-fade-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="today-rhythm-storage.js?v=6.5.1-c02ef3b"></script>
+  <script src="account-personal-scope.js?v=6.5.1-c02ef3b"></script>
+  <script src="health-reports-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="state-share-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="data-quality-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-record-store.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-home-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-cycle-store.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-cycle-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-guide-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-editor-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-settings-store.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-settings-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-setup-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="body-weather-route-compat.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-management-store.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-management-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-halo-handoff.js?v=6.5.1-c02ef3b"></script>
+  <script src="rhythm-halo-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="heart-trend.js?v=6.5.1-c02ef3b"></script>
+  <script src="respiration-trend.js?v=6.5.1-c02ef3b"></script>
+  <script src="oxygen-trend.js?v=6.5.1-c02ef3b"></script>
+  <script src="temperature-trend.js?v=6.5.1-c02ef3b"></script>
+  <script src="oxygen-day.js?v=6.5.1-c02ef3b"></script>
+  <script src="oxygen-measurement.js?v=6.5.1-c02ef3b"></script>
+  <script src="measurement-center.js?v=6.5.1-c02ef3b"></script>
+  <script src="help-center-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="feedback-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="support-contact-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="about-legal-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="account-security-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="account-deletion-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-account-scope.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-history-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-memory-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-proactive-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-feeling-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-journey-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-privacy-page.js?v=6.5.1-c02ef3b"></script>
+  <script src="halo-settings-page.js?v=6.5.1-c02ef3b"></script>
+<script src="app.js?v=6.5.1-c02ef3b"></script>
 </body>
 </html>

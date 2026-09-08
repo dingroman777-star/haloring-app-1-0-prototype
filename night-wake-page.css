@@ -1,0 +1,60 @@
+/* NIG-06 only: familiar alarm controls, visible local-preview status. */
+.night-wake { min-width:0; }
+.night-wake .nw-header { display:grid; grid-template-columns:44px 1fr 44px; align-items:center; gap:8px; margin:-4px 0 18px; }
+.night-wake .nw-header h1 { margin:0; text-align:center; font-size:21px; line-height:1.4; }
+.night-wake .nw-back { display:grid; place-items:center; min-height:44px; border:0; background:transparent; color:inherit; }
+.night-wake .nw-enable { display:flex; justify-content:space-between; gap:16px; align-items:center; padding:0 0 16px; border-bottom:1px solid #334338; }
+.night-wake .nw-enable strong { display:block; font-size:15px; font-weight:550; }
+.night-wake .nw-enable small { display:block; margin-top:4px; font-size:12px; color:#b3beb4; }
+.night-wake .nw-switch { flex:0 0 52px; width:52px; min-height:44px; padding:8px 0; border:0; background:transparent; }
+.night-wake .nw-switch span { display:block; width:52px; height:28px; padding:3px; background:#536057; border-radius:18px; }
+.night-wake .nw-switch span::after { content:""; display:block; width:22px; height:22px; border-radius:50%; background:#fff; }
+.night-wake .nw-switch[aria-checked="true"] span { background:#a7c2ac; }
+.night-wake .nw-switch[aria-checked="true"] span::after { transform:translateX(24px); background:#152019; }
+.night-wake .nw-time { display:block; margin:18px 0; color:#c4cdc6; font-size:13px; }
+.night-wake .nw-time input { display:block; color-scheme:dark; width:100%; min-width:0; margin-top:8px; padding:8px 10px; border:1px solid #536450; border-radius:10px; background:#1b2b20; color:#f2eee5; font:500 44px/1.25 inherit; font-family:inherit; font-size:44px; font-weight:500; line-height:1.25; font-variant-numeric:tabular-nums; }
+.night-wake .nw-time input[aria-invalid="true"] { border-color:#edb284; }
+.night-wake .nw-time input::-webkit-calendar-picker-indicator { width:22px; height:22px; padding:10px 0 10px 10px; margin:0; }
+.night-wake .nw-modes { display:flex; gap:3px; min-width:0; margin:0; padding:3px; border:1px solid #394a3e; border-radius:11px; }
+.night-wake .nw-mode-label { margin:0 0 8px; font-size:13px; color:#c4cdc6; }
+.night-wake .nw-snooze-row { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:65px; margin:0; padding:9px 0; border-bottom:1px solid #334338; font-size:14px; }
+.night-wake .nw-snooze-row small { display:block; margin-top:3px; font-size:11px; color:#b3beb4; }
+.night-wake .nw-snooze-row select { min-height:44px; max-width:45%; padding:8px; border:1px solid #445344; border-radius:8px; background:#1c2a21; color:#f2eee5; font:inherit; }
+.night-wake .nw-alarm-main { padding:35px 0; text-align:center; }
+.night-wake .nw-alarm-main h2 { margin:12px 0; font-size:58px; line-height:1.1; font-weight:500; font-variant-numeric:tabular-nums; }
+.night-wake .nw-alarm-snooze { display:block; width:100%; min-height:50px; margin:12px 0 20px; border:1px solid #536450; border-radius:10px; background:transparent; color:inherit; }
+.night-wake .nw-modes legend { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.night-wake .nw-modes label { position:relative; flex:1; min-width:0; margin:0; cursor:pointer; }
+.night-wake .nw-modes input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:inherit; }
+.night-wake .nw-modes span { display:flex; align-items:center; justify-content:center; height:100%; min-height:44px; padding:8px 3px; border-radius:8px; font-size:12px; line-height:1.5; color:#bdc9bf; text-align:center; }
+.night-wake .nw-modes input:checked + span { background:#d6dfcf; color:#172219; font-weight:600; }
+.night-wake .nw-modes input:focus-visible + span { outline:2px solid #dfc391; outline-offset:2px; }
+.night-wake .nw-modes input:disabled + span { opacity:.45; }
+.night-wake .nw-preview { margin:10px 0 8px; padding:0; }
+.night-wake .nw-preview p { margin:0; font-size:12px; line-height:1.7; color:#bbc8bd; }
+.night-wake .nw-sound { display:flex; width:100%; gap:10px; align-items:center; min-height:56px; padding:8px 0; border:0; border-bottom:1px solid #334338; background:transparent; color:#f2eee5; font-size:14px; }
+.night-wake .nw-sound strong { flex:1; text-align:right; color:#cdb997; font-size:13px; font-weight:500; }
+.night-wake .nw-text { min-height:44px; padding:8px 0; border:0; background:transparent; color:#d0ae82; font-size:12px; }
+.night-wake .nw-permission { display:flex; gap:12px; align-items:center; margin-top:12px; padding:12px; border:1px solid #6a5840; border-radius:8px; }
+.night-wake .nw-permission div { flex:1; min-width:0; }
+.night-wake .nw-permission strong { font-size:13px; font-weight:500; color:#edcda5; }
+.night-wake .nw-permission p { margin:4px 0 0; font-size:12px; line-height:1.6; }
+.night-wake .nw-permission button { flex-shrink:0; }
+.night-wake .nw-feedback,.night-wake .nw-connection { margin:12px 0 0; font-size:12px; line-height:1.7; color:#bbc8bd; }
+.night-wake .nw-feedback.is-error,.night-wake .nw-connection { color:#edb284; }
+.night-wake .nw-save-area > .night-home-primary { margin-top:10px; }
+.night-wake .nw-save-area > .nw-text { display:block; margin:2px auto 0; }
+.night-wake [hidden] { display:none!important; }
+.night-wake .nw-explain { border-top:1px solid #334338; margin-top:16px; font-size:12px; }
+.night-wake .nw-explain summary { min-height:44px; padding:14px 0; cursor:pointer; color:#c5cfc7; }
+.night-wake .nw-explain p { margin:0 0 10px; line-height:1.8; }
+.night-wake .nw-footnote { margin:8px 0 0; font-size:11px; line-height:1.7; color:#adbab0; }
+.night-wake .nw-gate { padding:28px 0; }
+.night-wake .nw-gate h2 { font-size:21px; }
+.night-wake button:disabled,.night-wake input:disabled,.night-wake select:disabled { opacity:.48; cursor:default; }
+.night-wake button:focus-visible,.night-wake input:focus-visible,.night-wake select:focus-visible,.night-wake summary:focus-visible { outline:2px solid #dfc391; outline-offset:3px; }
+@media(max-width:350px) { .night-wake .nw-time input { font-size:39px; } }
+.night-wake .nw-cancel-confirm { border: 1px solid #bca477; border-radius: 16px; padding: 16px; margin: 12px 0; }
+.night-wake .nw-cancel-confirm p { font-size: 13px; line-height: 1.6; }
+.night-wake:has(.nw-cancel-confirm) .nw-save-area > [data-action="wake-save"] { display: none; }
+.night-wake #nw-pending:empty, .night-wake #nw-connection:empty { display: none; }

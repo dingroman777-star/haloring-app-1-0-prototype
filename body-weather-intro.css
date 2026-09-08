@@ -1,0 +1,39 @@
+/* ONB-02: the existing mist/copper onboarding system, without demo health progress. */
+.device-shell:has(.screen[data-page="ONB-02"]) { grid-template-rows: 34px minmax(0, 1fr) 0; min-height: 0; }
+.screen[data-page="ONB-02"] { padding: 8px 26px 18px; overflow: hidden; }
+.body-intro { display: grid; grid-template-rows: 44px minmax(0, 1fr) auto; height: 100%; gap: 14px; min-height: 0; }
+.body-intro-header { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; text-align: center; font-size: 17px; font-weight: 600; }
+.body-intro-back { width: 44px; height: 44px; display: grid; place-items: center; border: 0; padding: 10px; background: transparent; color: var(--ink); }
+.body-intro-back svg, .body-intro-explain summary svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.body-intro-scroll { min-height: 0; overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain; padding: 0 2px 12px; }
+.body-intro-hero { text-align: center; padding: 26px 0 0; }
+.body-intro-hero img { display: block; margin: 0 auto 28px; width: 80px; height: 96px; object-fit: contain; }
+.screen .body-intro-hero h1 { margin: 0; font-size: 27px; font-weight: 650; line-height: 1.4; letter-spacing: -.5px; text-wrap: balance; }
+.screen .body-intro-hero p { margin: 14px auto 0; max-width: 295px; color: var(--muted); font-size: 15px; line-height: 1.8; text-wrap: balance; }
+.body-intro-steps { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 30px 0 20px; padding: 0; }
+.body-intro-steps li { display: flex; align-items: center; flex-direction: column; gap: 12px; min-width: 0; text-align: center; }
+.body-intro-steps li + li { border-left: 1px solid var(--line); }
+.body-intro-steps li > span { display: grid; place-items: center; width: 36px; height: 36px; color: var(--sage); }
+.body-intro-steps .domain-icon { width: 28px; height: 28px; }
+.body-intro-steps strong { color: var(--ink); font-size: 12px; line-height: 1.5; font-weight: 500; }
+.body-intro-explain { border-top: 1px solid var(--line); margin-top: 24px; }
+.body-intro-explain summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; min-height: 48px; color: var(--muted); font-size: 14px; cursor: pointer; list-style: none; }
+.body-intro-explain summary::-webkit-details-marker { display: none; }
+.body-intro-explain summary svg { width: 18px; height: 18px; flex-shrink: 0; }
+.body-intro-explain[open] summary svg { transform: rotate(180deg); }
+.screen .body-intro-explain p, .screen .body-intro-connection { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+.screen .body-intro-connection { border-left: 2px solid var(--brand-copper); padding-left: 12px; }
+.body-intro-actions { padding-top: 4px; }
+.screen .body-intro-actions > p { margin: 0 0 12px; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.6; }
+.body-intro-actions .primary { display: block; width: 100%; min-height: 52px; font-size: 16px; }
+.body-intro-actions .text-button { width: 100%; min-height: 44px; margin-top: 4px; color: var(--muted); font-size: 14px; }
+.body-intro button:focus-visible, .body-intro summary:focus-visible { outline: 2px solid var(--brand-copper); outline-offset: 2px; }
+@media (max-width: 760px) { .device-shell:has(.screen[data-page="ONB-02"]) { height: calc(var(--hal-viewport-height, 100dvh) - 48px); } }
+@media (max-width: 360px), (max-height: 650px) {
+  .screen[data-page="ONB-02"] { padding: 4px 18px 12px; }
+  .body-intro { gap: 8px; }
+  .body-intro-hero { padding-top: 12px; }
+  .body-intro-hero img { width: 60px; height: 72px; margin-bottom: 18px; }
+  .screen .body-intro-hero h1 { font-size: 24px; }
+  .body-intro-steps { margin: 22px 0 16px; }
+}

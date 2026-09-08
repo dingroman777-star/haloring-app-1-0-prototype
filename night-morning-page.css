@@ -1,0 +1,18 @@
+/* NIG-09: gentle handoff, one clear primary action. */
+.night-morning .nm-header { display:flex; justify-content:flex-end; }
+.night-morning .nm-header button { min-height:44px; padding:10px 0 10px 12px; border:0; background:transparent; color:#c0cdbf; font-size:12px; }
+.night-morning .nm-hero { padding:30px 0 32px; text-align:center; }
+.night-morning .nm-hero img { display:block; width:68px; height:68px; margin:0 auto 27px; object-fit:contain; }
+.night-morning .nm-hero h1 { margin:0; color:#f1e9db; font-size:34px; font-weight:500; line-height:1.4; letter-spacing:1px; }
+.night-morning .nm-confirm { margin:14px 0 0; font-size:12px; color:#b9cdb8; }
+.night-morning .nm-confirm span { padding-right:5px; }
+.night-morning .nm-alarm-link { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:10px 4px; margin-top:9px; border:0; background:transparent; color:#e0c498; font-size:13px; }
+.night-morning .nm-primary .night-home-primary { min-height:56px; margin:0; gap:12px; font-size:16px; }
+.night-morning .nm-record { margin:26px 0 0; padding:18px 0 6px; border-top:1px solid #334338; }
+.night-morning .nm-record h2 { margin:0; font-size:15px; font-weight:500; line-height:1.6; }
+.night-morning .nm-record p { margin:7px 0 3px; font-size:12px; line-height:1.8; color:#b3beb4; }
+.night-morning .nm-record button { display:inline-flex; align-items:center; gap:7px; min-height:44px; padding:10px 0; border:0; background:transparent; color:#d3bc95; font-size:12px; }
+.night-morning .nm-history { display:flex; justify-content:space-between; align-items:center; width:100%; min-height:56px; margin-top:24px; padding:10px 0; border:0; border-top:1px solid #334338; background:transparent; color:#c2cdbf; font-size:13px; text-align:left; }
+.night-morning svg { flex:0 0 18px; width:18px; height:18px; }
+.night-morning button:focus-visible { outline:2px solid #dfc391; outline-offset:3px; border-radius:5px; }
+@media(max-width:350px),(max-height:620px) { .night-morning .nm-hero { padding:16px 0 26px; } .night-morning .nm-hero img { margin-bottom:20px; } }

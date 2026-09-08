@@ -1,0 +1,43 @@
+.screen[data-page="STU-06"] { padding: 0; overflow: hidden; min-height: 0; }
+.studio-next-day .studio-detail-header { grid-template-columns: 44px minmax(0,1fr) max-content; gap: 8px; margin-bottom: 12px; }
+.screen .studio-next-day .studio-detail-header h1 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 650; text-align: center; }
+.studio-next-link { min-height: 44px; min-width: 44px; border: 0; background: transparent; color: #46614d; font-size: 14px; padding: 8px; }
+.studio-next-event { padding: 4px 0 18px; border-bottom: 1px solid var(--line); }
+.studio-next-event > img { flex: 0 0 64px; width: 64px; height: 64px; }
+.screen .studio-next-day p { margin: 8px 0 0; font-size: 14px; color: var(--muted); line-height: 1.65; overflow-wrap: anywhere; }
+.studio-next-dates { display: grid; grid-template-columns: minmax(0,1fr) 20px minmax(0,1fr); align-items: center; gap: 12px; padding: 18px 0 0; }
+.studio-next-dates > div { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.studio-next-dates svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.studio-next-dates time { display: block; color: #46614d; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.studio-next-state { margin: 22px 0 16px; }
+.screen .studio-next-state h2 { margin: 0; font-size: 19px; font-weight: 600; line-height: 1.55; }
+.screen .studio-next-state .studio-next-demo { color: #80502e; font-size: 13px; }
+.studio-next-metric { border-bottom: 1px solid var(--line); }
+.studio-next-metric summary { display: flex; gap: 10px; align-items: center; min-height: 60px; padding: 12px 0; cursor: pointer; font-size: 15px; line-height: 1.5; list-style: none; }
+.studio-next-metric summary::-webkit-details-marker, .studio-next-explanation summary::-webkit-details-marker { display: none; }
+.studio-next-metric summary > span { flex: 1; min-width: 0; }
+.studio-next-metric summary > strong { font-size: 13px; line-height: 1.6; color: var(--muted); font-weight: 400; max-width: 44%; overflow-wrap: anywhere; text-align: right; }
+.studio-next-day[data-next-status="ready"] .studio-next-metric summary > strong { color: #46614d; }
+.studio-next-metric svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.studio-next-metric summary > svg:last-child { width: 16px; flex-basis: 16px; }
+.studio-next-metric[open] summary > svg:last-child, .studio-next-explanation[open] summary > svg { transform: rotate(90deg); }
+.studio-next-metric-content { padding: 0 0 16px 30px; }
+.studio-next-explanation { border-bottom: 1px solid var(--line); }
+.studio-next-explanation summary { min-height: 48px; display: flex; gap: 12px; align-items: center; justify-content: space-between; font-size: 14px; padding: 12px 0; line-height: 1.5; list-style: none; cursor: pointer; }
+.studio-next-explanation summary svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.studio-next-explanation[open] { padding-bottom: 16px; }
+.studio-next-explanation .secondary { min-height: 44px; font-size: 14px; margin-top: 12px; }
+.studio-next-links > button { display: flex; width: 100%; gap: 12px; align-items: center; min-height: 48px; padding: 12px 0; border: 0; background: transparent; color: var(--ink); font-size: 15px; line-height: 1.5; text-align: left; }
+.studio-next-links svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.studio-next-links > button > svg:last-child { margin-left: auto; }
+.studio-next-day .studio-detail-footer { grid-template-columns: minmax(0,1fr); border-top: 0; }
+.studio-next-day .studio-detail-footer > button { min-height: 48px; font-size: 16px; }
+.studio-next-comparison { margin: 4px 0 0; display: grid; grid-template-columns: max-content minmax(24px,1fr) minmax(70px,max-content); align-items: center; gap: 8px; }
+.studio-next-comparison figcaption { grid-column: 1 / -1; font-size: 14px; margin: 0 0 2px; line-height: 1.5; }
+.studio-next-comparison > div { display: contents; font-size: 12px; line-height: 1.6; }
+.studio-next-comparison > div > span:first-child { white-space: nowrap; }
+.studio-next-bar { height: 8px; background: #e8ebe6; border-radius: 4px; overflow: hidden; }
+.studio-next-bar i { display: block; height: 100%; background: #46614d; }
+.studio-next-comparison > div:last-child i { background: #9ca898; }
+@media (max-width: 360px) { .studio-next-metric summary { gap: 8px; } .studio-next-metric-content { padding-left: 0; } }
+@media (max-height: 640px) { .device-shell:has(.screen[data-page="STU-06"]) { min-height: 0; } }

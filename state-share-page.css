@@ -1,0 +1,39 @@
+#screen[data-page="TOD-10"] { padding: 4px 0 0; display: flex; flex-direction: column; overflow: hidden; }
+.device-shell:has(#screen[data-page="TOD-10"]) { min-height: 0; }
+.state-share-head { padding: 0 20px; flex: 0 0 auto; }
+.state-share-head > button { min-height: 44px; padding: 0 12px 0 0; border: 0; background: none; color: var(--muted); font-size: 14px; }
+.state-share-head h1 { margin: 7px 0 12px; font-size: 28px; line-height: 1.35; letter-spacing: -.5px; }
+.state-share-page { display: flex; flex-direction: column; gap: 16px; flex: 1 1 auto; min-height: 0; padding: 0 20px 20px; overflow-y: auto; overflow-x: hidden; }
+.state-share-page > * { flex-shrink: 0; }
+.state-share-date { margin: 0; font-size: 14px; color: var(--muted); }
+.state-share-card { position: relative; width: min(100%, 292px); aspect-ratio: 4 / 5; margin: 0 auto; background: #f1ede5; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.state-share-card canvas { display: block; width: 100%; height: 100%; }
+.state-share-render-status { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; text-align: center; color: #536354; font-size: 15px; line-height: 1.8; background: #f1ede5; }
+.state-share-render-status[hidden] { display: none; }
+.state-share-themes { margin: 0; padding: 0; border: 0; }
+.state-share-themes legend { padding: 0 0 10px; font-size: 16px; font-weight: 650; }
+.state-share-themes > div { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.state-share-themes button { display: flex; min-height: 54px; align-items: center; justify-content: center; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: white; font-size: 14px; }
+.state-share-themes button[aria-pressed="true"] { border: 2px solid #55705e; background: #edf2eb; padding: 7px; font-weight: 650; }
+.state-share-themes i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #c8cbc4; font-style: normal; display: grid; place-content: center; }
+.theme-mist { background: #f1ede5; }.theme-night { background: #101915; }.theme-photo { background: white; color: #526c59; }
+.state-share-privacy, .state-share-photo p, .state-share-local-note { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.state-share-page .primary, .state-share-page .secondary, .state-share-empty .primary { width: 100%; min-height: 50px; border-radius: 13px; font-size: 15px; }
+.state-share-footer { flex: 0 0 auto; padding: 12px 20px 16px; background: var(--mist); border-top: 1px solid var(--line); }
+.state-share-footer .primary { width: 100%; min-height: 50px; font-size: 15px; border-radius: 13px; }
+.state-share-text { min-height: 44px; padding: 10px 0; background: none; border: 0; color: #41604b; font-size: 14px; }
+.state-share-photo { display: grid; gap: 10px; padding: 16px; border-radius: 14px; background: white; border: 1px solid var(--line); }
+.state-share-photo label { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+.state-share-photo input[type="range"] { min-height: 44px; width: 100%; margin: 0; accent-color: #52715a; }
+.state-share-feedback:empty { display: none; }
+.state-share-feedback { display: grid; gap: 8px; font-size: 14px; color: #42634c; line-height: 1.7; }
+.state-share-feedback p { margin: 0; padding: 12px; border-radius: 10px; background: #edf2eb; }
+.state-share-feedback .state-share-error { background: #fff5e7; color: #835219; }
+.state-share-feedback button { display: block; min-height: 44px; padding: 6px 0; border: 0; background: none; color: inherit; text-decoration: underline; }
+.state-share-manual-copy { width: 100%; min-height: 135px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 15px; }
+.state-share-export { display: grid; gap: 10px; }
+.state-share-empty { display: grid; gap: 16px; justify-items: center; padding: 36px 16px; text-align: center; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.state-share-empty img { width: 60px; height: 72px; object-fit: contain; }
+.state-share-empty h2 { margin: 8px 0 0; font-size: 22px; }.state-share-empty p { margin: 0 0 12px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+@media (max-width: 359px) { .state-share-head, .state-share-page { padding-inline: 16px; }.state-share-footer { padding-inline: 16px; }.state-share-card { max-width: 240px; }.state-share-head h1 { font-size: 26px; } }
+@media (max-height: 600px) { .state-share-card { max-width: 224px; } }

@@ -1,0 +1,63 @@
+/* SEL-10. Persistent filters and independently actionable, compact order cards. */
+#screen[data-page="SEL-10"] { padding: 0; min-height: 0; overflow: hidden; }
+.device-shell:has(#screen[data-page="SEL-10"]) { min-height: 0; }
+#screen[data-page="SEL-10"] .select-orders { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--ink); background: var(--mist); }
+#screen[data-page="SEL-10"] .select-orders button { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#screen[data-page="SEL-10"] .select-orders-header { display: grid; grid-template-columns: 64px minmax(0,1fr) 64px; align-items: center; flex: 0 0 56px; padding: 0 24px; }
+#screen[data-page="SEL-10"] .select-orders-header h1 { min-width: 0; margin: 0; color: var(--ink); text-align: center; font-size: 18px; line-height: 1.4; font-weight: 600; }
+#screen[data-page="SEL-10"] .select-orders-header button { display: flex; align-items: center; min-width: 44px; height: 44px; padding: 0; border: 0; color: var(--ink); background: transparent; }
+#screen[data-page="SEL-10"] .select-orders-back { justify-content: flex-start; width: 44px; }
+#screen[data-page="SEL-10"] .select-orders-back svg { width: 18px; height: 18px; }
+#screen[data-page="SEL-10"] .select-orders-shop { justify-content: flex-end; font-size: 12px; line-height: 1.5; white-space: nowrap; }
+#screen[data-page="SEL-10"] .select-orders-filters { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; flex-shrink: 0; padding: 4px 24px 12px; border-bottom: 1px solid var(--line); }
+#screen[data-page="SEL-10"] .select-orders-filters button { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 44px; padding: 8px 6px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: transparent; font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-10"] .select-orders-filters button > span { min-width: 0; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-filters small { font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+#screen[data-page="SEL-10"] .select-orders-filters .is-active { border-color: var(--ink); color: var(--paper); background: var(--ink); font-weight: 600; }
+#screen[data-page="SEL-10"] .select-orders-scroll { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 16px 24px max(24px,env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 24px; }
+#screen[data-page="SEL-10"] .select-orders-scroll::-webkit-scrollbar { display: none; }
+#screen[data-page="SEL-10"] .select-orders-result-count { flex-shrink: 0; margin: 0 0 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-10"] .select-orders-list { display: grid; gap: 12px; }
+#screen[data-page="SEL-10"] .select-orders-card { min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); overflow: hidden; }
+#screen[data-page="SEL-10"] .select-orders-body { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 14px 16px 8px; border: 0; border-radius: 0; color: var(--ink); background: transparent; text-align: left; }
+#screen[data-page="SEL-10"] .select-orders-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 1.6; }
+#screen[data-page="SEL-10"] .select-orders-meta > span { display: flex; flex-wrap: wrap; gap: 2px 10px; min-width: 0; color: var(--muted); }
+#screen[data-page="SEL-10"] .select-orders-meta > span > span { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+#screen[data-page="SEL-10"] .select-orders-meta > strong { flex-shrink: 0; max-width: 44%; color: var(--ink); font-weight: 500; overflow-wrap: anywhere; text-align: right; }
+#screen[data-page="SEL-10"] .select-orders-meta > strong[data-order-tone="pending"], #screen[data-page="SEL-10"] .select-orders-meta > strong[data-order-tone="processing"], #screen[data-page="SEL-10"] .select-orders-meta > strong[data-order-tone="warning"] { color: var(--gold); }
+#screen[data-page="SEL-10"] .select-orders-meta > strong[data-order-tone="closed"], #screen[data-page="SEL-10"] .select-orders-meta > strong[data-order-tone="cancelled"], #screen[data-page="SEL-10"] .select-orders-meta > strong[data-order-tone="neutral"] { color: var(--muted); }
+#screen[data-page="SEL-10"] .select-orders-items { display: grid; gap: 12px; margin-top: 16px; }
+#screen[data-page="SEL-10"] .select-orders-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+#screen[data-page="SEL-10"] .select-orders-item-copy { display: block; flex: 1; min-width: 0; }
+#screen[data-page="SEL-10"] .select-orders-item-copy strong { display: block; margin: 0; color: var(--ink); font-size: 14px; font-weight: 500; line-height: 1.55; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-item-copy > span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-quantity { flex-shrink: 0; padding-top: 1px; color: var(--muted); font-size: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#screen[data-page="SEL-10"] .select-orders-more { display: block; margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+#screen[data-page="SEL-10"] .select-orders-open { display: flex; align-items: center; justify-content: flex-end; gap: 4px; min-height: 28px; margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-10"] .select-orders-open svg { width: 14px; height: 14px; }
+#screen[data-page="SEL-10"] .select-orders-message { margin: 0; padding: 0 16px 12px; color: var(--muted); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 12px; margin: 0 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+#screen[data-page="SEL-10"] .select-orders-amount { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#screen[data-page="SEL-10"] .select-orders-amount > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-10"] .select-orders-amount > strong { max-width: 100%; color: var(--ink); font-size: 19px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-primary { min-width: 92px; max-width: 100%; min-height: 44px; margin-left: auto; padding: 9px 12px; border: 1px solid var(--ink); border-radius: 6px; color: var(--paper); background: var(--ink); font-size: 13px; line-height: 1.5; font-weight: 500; }
+#screen[data-page="SEL-10"] .select-orders-notice { flex-shrink: 0; margin: 0 0 14px; padding-left: 10px; border-left: 2px solid var(--gold); color: var(--gold); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-context { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; flex-shrink: 0; margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); }
+#screen[data-page="SEL-10"] .select-orders-context p { flex: 1; min-width: 120px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-context button { min-width: 44px; min-height: 44px; padding: 8px 0; border: 0; color: var(--gold); background: transparent; font-size: 12px; line-height: 1.5; text-decoration: underline; text-underline-offset: 3px; }
+#screen[data-page="SEL-10"] .select-orders-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1 0 auto; min-height: 240px; gap: 24px; padding: 32px 0 64px; text-align: center; }
+#screen[data-page="SEL-10"] .select-orders-empty h2 { max-width: 100%; margin: 0; color: var(--ink); font-size: 20px; line-height: 1.5; font-weight: 500; overflow-wrap: anywhere; }
+#screen[data-page="SEL-10"] .select-orders-empty button { min-width: 160px; max-width: 100%; min-height: 48px; padding: 10px 20px; border: 1px solid var(--ink); border-radius: 7px; color: var(--paper); background: var(--ink); font-size: 14px; line-height: 1.5; font-weight: 500; }
+#screen[data-page="SEL-10"] .select-orders button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+#screen[data-page="SEL-10"] .select-orders-body:focus-visible { outline-offset: -3px; }
+@media (max-width: 360px) {
+  #screen[data-page="SEL-10"] .select-orders-header, #screen[data-page="SEL-10"] .select-orders-filters, #screen[data-page="SEL-10"] .select-orders-scroll { padding-inline: 16px; }
+  #screen[data-page="SEL-10"] .select-orders-filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #screen[data-page="SEL-10"] .select-orders-body { padding-inline: 12px; }
+  #screen[data-page="SEL-10"] .select-orders-message { padding-inline: 12px; }
+  #screen[data-page="SEL-10"] .select-orders-card-footer { margin-inline: 12px; }
+}
+@media (max-height: 640px) {
+  #screen[data-page="SEL-10"] .select-orders-scroll { padding-top: 12px; }
+  #screen[data-page="SEL-10"] .select-orders-empty { min-height: 200px; padding-block: 24px; }
+}

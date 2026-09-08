@@ -1,0 +1,21 @@
+.night-sound .nsound-intro { margin:0 0 18px; color:#bbc8bd; font-size:13px; }
+.night-sound .nsound-list { min-width:0; margin:0; padding:0; border:0; }
+.night-sound .nsound-list legend { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.night-sound .nsound-row { display:flex; gap:12px; align-items:center; min-height:84px; border-bottom:1px solid #334338; }
+.night-sound .nsound-row:first-of-type { border-top:1px solid #334338; }
+.night-sound .nsound-row label { display:flex; flex:1; align-items:center; gap:12px; position:relative; min-width:0; min-height:76px; margin:0; padding:12px 0; cursor:pointer; }
+.night-sound .nsound-row input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+.night-sound .nsound-mark { flex:0 0 19px; width:19px; height:19px; border:1px solid #839887; border-radius:50%; }
+.night-sound input:checked + .nsound-mark { border:5px solid #d6dfcf; background:#263c2e; }
+.night-sound input:focus-visible ~ .nsound-copy { outline:2px solid #dfc391; outline-offset:5px; border-radius:2px; }
+.night-sound .nsound-copy { min-width:0; }
+.night-sound .nsound-copy strong { display:block; font-size:16px; font-weight:500; }
+.night-sound .nsound-copy small { display:block; margin-top:5px; font-size:12px; color:#aebfb2; }
+.night-sound .nsound-audition { display:flex; align-items:center; justify-content:center; gap:4px; min-width:66px; min-height:44px; padding:8px; border:1px solid #445344; border-radius:8px; background:transparent; color:#d8c4a2; font-size:12px; }
+.night-sound .nsound-audition[aria-pressed="true"] { background:#314538; color:#eee5d6; }
+.night-sound .nsound-audition svg { flex-basis:16px; width:16px; height:16px; }
+.night-sound .nsound-feedback { min-height:21px; margin:15px 0 0; font-size:12px; line-height:1.7; color:#c3cec5; }
+.night-sound .nsound-feedback.is-error { color:#edb284; }
+.night-sound .nsound-hint { margin:12px 0 0; font-size:11px; line-height:1.8; color:#b9c5bc; }
+.night-sound .nsound-demo { margin:22px 0 0; font-size:11px; line-height:1.8; color:#aebeb2; }
+.night-sound .night-home-primary { margin-top:12px; }

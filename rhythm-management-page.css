@@ -1,0 +1,48 @@
+#screen[data-page="RHY-05"] { padding:0; }
+.rhythm-management-page { color:#302a25; padding:16px 20px 22px; }
+.rh-manage-header { margin-bottom:25px; }
+.rh-manage-header button { min-height:44px; border:0; background:transparent; color:#67564a; border-radius:8px; padding:0 7px 0 0; font-size:13px; }
+.rh-manage-header h1 { font-size:27px; line-height:1.4; letter-spacing:-.6px; margin:10px 0 0; }
+.rhythm-management-page h2 { font-size:15px; line-height:1.5; margin:0 0 12px; }
+.rhythm-management-page svg { flex:0 0 21px; height:21px; width:21px; }
+.rh-manage-row { width:100%; display:flex; align-items:center; gap:12px; min-height:84px; background:#fff; border:1px solid #ded5ce; border-radius:14px; padding:16px 13px; text-align:left; color:#675340; }
+.rh-manage-row>span { flex:1; min-width:0; }
+.rh-manage-row strong { display:block; font-size:15px; line-height:1.5; color:#302a25; }
+.rh-manage-row small { display:block; margin-top:5px; font-size:12px; line-height:1.7; color:#78695d; }
+.rh-manage-row i,.rh-manage-settings i { font-style:normal; font-size:20px; }
+.rh-manage-cycle { padding:18px 16px 8px; border:1px solid #ded5ce; border-radius:14px; background:#efe9e1; margin-top:22px; }
+.rh-manage-cycle-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.rh-manage-cycle-heading h2 { margin:0; }
+.rh-manage-cycle-heading>span { font-size:11px; padding:4px 9px; background:#faf8f5; border-radius:12px; color:#675340; white-space:nowrap; }
+.rh-manage-cycle>p { font-size:12px; line-height:1.8; color:#746357; margin:12px 0 15px; }
+.rh-manage-visibility .secondary { display:flex; align-items:center; justify-content:center; gap:9px; min-height:46px; width:100%; background:#fff; border:1px solid #b6a391; color:#594737; font-size:13px; }
+.rh-manage-visibility .secondary:disabled { color:#85786d; border-color:#d4c9c0; background:#f6f1ec; opacity:1; }
+.rh-manage-settings { display:flex; align-items:center; gap:9px; text-align:left; min-height:48px; width:100%; border:0; background:transparent; color:#675340; font-size:12px; padding:10px 0; }
+.rh-manage-settings>span { flex:1; }
+.rh-manage-settings svg { width:18px; height:18px; flex-basis:18px; }
+.rh-manage-cycle>.rh-manage-draft { border-top:1px solid #d9cdbf; padding-top:12px; margin-bottom:0; }
+.rh-manage-danger { border-top:1px solid #dfd8d1; padding-top:22px; margin-top:30px; }
+.rh-manage-danger>p { font-size:12px; line-height:1.8; color:#7d6b5d; margin:0 0 14px; }
+.rh-manage-delete { display:flex; align-items:center; justify-content:center; gap:9px; min-height:48px; width:100%; padding:10px; border-radius:12px; border:1px solid #c7968d; background:#fffaf9; color:#983e32; font-size:13px; }
+.rh-manage-delete:disabled { background:#f1eeeb; color:#8b8078; border-color:#dcd5cf; opacity:1; }
+.rh-manage-danger>small { display:block; margin-top:10px; font-size:11px; line-height:1.7; color:#7d6b5d; }
+.rh-manage-boundary { font-size:11px; line-height:1.8; color:#7d6b5d; margin:18px 0 0; }
+.rh-manage-feedback { font-size:12px; line-height:1.8; color:#85563d; margin:16px 0; }
+.rh-manage-feedback:empty { display:none; }
+.rh-manage-cleared { display:flex; align-items:center; gap:12px; padding:13px 15px; background:#e8eee8; border-radius:12px; margin-bottom:22px; color:#445c4a; }
+.rh-manage-cleared strong { font-size:14px; }
+.rh-manage-cleared p { font-size:12px; line-height:1.7; margin:5px 0 0; }
+.rh-manage-blocked p { font-size:14px; line-height:1.8; color:#7d6b5d; }
+.rh-manage-blocked .secondary { width:100%; min-height:48px; }
+.rh-manage-confirm { padding:24px; max-height:calc(100dvh - 32px); overflow-y:auto; }
+.rh-manage-confirm h2 { font-size:21px; line-height:1.5; margin:0 0 16px; }
+.rh-manage-confirm p,.rh-manage-confirm li { font-size:13px; line-height:1.8; }
+.rh-manage-confirm ul { padding-left:20px; margin:12px 0 16px; }
+.rh-manage-confirm .rh-manage-warning { color:#805544; padding:12px; border-radius:10px; background:#f5ece7; }
+.rh-manage-confirm-actions { display:grid; gap:10px; margin-top:18px; }
+.rh-manage-confirm-actions .secondary { min-height:46px; width:100%; }
+.rh-manage-modal-error { color:#9e3b25; }
+.rh-manage-modal-error:empty { display:none; }
+.rhythm-management-page button:focus-visible,.rh-manage-confirm button:focus-visible { outline:2px solid #8d642f; outline-offset:3px; }
+.device-shell:has(#screen[data-page="RHY-05"]) { min-height:0; }
+@media(max-width:350px) { .rhythm-management-page { padding:12px 16px 22px; } .rh-manage-header h1 { font-size:25px; } .rh-manage-cycle { padding:16px 13px 6px; } .rh-manage-confirm { padding:20px; } }

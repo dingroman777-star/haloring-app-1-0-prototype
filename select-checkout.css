@@ -1,0 +1,89 @@
+/* SEL-05. Open confirmation rows, one amount summary and a stable submit bar. */
+#screen[data-page="SEL-05"] { padding: 0; min-height: 0; overflow: hidden; }
+.device-shell:has(#screen[data-page="SEL-05"]) { min-height: 0; }
+#screen[data-page="SEL-05"] .select-checkout { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--ink); background: var(--mist); }
+#screen[data-page="SEL-05"] .select-checkout button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+#screen[data-page="SEL-05"] .select-checkout-header { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; flex: 0 0 56px; padding: 0 24px; }
+#screen[data-page="SEL-05"] .select-checkout-header h1 { margin: 0; text-align: center; font-size: 18px; line-height: 1.4; font-weight: 600; }
+#screen[data-page="SEL-05"] .select-checkout-header button { display: flex; align-items: center; justify-content: flex-start; width: 44px; height: 44px; padding: 0; border: 0; color: var(--ink); background: transparent; }
+#screen[data-page="SEL-05"] .select-checkout-header button svg { width: 18px; height: 18px; }
+#screen[data-page="SEL-05"] .select-checkout-scroll { flex: 1; min-height: 0; padding: 0 24px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 16px; }
+#screen[data-page="SEL-05"] .select-checkout-scroll::-webkit-scrollbar { display: none; }
+#screen[data-page="SEL-05"] .select-checkout-address-section { padding: 4px 0 12px; }
+#screen[data-page="SEL-05"] .select-checkout-address { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 68px; padding: 8px 0; border: 0; background: transparent; color: var(--ink); text-align: left; }
+#screen[data-page="SEL-05"] .select-checkout-address > span { min-width: 0; }
+#screen[data-page="SEL-05"] .select-checkout-address strong { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 15px; line-height: 1.5; font-weight: 600; }
+#screen[data-page="SEL-05"] .select-checkout-address strong > span { font-weight: 400; white-space: nowrap; }
+#screen[data-page="SEL-05"] .select-checkout-address-detail { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+#screen[data-page="SEL-05"] .select-checkout-address svg { flex: 0 0 18px; width: 18px; height: 18px; }
+#screen[data-page="SEL-05"] .select-checkout-address-problem { margin: 0; color: var(--gold); font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-05"] .select-checkout-lines { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+#screen[data-page="SEL-05"] .select-checkout-line { display: grid; grid-template-columns: 64px minmax(0,1fr); align-items: start; gap: 14px; padding: 6px 0; }
+#screen[data-page="SEL-05"] .select-checkout-photo { width: 64px; min-width: 0; }
+#screen[data-page="SEL-05"] .select-checkout-photo img, #screen[data-page="SEL-05"] .select-checkout-photo .product-visual { display: grid; width: 64px; height: 64px; min-height: 0; margin: 0; border-radius: 7px; object-fit: cover; overflow: hidden; }
+#screen[data-page="SEL-05"] .select-checkout-photo img { display: block; }
+#screen[data-page="SEL-05"] .select-checkout-photo .product-visual > i { transform: rotate(-5deg) scale(.64); }
+#screen[data-page="SEL-05"] .select-checkout-photo small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.5; white-space: nowrap; text-align: center; }
+#screen[data-page="SEL-05"] .select-checkout-product-copy { min-width: 0; }
+#screen[data-page="SEL-05"] .select-checkout-product-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+#screen[data-page="SEL-05"] .select-checkout-product-heading h2 { flex: 1; min-width: 0; margin: 0; font-size: 14px; font-weight: 500; line-height: 1.55; overflow-wrap: anywhere; }
+#screen[data-page="SEL-05"] .select-checkout-product-heading strong { flex-shrink: 0; font-size: 14px; line-height: 1.55; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#screen[data-page="SEL-05"] .select-checkout-spec { display: flex; align-items: center; gap: 6px; max-width: 100%; min-height: 44px; margin: 0; padding: 3px 0; border: 0; color: var(--muted); background: transparent; text-align: left; font-size: 13px; line-height: 1.5; }
+#screen[data-page="SEL-05"] .select-checkout-spec > span { min-width: 0; overflow-wrap: anywhere; }
+#screen[data-page="SEL-05"] .select-checkout-spec svg { flex: 0 0 16px; width: 16px; height: 16px; transform: rotate(90deg); }
+#screen[data-page="SEL-05"] .select-checkout-line-problem { margin: 3px 0 0; color: var(--gold); font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-05"] .select-checkout-text-button { display: flex; align-items: center; min-height: 44px; padding: 6px 0; border: 0; color: var(--gold); background: transparent; font-size: 13px; line-height: 1.5; }
+#screen[data-page="SEL-05"] .select-checkout-line[data-unavailable="true"] .select-checkout-photo { opacity: .55; }
+#screen[data-page="SEL-05"] .select-checkout-options { padding: 0; border-bottom: 1px solid var(--line); }
+#screen[data-page="SEL-05"] .select-checkout-option, #screen[data-page="SEL-05"] .select-checkout-delivery > summary, #screen[data-page="SEL-05"] .select-checkout-more > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; margin: 0; padding: 10px 0; border: 0; color: var(--ink); background: transparent; text-align: left; font-size: 14px; line-height: 1.5; font-weight: 400; }
+#screen[data-page="SEL-05"] .select-checkout-option-value { display: flex; align-items: center; justify-content: flex-end; min-width: 0; gap: 9px; font-variant-numeric: tabular-nums; text-align: right; }
+#screen[data-page="SEL-05"] .select-checkout-option-value svg, #screen[data-page="SEL-05"] .select-checkout-more svg { flex: 0 0 18px; width: 18px; height: 18px; }
+#screen[data-page="SEL-05"] .select-checkout-delivery .select-checkout-option-value { max-width: 80%; }
+#screen[data-page="SEL-05"] .select-checkout-delivery summary small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+#screen[data-page="SEL-05"] .select-checkout-points { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 64px; padding: 8px 0; cursor: pointer; }
+#screen[data-page="SEL-05"] .select-checkout-points > span:first-child { min-width: 0; }
+#screen[data-page="SEL-05"] .select-checkout-points strong { display: block; font-size: 14px; line-height: 1.5; font-weight: 400; }
+#screen[data-page="SEL-05"] .select-checkout-points small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+#screen[data-page="SEL-05"] .select-checkout-check-target { display: flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; margin-right: -11px; }
+#screen[data-page="SEL-05"] .select-checkout-points input { appearance: none; -webkit-appearance: none; position: relative; display: block; width: 22px; height: 22px; margin: 0; border: 1px solid #a8aca5; border-radius: 3px; background: var(--paper); cursor: pointer; }
+#screen[data-page="SEL-05"] .select-checkout-points input:checked { border-color: var(--ink); background: var(--ink); }
+#screen[data-page="SEL-05"] .select-checkout-points input:checked::after { content: ""; position: absolute; left: 6px; top: 3px; width: 6px; height: 11px; border: solid var(--paper); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+#screen[data-page="SEL-05"] .select-checkout-points input:disabled { border-color: #cdd0c9; background: #e9eae6; cursor: not-allowed; }
+#screen[data-page="SEL-05"] .select-checkout-points:has(input:disabled) { cursor: not-allowed; }
+#screen[data-page="SEL-05"] .select-checkout-delivery > summary, #screen[data-page="SEL-05"] .select-checkout-more > summary { list-style: none; cursor: pointer; }
+#screen[data-page="SEL-05"] .select-checkout-delivery > summary::-webkit-details-marker, #screen[data-page="SEL-05"] .select-checkout-more > summary::-webkit-details-marker { display: none; }
+#screen[data-page="SEL-05"] .select-checkout-delivery summary svg, #screen[data-page="SEL-05"] .select-checkout-more > summary svg { transform: rotate(90deg); }
+#screen[data-page="SEL-05"] .select-checkout-delivery[open] summary svg, #screen[data-page="SEL-05"] .select-checkout-more[open] > summary svg { transform: rotate(-90deg); }
+#screen[data-page="SEL-05"] .select-checkout-delivery p { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-05"] .select-checkout-amounts { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--line); }
+#screen[data-page="SEL-05"] .select-checkout-amounts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 4px 0; font-size: 13px; line-height: 1.5; }
+#screen[data-page="SEL-05"] .select-checkout-amounts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+#screen[data-page="SEL-05"] .select-checkout-more { margin-bottom: 6px; }
+#screen[data-page="SEL-05"] .select-checkout-more > div { padding: 0 0 8px; }
+#screen[data-page="SEL-05"] .select-checkout-more > div button { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 9px 0; border: 0; background: transparent; color: var(--muted); text-align: left; font-size: 13px; line-height: 1.5; }
+#screen[data-page="SEL-05"] .select-checkout-demo { flex-shrink: 0; margin: 0; padding: 9px 24px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-05"] .select-checkout-status { flex-shrink: 0; max-height: 100px; overflow-y: auto; margin: 0; padding: 8px 24px; border-top: 1px solid var(--line); color: var(--gold); font-size: 12px; line-height: 1.65; background: var(--mist); }
+#screen[data-page="SEL-05"] .select-checkout-footer { display: grid; grid-template-columns: minmax(0,1fr) 158px; align-items: center; gap: 16px; flex-shrink: 0; min-height: 94px; padding: 12px 24px max(20px,env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--mist); }
+#screen[data-page="SEL-05"] .select-checkout-payable { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+#screen[data-page="SEL-05"] .select-checkout-payable small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-05"] .select-checkout-payable strong { color: var(--ink); font-size: 22px; font-weight: 600; line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#screen[data-page="SEL-05"] .select-checkout-footer .primary { width: 100%; min-width: 0; min-height: 52px; padding: 10px 8px; border-radius: 7px; border-color: var(--ink); color: var(--paper); background: var(--ink); font-size: 15px; line-height: 1.5; font-weight: 600; }
+#screen[data-page="SEL-05"] .select-checkout-footer .primary:disabled { border-color: #e2e3df; background: #e2e3df; color: #626760; cursor: not-allowed; opacity: 1; }
+#screen[data-page="SEL-05"] .select-checkout-footer-single { grid-template-columns: minmax(0,1fr); }
+#screen[data-page="SEL-05"] .select-checkout-empty, #screen[data-page="SEL-05"] .select-checkout-locked { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; padding: 32px 0 64px; text-align: center; }
+#screen[data-page="SEL-05"] .select-checkout-empty > svg { width: 42px; height: 42px; margin-bottom: 18px; color: var(--muted); }
+#screen[data-page="SEL-05"] .select-checkout-empty h2, #screen[data-page="SEL-05"] .select-checkout-locked h2 { margin: 0; font-size: 20px; line-height: 1.5; font-weight: 600; }
+#screen[data-page="SEL-05"] .select-checkout-empty p, #screen[data-page="SEL-05"] .select-checkout-locked p { max-width: 280px; margin: 10px 0 24px; font-size: 13px; line-height: 1.7; color: var(--muted); }
+#screen[data-page="SEL-05"] .select-checkout-empty .primary { min-width: 144px; min-height: 48px; padding: 10px 24px; border-radius: 7px; font-size: 14px; }
+#screen[data-page="SEL-05"] .select-checkout-locked > strong { font-size: 26px; font-variant-numeric: tabular-nums; }
+#screen[data-page="SEL-05"] .select-checkout button:focus-visible, #screen[data-page="SEL-05"] .select-checkout input:focus-visible, #screen[data-page="SEL-05"] .select-checkout summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+#screen[data-page="SEL-05"] .select-checkout [hidden] { display: none; }
+@media (max-width: 360px) {
+  #screen[data-page="SEL-05"] .select-checkout-header, #screen[data-page="SEL-05"] .select-checkout-scroll, #screen[data-page="SEL-05"] .select-checkout-demo, #screen[data-page="SEL-05"] .select-checkout-status, #screen[data-page="SEL-05"] .select-checkout-footer { padding-inline: 16px; }
+  #screen[data-page="SEL-05"] .select-checkout-line { gap: 12px; }
+  #screen[data-page="SEL-05"] .select-checkout-product-heading { display: block; }
+  #screen[data-page="SEL-05"] .select-checkout-product-heading strong { display: block; margin-top: 3px; }
+  #screen[data-page="SEL-05"] .select-checkout-footer { grid-template-columns: minmax(0,1fr) 136px; gap: 12px; }
+  #screen[data-page="SEL-05"] .select-checkout-payable strong { font-size: 21px; }
+  #screen[data-page="SEL-05"] .select-checkout-footer-single { grid-template-columns: minmax(0,1fr); }
+}

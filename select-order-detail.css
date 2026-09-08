@@ -1,0 +1,58 @@
+/* SEL-11. Original order facts remain readable above a stable action bar. */
+#screen[data-page="SEL-11"] { padding: 0; min-height: 0; overflow: hidden; }
+.device-shell:has(#screen[data-page="SEL-11"]) { min-height: 0; }
+#screen[data-page="SEL-11"] .select-order-detail { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--ink); background: var(--mist); }
+#screen[data-page="SEL-11"] .select-order-detail button, #screen[data-page="SEL-11"] .select-order-detail summary { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#screen[data-page="SEL-11"] .select-order-detail-header { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; flex: 0 0 56px; padding: 0 24px; }
+#screen[data-page="SEL-11"] .select-order-detail-header h1 { min-width: 0; margin: 0; color: var(--ink); text-align: center; font-size: 18px; line-height: 1.4; font-weight: 600; }
+#screen[data-page="SEL-11"] .select-order-detail-header button { display: flex; align-items: center; justify-content: flex-start; width: 44px; height: 44px; padding: 0; border: 0; color: var(--ink); background: transparent; }
+#screen[data-page="SEL-11"] .select-order-detail-header svg { width: 18px; height: 18px; }
+#screen[data-page="SEL-11"] .select-order-detail-scroll { flex: 1; min-height: 0; padding: 4px 24px max(24px,env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 24px; }
+#screen[data-page="SEL-11"] .select-order-detail-scroll::-webkit-scrollbar { display: none; }
+#screen[data-page="SEL-11"] .select-order-detail-status { padding: 12px 0 20px; }
+#screen[data-page="SEL-11"] .select-order-detail-status h2 { margin: 0; color: var(--ink); font-size: 21px; line-height: 1.4; font-weight: 500; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-status p { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-amount { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-top: 20px; }
+#screen[data-page="SEL-11"] .select-order-detail-amount > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-11"] .select-order-detail-amount > strong { max-width: 100%; color: var(--ink); font-size: 28px; line-height: 1.25; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.02em; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-items { padding: 4px 0; border-block: 1px solid var(--line); }
+#screen[data-page="SEL-11"] .select-order-detail-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; padding: 12px 0; }
+#screen[data-page="SEL-11"] .select-order-detail-item-copy { flex: 1; min-width: 0; }
+#screen[data-page="SEL-11"] .select-order-detail-item h2 { margin: 0; color: var(--ink); font-size: 14px; font-weight: 500; line-height: 1.55; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-item p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-item-values { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; max-width: 45%; min-width: 0; padding-top: 1px; text-align: right; font-variant-numeric: tabular-nums; }
+#screen[data-page="SEL-11"] .select-order-detail-item-values strong { max-width: 100%; color: var(--ink); font-size: 13px; line-height: 1.55; font-weight: 500; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-item-values > span { color: var(--muted); font-size: 12px; line-height: 1.6; white-space: nowrap; }
+#screen[data-page="SEL-11"] .select-order-detail-information { padding: 16px 0; border-bottom: 1px solid var(--line); }
+#screen[data-page="SEL-11"] .select-order-detail-information h2 { margin: 0; color: var(--ink); font-size: 13px; line-height: 1.5; font-weight: 500; }
+#screen[data-page="SEL-11"] .select-order-detail-information p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; white-space: pre-line; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-fees { border-bottom: 1px solid var(--line); }
+#screen[data-page="SEL-11"] .select-order-detail-fees summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 0; color: var(--ink); font-size: 13px; line-height: 1.5; list-style: none; }
+#screen[data-page="SEL-11"] .select-order-detail-fees summary::-webkit-details-marker { display: none; }
+#screen[data-page="SEL-11"] .select-order-detail-fees summary svg { flex-shrink: 0; width: 16px; height: 16px; transform: rotate(90deg); }
+#screen[data-page="SEL-11"] .select-order-detail-fees[open] summary svg { transform: rotate(-90deg); }
+#screen[data-page="SEL-11"] .select-order-detail-fees dl { margin: 0; padding: 0 0 12px; }
+#screen[data-page="SEL-11"] .select-order-detail-fees dl > div, #screen[data-page="SEL-11"] .select-order-detail-metadata > div { display: grid; grid-template-columns: minmax(60px,1fr) minmax(0,2fr); gap: 12px; padding: 5px 0; font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-11"] .select-order-detail-fees dt, #screen[data-page="SEL-11"] .select-order-detail-metadata dt { color: var(--muted); overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-fees dd, #screen[data-page="SEL-11"] .select-order-detail-metadata dd { min-width: 0; margin: 0; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-metadata { margin: 0; padding-top: 12px; }
+#screen[data-page="SEL-11"] .select-order-detail-notice { grid-column: 1 / -1; margin: 0; padding-left: 10px; border-left: 2px solid var(--gold); color: var(--gold); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-footer { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr); align-items: center; gap: 12px; flex-shrink: 0; padding: 12px 24px max(16px,env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--mist); }
+#screen[data-page="SEL-11"] .select-order-detail-footer.is-single { grid-template-columns: minmax(0,1fr); }
+#screen[data-page="SEL-11"] .select-order-detail-footer button { width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1px solid var(--ink); border-radius: 7px; font-size: 14px; line-height: 1.5; }
+#screen[data-page="SEL-11"] .select-order-detail-primary { color: var(--paper); background: var(--ink); font-weight: 600; }
+#screen[data-page="SEL-11"] .select-order-detail-footer .select-order-detail-secondary { border-color: var(--line); color: var(--ink); background: transparent; font-weight: 400; }
+#screen[data-page="SEL-11"] .select-order-detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; padding: 32px 0 64px; text-align: center; }
+#screen[data-page="SEL-11"] .select-order-detail-empty h2 { max-width: 100%; margin: 0; color: var(--ink); font-size: 20px; line-height: 1.5; font-weight: 500; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-empty p { max-width: 100%; margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+#screen[data-page="SEL-11"] .select-order-detail-empty button { min-width: 160px; max-width: 100%; min-height: 48px; margin-top: 24px; padding: 10px 20px; border: 1px solid var(--ink); border-radius: 7px; color: var(--paper); background: var(--ink); font-size: 14px; line-height: 1.5; }
+#screen[data-page="SEL-11"] .select-order-detail button:focus-visible, #screen[data-page="SEL-11"] .select-order-detail summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (max-width: 360px) {
+  #screen[data-page="SEL-11"] .select-order-detail-header, #screen[data-page="SEL-11"] .select-order-detail-scroll, #screen[data-page="SEL-11"] .select-order-detail-footer { padding-inline: 16px; }
+  #screen[data-page="SEL-11"] .select-order-detail-amount > strong { font-size: 26px; }
+  #screen[data-page="SEL-11"] .select-order-detail-footer { gap: 8px; }
+}
+@media (max-height: 640px) {
+  #screen[data-page="SEL-11"] .select-order-detail-status { padding-top: 8px; }
+  #screen[data-page="SEL-11"] .select-order-detail-footer { padding-block: 8px max(8px,env(safe-area-inset-bottom)); }
+}

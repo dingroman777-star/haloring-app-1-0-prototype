@@ -1,0 +1,56 @@
+.rhythm-home-page { color:#292522; padding-bottom:18px; }
+.rh-home-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.rh-home-header h1 { font-size:27px; letter-spacing:-1px; margin:0 0 5px; }
+.rh-home-header p { color:#79706b; font-size:12px; margin:0; }
+.rh-home-header button { font-size:13px; color:#55453b; border:1px solid #e0d7d0; background:transparent; border-radius:12px; padding:0 15px; min-height:44px; }
+.rh-home-intro { background:#eee6e0; padding:20px; border-radius:18px; }
+.rh-home-kicker { display:flex; justify-content:space-between; gap:8px; font-size:11px; color:#79675d; }
+.rh-home-intro h2 { font-size:24px; line-height:1.4; margin:13px 0 7px; letter-spacing:-.5px; }
+.rh-home-intro p { font-size:13px; color:#75645b; line-height:1.7; margin:0 0 16px; }
+.rh-home-intro .primary { width:100%; min-height:46px; border:0; background:#403831; color:#fff; }
+.rh-home-cycle-option { display:flex; align-items:center; justify-content:space-between; width:100%; gap:14px; min-height:64px; background:transparent; border:0; text-align:left; color:#635247; padding:13px 4px; font-size:13px; }
+.rh-home-cycle-option small { display:block; font-size:11px; color:#857b74; margin-top:5px; }
+.rh-home-cycle { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:11px; padding:14px 4px; color:#7a6c63; }
+.rh-home-cycle strong { display:block; font-size:14px; margin-top:4px; color:#51453d; }
+.rh-home-cycle button { min-height:44px; border:0; background:transparent; color:#665246; font-size:12px; }
+.rh-home-calendar { margin:12px 0 18px; padding:12px 8px; background:#fff; border:1px solid #e4ddd7; border-radius:16px; }
+.rh-month-nav { display:flex; align-items:center; justify-content:space-between; padding:0 5px 6px; }
+.rh-month-nav>button { font-size:25px; width:44px; height:44px; border:0; background:transparent; color:#594e46; border-radius:10px; }
+.rh-month-nav>label { position:relative; font-size:15px; color:#493d35; font-weight:600; min-height:44px; display:flex; align-items:center; padding:0 14px; }
+.rh-month-nav input { position:absolute; inset:0; opacity:0; width:100%; cursor:pointer; }
+.rh-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px 0; }
+.rh-calendar-grid>small { text-align:center; padding:6px 0 10px; font-size:11px; color:#8c8179; }
+.rh-calendar-grid>button { position:relative; min-width:0; min-height:44px; background:transparent; border:0; border-radius:12px; padding:0; font-size:13px; color:#554a42; }
+.rh-calendar-grid>button:disabled,.rh-month-nav>button:disabled { color:#c1bab5; }
+.rh-calendar-grid>button.is-today>span { outline:1px solid #aa8a74; outline-offset:6px; border-radius:50%; }
+.rh-calendar-grid>button.is-selected { background:#e9d9cc; color:#513927; font-weight:700; }
+.rh-calendar-grid>button>i { position:absolute; width:4px; height:4px; border-radius:50%; background:#81614a; bottom:5px; left:calc(50% - 2px); }
+.rh-calendar-legend { display:flex; align-items:center; gap:13px; padding:7px 6px 0; color:#8a7b70; font-size:11px; }
+.rh-calendar-legend>span { display:flex; align-items:center; gap:6px; }
+.rh-calendar-legend i { display:inline-block; flex:0 0 5px; width:5px; height:5px; border-radius:50%; background:#81614a; }
+.rh-calendar-legend .rh-outline { flex:0 0 9px; width:9px; height:9px; border:1px solid #aa8a74; background:transparent; }
+.rh-calendar-legend button { margin-left:auto; min-height:44px; border:0; padding:0 4px; background:transparent; font-size:11px; color:#745641; }
+.rh-calendar-legend button:disabled { color:#aaa098; }
+.rh-home-selected { padding:18px; border:1px solid #e2d8d0; background:#f4f0eb; border-radius:15px; }
+.rh-selected-label { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.rh-selected-label h2 { margin:0; font-size:14px; }
+.rh-selected-label>span { color:#847569; font-size:11px; }
+.rh-home-selected h3 { font-size:20px; line-height:1.5; margin:16px 0 6px; }
+.rh-home-selected p { font-size:13px; line-height:1.8; color:#746358; margin:12px 0 15px; }
+.rh-home-selected .rh-selected-note { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; white-space:pre-wrap; }
+.rh-home-selected .secondary { width:100%; min-height:44px; border-color:#d8c7b8; color:#654e3d; background:#fff; }
+.rh-home-halo { width:100%; min-height:44px; margin-top:8px; padding:7px 0; border:0; background:transparent; color:#7d5e46; font-size:12px; }
+.rh-home-more { margin-top:20px; }
+.rh-home-more>button { display:flex; justify-content:space-between; width:100%; min-height:52px; padding:10px 3px; font-size:13px; color:#645348; border:0; border-bottom:1px solid #e3dcd5; background:transparent; }
+.rh-home-more>button>span:last-child { font-size:18px; }
+.rh-home-boundary { font-size:11px; line-height:1.7; color:#8e8279; margin:19px 0 0; }
+.rh-home-notice { margin:14px 0; padding:13px 15px; border-left:3px solid #b6987e; background:#f2eee8; border-radius:4px 12px 12px 4px; }
+.rh-home-notice strong { font-size:13px; }
+.rh-home-notice p { font-size:12px; line-height:1.7; color:#7b6a5e; margin:7px 0 2px; }
+.rh-home-notice button,.rh-home-error button { min-height:44px; color:#7f552b; background:transparent; border:0; padding:7px 0; font-size:12px; }
+.rh-home-error,.rh-home-message { font-size:12px; line-height:1.7; margin:14px 0; color:#876133; }
+.rh-home-error { color:#9e3b25; }
+.rh-home-error button { display:block; }
+.rhythm-home-page button:focus-visible,.rh-month-nav label:focus-within { outline:2px solid #8d642f; outline-offset:1px; }
+.device-shell:has(#screen[data-page="RHY-01"]) { min-height:0; }
+@media(max-width:350px) { .rh-home-header { margin-bottom:14px; } .rh-home-intro { padding:17px; } .rh-home-intro h2 { font-size:22px; } .rh-home-intro p { font-size:12px; } .rh-home-calendar { padding:8px 5px; } .rh-calendar-legend { gap:8px; } }

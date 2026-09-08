@@ -1,0 +1,46 @@
+/* STU-03: the last explicit confirmation, using the confirmed Studio visual system. */
+.screen[data-page="STU-03"] { padding: 0; overflow: hidden; min-height: 0; }
+.screen .studio-preflight .studio-detail-header h1 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 650; text-align: center; }
+.studio-preflight .studio-detail-header { margin-bottom: 12px; }
+.studio-preflight-event { padding: 4px 0 18px; border-bottom: 1px solid var(--line); }
+.studio-preflight-event > img { width: 64px; height: 64px; flex-basis: 64px; }
+.studio-preflight-section { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.screen .studio-preflight h2 { font-size: 18px; line-height: 1.5; margin: 0 0 14px; font-weight: 600; }
+.screen .studio-preflight .studio-booking-event h2 { font-size: 17px; margin-bottom: 7px; }
+.studio-preflight-mode { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: start; column-gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 12px; }
+.studio-preflight-symbol { grid-column: 1; grid-row: 1 / 4; padding-top: 1px; }
+.studio-preflight-symbol svg { width: 30px; height: 30px; }
+.studio-preflight-mode > div { display: contents; }
+.studio-preflight-mode strong { grid-column: 2 / -1; font-size: 15px; line-height: 1.6; }
+.studio-preflight-mode > div > p:last-child { grid-column: 2 / -1; text-wrap: pretty; }
+.screen .studio-preflight p { margin: 6px 0 0; font-size: 14px; line-height: 1.65; color: var(--muted); overflow-wrap: anywhere; }
+.studio-preflight-mode > .studio-preflight-link { grid-column: 3; grid-row: 2; align-self: center; margin-block: -4px; }
+.studio-preflight-mode:not(:has(.studio-preflight-status)) > .studio-preflight-link { grid-row: 1; }
+.studio-preflight-mode:not(:has(.studio-preflight-status)) strong { grid-column: 2; }
+.studio-preflight-link { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; min-height: 44px; min-width: 44px; padding: 8px 0; border: 0; background: transparent; color: var(--brand-brown); font-size: 14px; line-height: 1.5; }
+.studio-preflight-link svg { width: 14px; height: 14px; }
+.studio-preflight-status { grid-column: 2; display: flex; gap: 6px; align-items: baseline; }
+.studio-preflight-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 6px; }
+.screen .studio-preflight-status.is-ready { color: #46614d; }
+.screen .studio-preflight-status.is-warning { color: #805020; }
+.studio-preflight-feeling { padding: 16px 0 18px; }
+.studio-preflight-feeling > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.screen .studio-preflight-feeling h2 { margin: 0; }
+.screen .studio-preflight-feeling > p { margin-top: 0; }
+.studio-preflight-reminder { display: flex; align-items: flex-start; gap: 14px; padding: 16px; background: var(--sage-soft); border-radius: 12px; }
+.studio-preflight-reminder > span { flex: 0 0 24px; color: #46614d; }
+.studio-preflight-reminder svg { width: 24px; height: 24px; }
+.studio-preflight-reminder strong { font-size: 15px; line-height: 1.5; font-weight: 600; }
+.studio-preflight-reminder p { text-wrap: pretty; }
+.studio-preflight .studio-detail-footer { grid-template-columns: minmax(0,1fr); gap: 6px; border-top: 0; }
+.studio-preflight .studio-detail-footer .primary { min-height: 48px; font-size: 16px; }
+.studio-preflight .studio-detail-footer .primary:disabled { opacity: 1; background: var(--line); border-color: var(--line); color: var(--muted); }
+.screen .studio-preflight .studio-detail-footer > p { margin: 0; text-align: center; font-size: 13px; line-height: 1.6; }
+.screen .studio-preflight .studio-detail-footer > .studio-preflight-error { text-align: left; color: #805020; padding-bottom: 6px; }
+.studio-preflight .studio-detail-footer .studio-preflight-secondary { min-height: 44px; font-size: 14px; border: 0; color: var(--brand-brown); background: transparent; padding: 8px 0; }
+.studio-preflight-modal { max-height: 85dvh; overflow-y: auto; }
+.studio-preflight-modal h2 { font-size: 22px; line-height: 1.5; }
+.studio-preflight-modal p { font-size: 14px; line-height: 1.75; color: var(--muted); }
+.studio-preflight-modal button { min-height: 48px; }
+@media (max-width: 360px) { .studio-preflight-mode { column-gap: 9px; } }
+@media (max-height: 640px) { .device-shell:has(.screen[data-page="STU-03"]) { min-height: 0; } }

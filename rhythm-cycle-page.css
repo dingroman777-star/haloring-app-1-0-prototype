@@ -1,0 +1,73 @@
+.rc-hero { background:linear-gradient(135deg,#f2e6e1,#eee9e2); border:1px solid #e5d6cc; border-radius:20px; padding:20px; margin-bottom:18px; }
+.rc-kicker { display:flex; justify-content:space-between; gap:8px; font-size:11px; color:#785a4f; }
+.rc-hero h2 { font-size:26px; letter-spacing:-.7px; line-height:1.4; margin:16px 0 8px; color:#3d302a; }
+.rc-hero h2.rc-day { font-size:40px; letter-spacing:-1px; }
+.rc-hero>p { font-size:12px; line-height:1.8; color:#786357; margin:0 0 17px; }
+.rc-hero>.primary { width:100%; min-height:48px; background:#684e43; border:0; color:#fff; font-size:14px; }
+.rc-hero-links { display:flex; justify-content:space-between; gap:12px; margin-top:4px; }
+.rc-hero-links button { min-height:44px; padding:5px 0; border:0; background:transparent; color:#765a47; font-size:12px; }
+.rc-hero>.rc-reminder { border-top:1px solid #d9c9bf; margin:2px 0 0; padding-top:12px; }
+.rc-hero>.rc-hero-error { color:#9e3b25; margin:10px 0 0; }
+.rc-feeling { display:flex; gap:12px; align-items:center; width:100%; min-height:68px; padding:14px 2px; background:transparent; border:0; text-align:left; color:#5e4e43; }
+.rc-feeling>i { font-size:22px; font-style:normal; color:#836d5b; }
+.rc-feeling>span { flex:1; }
+.rc-feeling strong { display:block; font-size:14px; }
+.rc-feeling small { display:block; font-size:11px; line-height:1.7; color:#7f7268; margin-top:5px; }
+.rc-feeling>b { font-size:20px; font-weight:400; }
+.rh-calendar-grid>button.is-period { background:#b86979; color:#fff; border-radius:10px; }
+.rh-calendar-grid>button.is-prediction { background:repeating-linear-gradient(-45deg,#f6e4e8,#f6e4e8 4px,#faeff1 4px,#faeff1 8px); color:#805466; }
+.rh-calendar-grid>button.is-period.is-selected,.rh-calendar-grid>button.is-prediction.is-selected { box-shadow:inset 0 0 0 2px #493a31; }
+.rh-calendar-grid>button.is-period>i { background:#fff; }
+.rh-calendar-grid>button.is-today>span { outline-color:#7d594b; }
+.rh-calendar-grid>button.is-fertile:not(.is-period) { background:#efe9f7; color:#72578e; border-radius:10px; }
+.rh-calendar-grid>button.is-ovulation:not(.is-period) { background:#8260ac; color:#fff; border-radius:50%; }
+.rh-calendar-grid>button.is-period.is-fertile,.rh-calendar-grid>button.is-period.is-ovulation { border-bottom:3px solid #8260ac; }
+.rh-calendar-grid>button.is-fertile.is-selected,.rh-calendar-grid>button.is-ovulation.is-selected { box-shadow:inset 0 0 0 2px #44354d; }
+.rc-calendar-legend { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 12px; padding:8px 6px 0; }
+.rc-calendar-legend button { min-height:44px; display:flex; align-items:center; gap:8px; background:none; border:0; padding:4px 0; font-size:12px; color:#665a53; text-align:left; }
+.rc-calendar-legend i { width:12px; height:12px; flex-shrink:0; border-radius:4px; display:inline-block; background:#b86979; }
+.rc-calendar-legend .prediction { background:repeating-linear-gradient(-45deg,#e6c3ce,#e6c3ce 2px,#faeff1 2px,#faeff1 4px); border:1px solid #c59aaa; }
+.rc-calendar-legend .ovulation { background:#8260ac; border-radius:50%; }
+.rc-calendar-legend .fertile { background:#efe9f7; border:1px solid #cbb8e1; }
+.rc-calendar-note { font-size:11px; color:#877a72; padding:0 6px; margin:3px 0 0; line-height:1.7; }
+.rc-selected-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.rc-tag.ovulation { color:#fff; background:#8260ac; }
+.rc-tag.fertile { color:#72578e; background:#efe9f7; }
+.rc-selected { margin-top:14px; padding-top:14px; border-top:1px solid #dfd3c9; }
+.rc-tag { display:inline-block; border-radius:8px; padding:4px 8px; font-size:11px; background:#e9e4dc; color:#746257; }
+.rc-tag.actual { background:#ead2d9; color:#814e5c; }
+.rc-tag.predicted { background:#f4e6eb; border:1px dashed #c399a5; color:#865c68; }
+.rc-selected button { min-height:44px; padding:6px 0; background:transparent; border:0; color:#785442; font-size:12px; }
+.rh-home-selected .rc-selected p { margin:8px 0 0; font-size:12px; }
+.rc-explain { margin:18px 0 0; font-size:12px; color:#736254; }
+.rc-explain summary { min-height:44px; padding:12px 0; }
+.rc-explain p { font-size:12px; line-height:1.8; }
+.rc-modal { padding:0; display:flex; flex-direction:column; max-height:calc(100dvh - 32px); width:min(440px,calc(100vw - 28px)); color:#352e29; overflow:hidden; }
+.rc-modal>header { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; padding:14px 20px 5px; }
+.rc-modal h2 { font-size:21px; margin:0; }
+.rc-close { width:44px; min-height:44px; border:0; border-radius:8px; font-size:26px; background:transparent; color:#756253; }
+.rc-modal-body { padding:12px 20px 18px; overflow-y:auto; min-height:0; }
+.rc-modal>footer { flex-shrink:0; padding:12px 20px; border-top:1px solid #e0d6ce; background:#f8f6f3; }
+.rc-modal-buttons { display:grid; gap:8px; }
+.rc-modal-buttons .primary,.rc-modal-buttons .secondary,.rc-danger { min-height:46px; width:100%; }
+.rc-modal-buttons .primary { background:#684e43; color:#fff; border:0; }
+.rc-modal-buttons .primary:disabled { background:#ded7d1; color:#817367; }
+.rc-modal-note,.rc-modal-empty { font-size:12px; line-height:1.8; color:#79695d; margin:0 0 15px; }
+.rc-field { display:block; font-size:13px; margin-bottom:20px; }
+.rc-field input { display:block; width:100%; min-height:48px; box-sizing:border-box; padding:11px; margin-top:10px; border:1px solid #d7c8bc; border-radius:10px; background:#fff; font-size:16px; color:#483b31; }
+.rc-field small { display:block; margin-top:6px; font-size:11px; line-height:1.6; color:#9e3b25; }
+.rc-field small:empty { display:none; }
+.rc-state { display:flex; flex-wrap:wrap; gap:7px; border:0; padding:0; margin:0 0 20px; }
+.rc-state legend { margin-bottom:10px; font-size:13px; }
+.rc-state button { flex:1; min-height:44px; font-size:12px; white-space:nowrap; padding:8px; border:1px solid #d9cdc2; border-radius:10px; background:#fff; color:#765e4d; }
+.rc-state button[aria-pressed="true"] { background:#eadbd2; border-color:#97725b; box-shadow:inset 0 0 0 1px #97725b; }
+.rc-modal-error,.rc-form-error { font-size:12px; line-height:1.7; color:#9e3b25; margin:0 0 10px; }
+.rc-modal-error:empty,.rc-form-error:empty { display:none; }
+.rc-discard,.rc-delete-link { width:100%; min-height:44px; border:0; background:transparent; color:#966453; font-size:12px; }
+.rc-danger { border:1px solid #c79588; background:#fff9f6; color:#9a4e3d; border-radius:10px; }
+.rc-history>button { width:100%; display:flex; align-items:center; justify-content:space-between; min-height:72px; text-align:left; border:0; background:transparent; border-bottom:1px solid #e4d9d0; color:#604a3b; }
+.rc-history strong { display:block; font-size:15px; }
+.rc-history small { display:block; font-size:12px; color:#8c7768; margin-top:7px; }
+.rc-history i { font-style:normal; font-size:21px; }
+.rc-modal button:focus-visible,.rc-modal input:focus-visible { outline:2px solid #8d642f; outline-offset:2px; }
+@media(max-width:350px) { .rc-hero { padding:17px; } .rc-hero h2 { font-size:22px; } .rc-modal-body,.rc-modal>header,.rc-modal>footer { padding-left:16px; padding-right:16px; } .rc-state { gap:5px; } .rc-state button { padding:6px; font-size:11px; } }

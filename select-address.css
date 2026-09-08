@@ -1,0 +1,89 @@
+/* SEL-07. Selection stays separate from editing; saving does not apply an address. */
+#screen[data-page="SEL-07"] .select-address-paste { margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); }
+#screen[data-page="SEL-07"] .select-address-paste button { min-height: 44px; padding: 8px; border: 0; border-radius: 5px; background: transparent; color: var(--ink); font-size: 12px; }
+#screen[data-page="SEL-07"] .select-address-paste .select-address-paste-read { display: flex; width: 100%; align-items: center; justify-content: center; gap: 9px; background: var(--mist); font-size: 14px; font-weight: 600; }
+#screen[data-page="SEL-07"] .select-address-paste-read svg { width: 19px; height: 19px; }
+#screen[data-page="SEL-07"] .select-address-paste-read:disabled { opacity: .6; cursor: wait; }
+#screen[data-page="SEL-07"] .select-address-paste-help { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 8px; }
+#screen[data-page="SEL-07"] .select-address-paste-help small { color: var(--muted); font-size: 11px; line-height: 1.6; }
+#screen[data-page="SEL-07"] .select-address-paste-help button { color: var(--gold); padding-inline: 0; }
+#screen[data-page="SEL-07"] .select-address-paste-status { color: var(--gold); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-07"] .select-address-paste-status button { text-decoration: underline; text-underline-offset: 3px; }
+#screen[data-page="SEL-07"] #address-paste-manual > label { display: block; margin: 8px 0; font-size: 12px; }
+#screen[data-page="SEL-07"] #address-paste-text { display: block; width: 100%; min-height: 90px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); font-size: 16px; line-height: 1.5; resize: vertical; }
+#screen[data-page="SEL-07"] #address-paste-text::placeholder { font-size: 12px; }
+#screen[data-page="SEL-07"] #address-paste-manual > button { display: block; width: 100%; margin-top: 8px; background: var(--mist); }
+#screen[data-page="SEL-07"] { padding: 0; min-height: 0; overflow: hidden; }
+.device-shell:has(#screen[data-page="SEL-07"]) { min-height: 0; }
+#screen[data-page="SEL-07"] .select-address { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--ink); background: var(--mist); }
+#screen[data-page="SEL-07"] .select-address button, #screen[data-page="SEL-07"] .select-address input, #screen[data-page="SEL-07"] .select-address textarea { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+#screen[data-page="SEL-07"] .select-address-header { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; flex: 0 0 56px; padding: 0 24px; }
+#screen[data-page="SEL-07"] .select-address-header h1 { margin: 0; text-align: center; font-size: 18px; line-height: 1.4; font-weight: 600; }
+#screen[data-page="SEL-07"] .select-address-header button { display: flex; align-items: center; justify-content: flex-start; width: 44px; height: 44px; padding: 0; border: 0; color: var(--ink); background: transparent; }
+#screen[data-page="SEL-07"] .select-address-header svg { width: 18px; height: 18px; }
+#screen[data-page="SEL-07"] .select-address-scroll { flex: 1; min-height: 0; padding: 12px 24px 24px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 24px; }
+#screen[data-page="SEL-07"] .select-address-scroll::-webkit-scrollbar { display: none; }
+#screen[data-page="SEL-07"] .select-address-list { display: grid; gap: 12px; }
+#screen[data-page="SEL-07"] .select-address-card { min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); overflow: hidden; }
+#screen[data-page="SEL-07"] .select-address-card.is-selected { border-color: var(--ink); }
+#screen[data-page="SEL-07"] .select-address-choice { display: grid; grid-template-columns: minmax(0,1fr) 32px; align-items: center; gap: 12px; min-height: 100px; padding: 16px 12px 14px 16px; cursor: pointer; }
+#screen[data-page="SEL-07"] .select-address-choice:has(input:disabled) { cursor: default; }
+#screen[data-page="SEL-07"] .select-address-copy { display: block; min-width: 0; }
+#screen[data-page="SEL-07"] .select-address-person { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 10px; font-size: 14px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address-person strong { font-weight: 600; overflow-wrap: anywhere; }
+#screen[data-page="SEL-07"] .select-address-person > span { white-space: nowrap; font-size: 13px; }
+#screen[data-page="SEL-07"] .select-address-detail { display: block; margin-top: 7px; color: var(--muted); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-07"] .select-address-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+#screen[data-page="SEL-07"] .select-address-tags small { display: inline-block; padding: 2px 6px; border-radius: 3px; color: var(--ink); background: var(--mist); font-size: 11px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address-tags .is-example { color: var(--muted); }
+#screen[data-page="SEL-07"] .select-address-radio-target { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-inline: -6px; }
+#screen[data-page="SEL-07"] .select-address input[type="radio"] { appearance: none; -webkit-appearance: none; display: block; width: 22px; height: 22px; margin: 0; border: 1px solid #a8aca5; border-radius: 50%; background: var(--paper); cursor: pointer; }
+#screen[data-page="SEL-07"] .select-address input[type="radio"]:checked { border: 6px solid var(--ink); }
+#screen[data-page="SEL-07"] .select-address input[type="radio"]:disabled { border-color: #cdd0c9; background: var(--mist); cursor: not-allowed; }
+#screen[data-page="SEL-07"] .select-address-card-actions { display: flex; justify-content: flex-end; gap: 12px; margin: 0 16px; border-top: 1px solid var(--line); }
+#screen[data-page="SEL-07"] .select-address-card-actions button { min-width: 44px; min-height: 44px; padding: 9px 0; border: 0; color: var(--muted); background: transparent; font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address-invalid { margin: 0 16px 12px; color: var(--gold); font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-07"] .select-address-add { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; margin-top: 16px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--paper); font-size: 14px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address-add > span { font-size: 19px; line-height: 1; }
+#screen[data-page="SEL-07"] .select-address-demo { flex-shrink: 0; margin: 0; padding: 9px 24px; color: var(--muted); text-align: center; font-size: 11px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address-footer { flex-shrink: 0; padding: 12px 24px max(20px,env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--mist); }
+#screen[data-page="SEL-07"] .select-address-footer > p { margin: 0 0 9px; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.6; }
+#screen[data-page="SEL-07"] .select-address .primary { min-width: 0; min-height: 52px; padding: 10px 16px; border: 1px solid var(--ink); border-radius: 7px; color: var(--paper); background: var(--ink); font-size: 15px; line-height: 1.5; font-weight: 600; }
+#screen[data-page="SEL-07"] .select-address-footer .primary { width: 100%; }
+#screen[data-page="SEL-07"] .select-address .primary:disabled { border-color: #e2e3df; color: #626760; background: #e2e3df; cursor: not-allowed; opacity: 1; }
+#screen[data-page="SEL-07"] .select-address-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; padding: 32px 0 64px; text-align: center; }
+#screen[data-page="SEL-07"] .select-address-empty h2 { margin: 0; font-size: 20px; line-height: 1.5; font-weight: 600; }
+#screen[data-page="SEL-07"] .select-address-empty p { max-width: 270px; margin: 10px 0 24px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+#screen[data-page="SEL-07"] .select-address-empty .primary { min-width: 144px; }
+#screen[data-page="SEL-07"] .select-address-notice { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 14px; padding: 8px 12px; border-left: 2px solid var(--gold); color: var(--gold); background: var(--paper); font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-07"] .select-address-notice button { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 8px 0; border: 0; color: var(--ink); background: transparent; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+#screen[data-page="SEL-07"] .select-address-delete-panel { margin: 0 0 16px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+#screen[data-page="SEL-07"] .select-address-delete-panel h2 { margin: 0 0 14px; font-size: 16px; line-height: 1.5; font-weight: 600; }
+#screen[data-page="SEL-07"] .select-address-delete-panel > strong { font-size: 14px; line-height: 1.5; font-weight: 500; }
+#screen[data-page="SEL-07"] .select-address-delete-panel > p { margin: 5px 0 12px; color: var(--muted); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-07"] .select-address-delete-panel > .select-address-delete-note { color: var(--gold); }
+#screen[data-page="SEL-07"] .select-address-delete-panel > div { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#screen[data-page="SEL-07"] .select-address-delete-panel button { min-height: 44px; padding: 9px 8px; border: 1px solid var(--line); border-radius: 6px; background: transparent; font-size: 13px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address-quiet { color: var(--ink); }
+#screen[data-page="SEL-07"] .select-address-danger { color: #944a38; }
+#screen[data-page="SEL-07"] .select-address-field { margin: 0; padding: 8px 0 18px; }
+#screen[data-page="SEL-07"] .select-address-field > label { display: block; margin-bottom: 8px; color: var(--ink); font-size: 13px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address-field > input, #screen[data-page="SEL-07"] .select-address-field > textarea { display: block; width: 100%; min-width: 0; min-height: 52px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--paper); font-size: 16px; line-height: 1.65; box-shadow: none; }
+#screen[data-page="SEL-07"] .select-address-field > textarea { min-height: 126px; resize: vertical; }
+#screen[data-page="SEL-07"] .select-address-field > input::placeholder, #screen[data-page="SEL-07"] .select-address-field > textarea::placeholder { color: var(--muted); font-size: 14px; opacity: 1; }
+#screen[data-page="SEL-07"] .select-address-field > [aria-invalid="true"] { border-color: #944a38; }
+#screen[data-page="SEL-07"] .select-address-field-error { margin: 7px 0 0; color: #944a38; font-size: 12px; line-height: 1.6; }
+#screen[data-page="SEL-07"] .select-address-form-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-07"] .select-address-form-cancel { display: block; width: 100%; min-height: 44px; margin-top: 4px; padding: 8px; border: 0; color: var(--muted); background: transparent; font-size: 13px; line-height: 1.5; }
+#screen[data-page="SEL-07"] .select-address button:focus-visible, #screen[data-page="SEL-07"] .select-address input:focus-visible, #screen[data-page="SEL-07"] .select-address textarea:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+#screen[data-page="SEL-07"] .select-address [hidden] { display: none; }
+@media (max-width: 360px) {
+  #screen[data-page="SEL-07"] .select-address-header, #screen[data-page="SEL-07"] .select-address-scroll, #screen[data-page="SEL-07"] .select-address-demo, #screen[data-page="SEL-07"] .select-address-footer { padding-inline: 16px; }
+  #screen[data-page="SEL-07"] .select-address-choice { padding-left: 12px; gap: 8px; }
+  #screen[data-page="SEL-07"] .select-address-card-actions { margin-inline: 12px; }
+}
+@media (max-height: 550px) {
+  #screen[data-page="SEL-07"] .select-address-header { flex-basis: 48px; }
+  #screen[data-page="SEL-07"] .select-address-demo { padding-block: 4px; }
+  #screen[data-page="SEL-07"] .select-address-footer { padding-block: 8px max(8px,env(safe-area-inset-bottom)); }
+}

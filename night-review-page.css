@@ -1,0 +1,57 @@
+#screen[data-page="TOD-08"] { padding: 4px 20px 24px; }
+.night-review-head { padding-bottom: 22px; }
+.night-review-head > button { min-height: 44px; padding: 0 8px 0 0; border: 0; background: transparent; color: var(--muted); font-size: 14px; cursor: pointer; }
+.night-review-head h1 { margin: 6px 0 0; font-size: 28px; line-height: 1.35; letter-spacing: -.6px; }
+.night-review { display: grid; gap: 26px; }
+.night-review-session { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; align-items: start; padding: 20px 18px; border: 1px solid #dce2dc; border-radius: 18px; background: #eef2ee; }
+.night-review-session-icon { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid #d1dad1; border-radius: 50%; color: #47604e; }
+.night-review-session-icon svg { width: 22px; height: 22px; }
+.night-review-session p { margin: 0 0 7px; color: #536456; font-size: 12px; }
+.night-review-session h2 { margin: 0 0 7px; font-size: 19px; line-height: 1.4; overflow-wrap: anywhere; }
+.night-review-session time { color: #586259; font-size: 12px; line-height: 1.6; }
+.night-review-duration { grid-column: 2; display: flex; align-items: baseline; gap: 9px; }
+.night-review-duration span { color: #586259; font-size: 12px; }
+.night-review-duration strong { font-size: 21px; font-weight: 600; }
+.night-review fieldset { display: grid; min-width: 0; gap: 12px; margin: 0; padding: 0; border: 0; }
+.night-review legend { padding: 0 0 14px; color: var(--ink); font-size: 17px; font-weight: 600; line-height: 1.5; }
+.night-review-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.night-review-options.practice { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.night-review-options button { display: flex; justify-content: center; align-items: center; gap: 5px; min-width: 0; min-height: 50px; padding: 12px 8px; border: 1px solid #d6dbd6; border-radius: 12px; background: #fff; color: #303a31; font-size: 14px; line-height: 1.5; cursor: pointer; }
+.night-review-options button i { display: none; font-size: 12px; font-style: normal; }
+.night-review-options button[aria-pressed="true"] { border-color: #48644e; background: #e8eee8; color: #203e28; box-shadow: inset 0 0 0 1px #48644e; font-weight: 600; }
+.night-review-options button[aria-pressed="true"] i { display: inline; }
+.night-review-options.practice button { flex-direction: column; gap: 2px; min-height: 66px; }
+.night-review-factors { border-top: 1px solid #dddeda; border-bottom: 1px solid #dddeda; padding: 4px 0; }
+.night-review-factors summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; min-height: 60px; gap: 6px; padding: 9px 0; list-style: none; cursor: pointer; font-size: 15px; }
+.night-review-factors summary::-webkit-details-marker { display: none; }
+.night-review-factors summary small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.night-review-factors summary i { font-size: 19px; font-style: normal; color: #536456; }
+.night-review-factors[open] summary i { transform: rotate(45deg); }
+.night-review-factors summary em { flex-basis: 100%; color: #47604e; font-size: 13px; line-height: 1.5; font-style: normal; }
+.night-review-factors .night-review-options { padding: 4px 0 14px; }
+.night-review-boundary { margin: -10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.night-review-actions { display: grid; gap: 8px; }
+.night-review-actions > p { min-height: 18px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
+.night-review-actions .primary, .night-review-empty .primary { min-height: 50px; width: 100%; font-size: 16px; border-radius: 13px; }
+.night-review-actions .primary:disabled { border-color: #dde1dc; background: #dde1dc; color: #5b625a; opacity: 1; cursor: not-allowed; }
+.night-review-later, .night-review-cancel { min-height: 44px; border: 0; background: transparent; font-size: 14px; color: #586259; cursor: pointer; }
+.night-review-cancel { color: #8b492c; }
+.night-review-error { margin: 0; padding: 14px; border: 1px solid #d8bca2; border-radius: 12px; background: #fff7ed; color: #823d18; font-size: 14px; line-height: 1.6; }
+.night-review-saved { padding: 20px; border: 1px solid #dddeda; border-radius: 18px; background: #fff; }
+.night-review-success { display: flex; align-items: center; gap: 9px; margin: 0 0 18px; color: #365440; font-size: 16px; font-weight: 600; }
+.night-review-success span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #e8eee8; }
+.night-review-saved dl { margin: 0; }
+.night-review-saved dl > div { display: flex; gap: 18px; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid #eff0ed; font-size: 14px; line-height: 1.6; }
+.night-review-saved dt { flex-shrink: 0; color: var(--muted); }
+.night-review-saved dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.night-review-edit { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 48px; margin-top: 10px; padding: 8px 0 0; border: 0; background: none; font-size: 14px; color: #47604e; cursor: pointer; }
+.night-review-empty { padding: 42px 12px; text-align: center; }
+.night-review-empty > span { color: #536456; font-size: 52px; }
+.night-review-empty h2 { margin: 22px 0 12px; font-size: 20px; }
+.night-review-empty p { margin: 0 0 32px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+#screen[data-page="TOD-08"] :is(button, summary):focus-visible { outline: 3px solid #aa6724; outline-offset: 3px; }
+@media (max-width: 350px) {
+  #screen[data-page="TOD-08"] { padding-left: 16px; padding-right: 16px; }
+  .night-review-options.practice { grid-template-columns: 1fr; }
+  .night-review-options.practice button { flex-direction: row; min-height: 50px; }
+}

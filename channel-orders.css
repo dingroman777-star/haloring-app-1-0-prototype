@@ -1,0 +1,25 @@
+.channel-service-orders { display:grid; gap:14px; }
+.service-summary { display:grid; grid-template-columns:1fr 1.3fr; padding:18px; border-radius:16px; background:#edf2ed; gap:12px; }
+.service-summary > div { display:grid; gap:9px; }
+.service-summary span { font-size:12px; color:var(--muted); }
+.service-summary strong { font-size:23px; font-weight:600; overflow-wrap:anywhere; }
+.service-caption { margin:0 2px; font-size:11px; color:var(--muted); }
+.service-order-list { display:grid; gap:12px; }
+.service-order { display:grid; gap:12px; width:100%; text-align:left; padding:16px; background:var(--paper); border:1px solid var(--line); border-radius:15px; }
+.service-order-top { display:flex; gap:10px; justify-content:space-between; font-size:11px; color:var(--muted); overflow-wrap:anywhere; }
+.service-order-top i { font-style:normal; }
+.service-product { font-size:16px; line-height:1.5; }
+.service-progress { font-size:12px; color:var(--muted); }
+.service-order-bottom { display:flex; justify-content:space-between; gap:10px; align-items:center; padding-top:12px; border-top:1px solid var(--line); }
+.service-order-bottom small { display:block; color:var(--muted); font-size:11px; margin-bottom:5px; }
+.service-order-bottom strong { font-size:22px; font-weight:600; }
+.service-tag { padding:5px 8px; border-radius:6px; font-size:11px; background:#f3eee5; color:#775329; }
+.service-open-label { color:#45634d; font-size:12px; }
+.service-notice { margin:0; padding:12px 14px; border-radius:12px; background:#f3eee5; font-size:12px; line-height:1.7; }
+.service-empty { padding:26px 18px; border:1px solid var(--line); border-radius:16px; text-align:center; background:var(--paper); }
+.service-empty > span { font-size:28px; color:#627c68; }
+.service-empty h2 { font-family:inherit; font-size:19px; margin:16px 0 8px; }
+.service-empty p { font-size:13px; color:var(--muted); line-height:1.7; margin:0; }
+.channel-service-orders .button-row { margin:0; }
+.channel-service-orders .service-help { min-height:44px; font-size:12px; }
+.channel-service-orders button:focus-visible { outline:2px solid #79552b; outline-offset:-3px; }

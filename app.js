@@ -5,9 +5,48 @@
   const SUBJECTIVE_RECORDS_KEY = "haloSubjectiveRecords";
   const SLEEP_GOAL_KEY = "haloSleepGoal";
   const APP_PROGRESS_KEY = "haloV5AppProgress";
+  let todayRhythmStorage = null;
+  let personalScope = null;
+  let startup = null;
+  let deviceHome = null;
+  let initialSync = null;
+  let deviceInfo = null;
+  let deviceMaintenance = null;
+  let dataPrivacy = null;
+  let notificationSettings = null;
+  let systemHealth = null;
+  let helpCenter = null;
+  let feedbackEditor = null;
+  let supportContact = null;
+  let aboutLegal = null;
+  let accountSecurity = null;
+  let accountDeletion = null;
+  let haloHistory = null;
+  let haloMemory = null;
+  let haloProactive = null;
+  let haloFeelingEditor = null;
+  let haloJourney = null;
+  let haloPrivacyControls = null;
+  let haloSettingsHub = null;
+  let studioTodayReminder = null;
+  let studioBenefit = null;
+  let studioContact = null;
+  let studioHistory = null;
+  let studioRecordDetail = null;
+  let studioCodeLookup = null;
+  let studioInstitution = null;
+  let oxygenMeasurement = null;
+  const AUTH_DEMO_CODE = "000000";
+  const AUTH_CONSENT_SCOPE = "user-privacy-ai-2026-09-07";
+  const BASIC_PROFILE_FIELDS = ["birthday", "height", "weight"];
+  const PROFILE_EDITOR_FIELDS = ["nickname", "birthday", "height", "weight", "birthdayBenefit"];
   const MEMBERSHIP_STATES = ["never-bound", "active", "unbound-retained"];
   const MEMBERSHIP_RULE_VERSION = "v1.20";
   const SUBJECTIVE_OPTIONS = ["情绪", "疲惫", "饮酒", "晚睡", "经期不适"];
+  const ACTIVITY_FEELINGS = ["轻松", "刚刚好", "有点累"];
+  const RECORD_FEELINGS = ["有精神", "还好", "有点累", "紧绷", "低落"];
+  const RECORD_CIRCUMSTANCES = ["饮酒", "晚睡", "经期不适"];
+  const RECORD_OPTIONS = [...new Set([...SUBJECTIVE_OPTIONS, ...RECORD_FEELINGS])];
   const DEFAULT_SLEEP_GOAL = { duration: "8", workdayBedtime: "23:15", workdayWake: "07:15", restBedtime: "23:45", restWake: "08:00" };
   const DEFAULT_AI_CORRECTION = { status: "none", reason: "", reasonLabel: "", note: "", memoryReview: false, savedAt: "" };
   const DEFAULT_NIGHT_REVIEW = { execution: "", helpfulness: "", factors: [], saved: false, counted: false, observationCount: 2 };
@@ -19,9 +58,9 @@
   };
   const JOURNEY_THEMES = {
     boundary: [
-      { title: "睡前把工作留在床外", action: "睡前用一段内容结束工作状态", detail: "12 分钟 · 按原计划" },
+      { title: "睡前，留 12 分钟放松", action: "先结束工作消息，把手机放远，让这段时间不被工作打断。", detail: "12 分钟 · 按原计划" },
       { title: "先离开工作消息 5 分钟", action: "打开勿扰，把手机放到伸手够不到的地方", detail: "5 分钟 · 更容易开始" },
-      { title: "只做 1 分钟的结束动作", action: "扣下手机，慢慢呼吸 6 次就可以停", detail: "1 分钟 · 最轻版本" },
+      { title: "放下手机，歇 1 分钟", action: "把手机屏幕朝下放好，舒服地坐着，慢慢呼吸几次。", detail: "1 分钟 · 最轻版本" },
     ],
     pause: [
       { title: "白天给自己留一个短暂停顿", action: "午后离开屏幕，站起来喝几口水", detail: "5 分钟 · 新主题" },
@@ -40,16 +79,22 @@
   const requestedMembershipState = new URLSearchParams(location.search).get(MEMBERSHIP_STATE_KEY);
   const requestedCopyVariant = new URLSearchParams(location.search).get("copyVariant");
   const storedMembershipState = localStorage.getItem(MEMBERSHIP_STATE_KEY);
+  const storedAppProgress = readStoredJson(APP_PROGRESS_KEY, {});
+  // Preserve legacy demo hardware; a fresh browser starts without an activated device.
+  const defaultMembershipState = storedAppProgress.signedIn === true ? "active" : "never-bound";
   const initialMembershipState = MEMBERSHIP_STATES.includes(requestedMembershipState)
     ? requestedMembershipState
-    : MEMBERSHIP_STATES.includes(storedMembershipState) ? storedMembershipState : "active";
+    : MEMBERSHIP_STATES.includes(storedMembershipState) ? storedMembershipState : defaultMembershipState;
+  if (!MEMBERSHIP_STATES.includes(storedMembershipState) && !MEMBERSHIP_STATES.includes(requestedMembershipState)) {
+    try { localStorage.setItem(MEMBERSHIP_STATE_KEY, initialMembershipState); } catch { /* Keep browsing when storage is unavailable. */ }
+  }
   const storedSubjectiveRecords = readStoredJson(SUBJECTIVE_RECORDS_KEY, []);
   const storedSleepGoal = readStoredJson(SLEEP_GOAL_KEY, DEFAULT_SLEEP_GOAL);
-  const storedAppProgress = readStoredJson(APP_PROGRESS_KEY, {});
   const state = {
     current: "TOD-01",
     group: "全部",
     query: "",
+    studioHomeFilter: "全部",
     toggles: { legal: false, aiLegal: false, bluetooth: true, notification: true, rhythm: true, wake: true, proactive: false, memory: true, studioHealth: true, studioActivity: true, haloBody: true, location: false, inspiration: true, trendRecords: true },
     playing: false,
     measured: false,
@@ -61,31 +106,72 @@
     alarmSound: "晨雾",
     previewSound: "",
     deviceStatus: "connected",
+    deviceLastSyncedAt: "",
     dataLifecycle: "interpretable",
     bodyWeather: "slow",
     trendPeriod: "7",
+    bodyWeatherTrendView: { period: "7", date: "" },
+    healthSelectedDate: "",
+    healthDemoRecordDate: "",
+    healthDetailContext: null,
+    heartDeviceReturn: null,
+    heartTrendSelection: null,
+    respirationWindowEnd: "",
+    respirationSleepReturn: null,
+    oxygenWindowEnd: "",
+    oxygenMode: "day",
+    oxygenDaySelection: null,
+    oxygenMeasurements: { accounts: {}, legacyImported: false },
+    oxygenReviewScenario: "unknown",
+    oxygenDemoEntry: "",
+    oxygenRelatedReturn: null,
+    oxygenDeviceReturn: null,
+    temperatureWindowEnd: "",
+    temperatureReviewScenario: "unknown",
+    temperatureDemoEntry: "",
+    temperatureExternalReturn: null,
+    recordEntryContext: null,
+    sleepStage: "all",
+    activityRecordDraft: { id: "", feeling: "", note: "" },
+    activityRecordsScope: "day",
+    activitySync: { request: null, receipt: null, message: "" },
     firmwareStatus: "available",
-    shareBackground: "mist",
-    shareZoom: 100,
-    sharePhotoUrl: "",
+    shareEditors: { accounts: {} },
+    dataQualityView: null,
     haloContext: "body",
+    haloSource: null,
+    haloDraft: "",
     haloFeeling: "",
     haloToolsOpen: false,
     chat: [],
     haloMemoryCleared: false,
+    haloMemoryDrafts: {},
     haloDataDeletionStatus: "ready",
     rhythmDeleted: false,
-    rhythmStatus: "ready",
+    rhythmStatus: "empty",
+    rhythmMode: "record-only",
+    rhythmHomeView: null,
+    rhythmEntryDrafts: {},
+    rhythmSettingsConfirmedAt: "",
     healthDeletionStatus: "ready",
     studioDeletionStatus: "ready",
     membershipHardwareState: initialMembershipState,
     subjectiveMarkers: Array.isArray(storedSubjectiveRecords) ? storedSubjectiveRecords.filter((label) => SUBJECTIVE_OPTIONS.includes(label)) : [],
     sleepGoal: { ...DEFAULT_SLEEP_GOAL, ...(storedSleepGoal && typeof storedSleepGoal === "object" ? storedSleepGoal : {}) },
     measurementStatus: "ready",
+    measurementCenterFilter: "all",
+    measurementHistoryLimit: 5,
     accountDeletionStatus: "ready",
-    signedIn: true,
+    accountDeletionRequest: null,
+    signedIn: false,
     authCodeRequested: false,
     authVerified: false,
+    authReturnRoute: "",
+    welcomeShopping: false,
+    authForm: { phone: "", termsAccepted: false, touched: false, request: null, error: "" },
+    agreementAcceptance: null,
+    systemHealth: { version: 1, accounts: {} },
+    connectionIntro: { permission: "not-requested", request: null, choice: "", completed: false },
     studioBenefitClaimed: false,
     studioBenefitStatus: "pending",
     studioReportStatus: "waiting",
@@ -96,6 +182,8 @@
     studioCodeError: "",
     memoryProposalConfirmed: false,
     aiCorrection: { ...DEFAULT_AI_CORRECTION },
+    aiCorrectionDraft: null,
+    aiCorrectionHistory: [],
     journeyPaused: false,
     journeyProgress: 2,
     journeyTheme: "boundary",
@@ -104,18 +192,29 @@
     journeyDecision: "active",
     journeyReason: "",
     wakeSaved: false,
+    wakeAlarmReceipt: null,
     snoozeUntil: "",
     profileSaved: false,
-    profile: { nickname: "Halo 用户", birthday: "1992-08-26", height: "165", weight: "55" },
+    basicProfile: { status: "not-started", draft: null, touched: {} },
+    profile: { nickname: "Halo 用户", birthday: "", height: "", weight: "" },
+    profileEditor: { draft: null, base: null, touched: {}, savedAt: "" },
     feedbackSubmitted: false,
     helpQuery: "",
+    helpCenter: { accounts: {} },
+    feedbackFlow: { accounts: {} },
+    supportContact: null,
     rhythmFeeling: "",
-    rhythmSettings: { startDate: "2026-08-18", cycleLength: "29", duration: "5" },
+    rhythmSettings: { startDate: "", cycleLength: "29", duration: "5" },
     rhythmSettingsDraft: null,
+    rhythmSettingsEditor: null,
     rhythmSettingsSaved: false,
     nightChoice: "scan",
     nightHistory: [],
     nightReview: { ...DEFAULT_NIGHT_REVIEW },
+    nightReviewDrafts: {},
+    nightReviewEntry: null,
+    healthReports: { accounts: {} },
+    healthReportsDemo: null,
     publicNightChoice: "",
     conversationQuery: "",
     activeConversationId: "today-energy",
@@ -128,26 +227,48 @@
     pageViews: {},
     subjectiveRecords: [],
     recordDraft: { labels: [], note: "" },
+    recordEditDraft: null,
+    recordEditorMode: "new",
+    recordEditorError: "",
     rhythmRecords: {},
     selectedRhythmDate: "",
     rhythmMonth: "",
   };
 
   const persistedAppKeys = [
+    "todayRhythmScope",
+    "haloAccountScope",
+    "personalAccountScope",
+    "rhythmHomeView", "rhythmEntryDrafts", "rhythmSettingsConfirmedAt",
+    "sleepGoal", "sleepNotifications",
+    "dataQualityView",
+    "shareEditors",
+    "deviceWearGuide", "initialDeviceSync",
+    "healthSelectedDate", "healthDemoRecordDate", "healthDetailContext", "sleepStage",
+    "heartDeviceReturn", "recordEntryContext",
+    "heartTrendSelection",
+    "respirationWindowEnd", "respirationSleepReturn",
+    "oxygenWindowEnd", "oxygenReviewScenario", "oxygenDemoEntry", "oxygenRelatedReturn", "oxygenDeviceReturn",
+    "temperatureWindowEnd", "temperatureReviewScenario", "temperatureDemoEntry", "temperatureExternalReturn",
+    "oxygenMode", "oxygenDaySelection", "oxygenMeasurements",
+    "activityRecordDraft", "activityRecordsScope", "activitySync",
     "playing", "booked", "paid", "refundStatus", "sessionDone", "studioMode", "alarmSound",
-    "dataLifecycle", "haloMemoryCleared", "haloDataDeletionStatus", "rhythmDeleted", "rhythmStatus",
-    "healthDeletionStatus", "studioDeletionStatus", "accountDeletionStatus", "studioBenefitClaimed",
+    "dataLifecycle", "haloMemoryCleared", "haloDataDeletionStatus", "rhythmDeleted", "rhythmStatus", "rhythmMode",
+    "healthDeletionStatus", "dataPrivacy", "studioDeletionStatus", "accountDeletionStatus", "accountDeletionRequest", "studioBenefitClaimed",
     "studioBenefitStatus", "studioReportStatus", "selectedStudioEventId", "selectedStudioHistoryId",
-    "studioScannerOpen", "studioCode",
-    "memoryProposalConfirmed", "aiCorrection", "journeyPaused", "journeyProgress", "journeyTheme", "journeyVariant", "journeyMissCount", "journeyDecision", "journeyReason", "wakeSaved", "snoozeUntil",
-    "profileSaved", "profile", "feedbackSubmitted", "helpQuery", "previewSound", "rhythmFeeling", "rhythmSettings", "rhythmSettingsSaved",
-    "nightChoice", "nightHistory", "nightReview", "publicNightChoice", "conversationQuery", "activeConversationId",
-    "conversationStatus", "signedIn", "authCodeRequested", "authVerified", "authPhone", "lastVisitedRoute",
-    "newMember", "memberCreatedAt", "activeTab", "tabStacks", "pageViews", "recordDraft", "rhythmRecords", "selectedRhythmDate", "rhythmMonth", "rhythmNote", "rhythmSetupReturn", "selectedReportMonth", "trendPeriod", "rhythmSettingsDraft",
-    "deviceStatus", "firmwareStatus", "devicePaired", "hardwareActivatedAt", "deviceResetStatus", "deviceOperationHistory",
-    "measurementStatus", "measurementType", "measured", "lastMeasurement", "feedbackDraft", "feedbackTickets", "activeFeedbackTicketId",
+    "studioScannerOpen", "studioCode", "studioHomeFilter", "studioInstitutionChecks",
+    "memoryProposalConfirmed", "aiCorrection", "aiCorrectionDraft", "aiCorrectionHistory", "bodyWeather", "journeyPaused", "journeyProgress", "journeyTheme", "journeyVariant", "journeyMissCount", "journeyDecision", "journeyReason", "wakeSoundSelection", "wakeSaved", "snoozeUntil", "wakeSnooze", "wakeAlarmReceipt",
+    "profileSaved", "profile", "profileEditor", "basicProfile", "feedbackSubmitted", "helpQuery", "helpCenter", "previewSound", "rhythmFeeling", "rhythmSettings", "rhythmSettingsSaved",
+    "nightChoice", "nightHistory", "nightReview", "nightReviewDrafts", "nightReviewEntry", "publicNightChoice", "conversationQuery", "activeConversationId",
+    "nightPlan", "nightRecommendationGoal", "nightContentDetail",
+    "healthReports", "healthReportsDemo",
+    "systemHealth", "rhythmSettingsEditor", "rhythmCycleData",
+    "conversationStatus", "signedIn", "authCodeRequested", "authVerified", "authPhone", "authReturnRoute", "welcomeShopping", "authForm", "agreementAcceptance", "connectionIntro", "lastVisitedRoute",
+    "newMember", "memberCreatedAt", "activeTab", "tabStacks", "pageViews", "recordDraft", "recordEditDraft", "recordEditorMode", "rhythmRecords", "selectedRhythmDate", "rhythmMonth", "rhythmNote", "rhythmSetupReturn", "selectedReportMonth", "trendPeriod", "bodyWeatherTrendView", "rhythmSettingsDraft",
+    "deviceStatus", "deviceLastSyncedAt", "firmwareStatus", "deviceFirmware", "deviceMaintenance", "devicePaired", "deviceScan", "pairedDevice", "deviceBinding", "deviceBindings", "deviceHub", "hardwareActivatedAt", "deviceResetStatus", "deviceOperationHistory",
+    "measurementStatus", "measurementType", "measured", "lastMeasurement", "measurementCenterFilter", "measurementHistoryLimit", "feedbackDraft", "feedbackTickets", "activeFeedbackTicketId", "feedbackFlow", "supportContact",
     "studioRecords", "wakeSettings", "wakeDraft", "nightSession", "selectedNightSessionId", "conversations", "haloQuota", "haloFeelingNote",
-    "haloFeelingRecords", "haloMemories", "haloQuietHours", "haloPreferences", "journeyRecords", "chat", "haloContext", "haloFeeling",
+    "haloSettingsView", "haloPrivacyView", "haloJourneyStore", "haloFeelingEditor", "haloFeelingRecords", "haloMemories", "haloMemoryDrafts", "haloQuietHours", "haloPreferences", "journeyRecords", "chat", "haloContext", "haloFeeling", "haloSource", "haloDraft",
   ];
   if (storedAppProgress && typeof storedAppProgress === "object") {
     for (const key of persistedAppKeys) {
@@ -157,20 +278,110 @@
       state.toggles = { ...state.toggles, ...storedAppProgress.toggles };
     }
     state.aiCorrection = { ...DEFAULT_AI_CORRECTION, ...(state.aiCorrection && typeof state.aiCorrection === "object" ? state.aiCorrection : {}) };
+    state.aiCorrectionHistory = Array.isArray(state.aiCorrectionHistory) ? state.aiCorrectionHistory.filter(item => item && typeof item === "object") : [];
+    state.aiCorrectionDraft = state.aiCorrectionDraft && typeof state.aiCorrectionDraft === "object" ? { ...state.aiCorrectionDraft, note: String(state.aiCorrectionDraft.note || "") } : null;
     state.nightReview = { ...DEFAULT_NIGHT_REVIEW, ...(state.nightReview && typeof state.nightReview === "object" ? state.nightReview : {}) };
     state.nightReview.factors = Array.isArray(state.nightReview.factors) ? state.nightReview.factors : [];
     if (!JOURNEY_THEMES[state.journeyTheme]) state.journeyTheme = "boundary";
     state.journeyVariant = Math.max(0, Math.min(2, Number(state.journeyVariant) || 0));
     state.journeyMissCount = Math.max(0, Number(state.journeyMissCount) || 0);
-    state.profile = { nickname: "Halo 用户", birthday: "1992-08-26", height: "165", weight: "55", ...(state.profile || {}) };
+    state.profile = { nickname: "Halo 用户", birthday: "", height: "", weight: "", ...(state.profile || {}) };
   }
+  state.authForm = { phone: "", code: "", termsAccepted: false, touched: false, request: null, login: null, error: "", codeError: "", cooldownUntil: 0, sequence: 0, ...(state.authForm && typeof state.authForm === "object" ? state.authForm : {}) };
+  state.authForm.phone = String(state.authForm.phone || "");
+  state.authForm.code = String(state.authForm.code || "").replace(/\D/g, "").slice(0, 6);
+  // A prior two-document checkbox cannot silently become consent to three documents.
+  // Keep existing sessions and form input; require an explicit check of the expanded scope.
+  state.authForm.termsAccepted = state.authForm.termsAccepted === true && state.authForm.consentScope === AUTH_CONSENT_SCOPE;
+  // Old AUTH-02 requests have no expiry or phone-bound challenge; preserve the draft, not their verification eligibility.
+  if (state.authForm.request && (state.authForm.request.version !== 2 || !["sending", "sent", "failed", "used"].includes(state.authForm.request.status) || !Number.isFinite(state.authForm.request.readyAt))) {
+    state.authForm.request = null;
+    state.authForm.login = null;
+    state.authForm.code = "";
+    state.authCodeRequested = false;
+    state.authVerified = false;
+  }
+  if (state.authForm.login && (!["verifying", "failed", "complete"].includes(state.authForm.login.status) || !Number.isFinite(state.authForm.login.readyAt))) state.authForm.login = null;
+  // Normalize cached demo challenges without renewing expiry or changing an in-flight login.
+  if (["sending", "sent"].includes(state.authForm.request?.status) && state.authForm.login?.status !== "verifying") state.authForm.request.demoCode = AUTH_DEMO_CODE;
+  // The old default signedIn=true was a demo preset, not a completed login.
+  // Only migrate the session flag; keep existing business assets and form drafts.
+  state.signedIn = state.signedIn === true && state.authVerified === true;
+  if (!state.signedIn && state.authForm.login?.status === "complete") state.authForm.login = null;
+  state.welcomeShopping = state.welcomeShopping === true;
+  let authRequestTimer = null;
+  let authReviewOutcome = "success";
+  let authLoginReviewOutcome = "success";
+  state.connectionIntro = { permission: "not-requested", request: null, choice: "", completed: false, ...(state.connectionIntro && typeof state.connectionIntro === "object" ? state.connectionIntro : {}) };
+  if (!["not-requested", "granted", "denied", "bluetooth-off"].includes(state.connectionIntro.permission)) state.connectionIntro.permission = "not-requested";
+  if (state.connectionIntro.request && (!Number.isFinite(state.connectionIntro.request.readyAt) || !["checking", "complete", "failed"].includes(state.connectionIntro.request.status))) state.connectionIntro.request = null;
+  // The intro is now navigation only. Retire an old intro-owned callback without granting permission.
+  if (state.connectionIntro.request?.status === "checking" && state.connectionIntro.request.sourcePage !== "DEV-01") state.connectionIntro.request = null;
+  // Guide completion is independent of registration dates and legacy demo hardware.
+  // Preserve explicit skip/connection decisions made before this field existed.
+  state.connectionIntro.completed = state.connectionIntro.completed === true || state.connectionIntro.choice === "skipped" || state.connectionIntro.choice === "connect" && state.connectionIntro.permission === "granted";
+  state.basicProfile = { status: "not-started", draft: null, touched: {}, ...(state.basicProfile && typeof state.basicProfile === "object" ? state.basicProfile : {}) };
+  if (!["not-started", "pending", "completed", "skipped"].includes(state.basicProfile.status)) state.basicProfile.status = "not-started";
+  state.basicProfile.touched = { ...(state.basicProfile.touched || {}) };
+  if (state.basicProfile.draft) state.basicProfile.draft = Object.fromEntries(BASIC_PROFILE_FIELDS.map(key => [key, String(state.basicProfile.draft[key] || "")]));
+  state.profileEditor = { draft: null, base: null, touched: {}, savedAt: "", ...(state.profileEditor && typeof state.profileEditor === "object" && !Array.isArray(state.profileEditor) ? state.profileEditor : {}) };
+  state.profileEditor.draft = normalizeProfileEditorSnapshot(state.profileEditor.draft);
+  state.profileEditor.base = normalizeProfileEditorSnapshot(state.profileEditor.base);
+  state.profileEditor.touched = Object.fromEntries(PROFILE_EDITOR_FIELDS.map(key => [key, state.profileEditor.touched?.[key] === true]));
+  state.profileEditor.savedAt = typeof state.profileEditor.savedAt === "string" ? state.profileEditor.savedAt : "";
+  let profileConflictReview = null;
+  let profileEditorComposing = false;
+  let profileDraftRestored = false;
+  if (!validHealthDate(state.healthDemoRecordDate)) state.healthDemoRecordDate = beijingDateKey();
+  if (!validHealthDate(state.healthSelectedDate)) state.healthSelectedDate = beijingDateKey();
+  state.activityRecordDraft = { id: "", feeling: "", note: "", ...(state.activityRecordDraft && typeof state.activityRecordDraft === "object" ? state.activityRecordDraft : {}) };
+  state.activityRecordDraft.id = typeof state.activityRecordDraft.id === "string" ? state.activityRecordDraft.id : "";
+  state.activityRecordDraft.feeling = ACTIVITY_FEELINGS.includes(state.activityRecordDraft.feeling) ? state.activityRecordDraft.feeling : "";
+  state.activityRecordDraft.note = String(state.activityRecordDraft.note || "");
+  state.activityRecordsScope = state.activityRecordsScope === "all" ? "all" : "day";
+  state.activitySync = { request: null, receipt: null, message: "", ...(state.activitySync && typeof state.activitySync === "object" ? state.activitySync : {}) };
+  if (state.activitySync.request && (!state.activitySync.request.id || !Number.isFinite(state.activitySync.request.readyAt) || !["pending", "complete", "failed"].includes(state.activitySync.request.status))) state.activitySync.request = null;
+  if (state.activitySync.receipt && (!validHealthDate(state.activitySync.receipt.date) || !Number.isFinite(Date.parse(state.activitySync.receipt.at)))) state.activitySync.receipt = null;
+  let activitySyncTimer = null;
+  let activitySyncReviewOutcome = "success";
+  let activityRecordError = "";
+  if (!state.healthDetailContext || !validHealthDate(state.healthDetailContext.date) || !pages.some(item => item.id === state.healthDetailContext.route)) state.healthDetailContext = null;
+  let connectionIntroTimer = null;
+  let connectionReviewOutcome = "granted";
   window.HALO_STUDIO_BENEFIT_CLAIMED = state.studioBenefitStatus === "posted" || state.studioBenefitClaimed;
+  let studioTransactions = null;
   function persistAppProgress() {
+    if (!generalSettingsSafe(false)) return;
+    if (["STU-17", "STU-18"].includes(state.current)) return;
+    if (state.current === "REF-01") return;
+    if (haloSettingsHub?.blocksPersist()) return;
+    if (haloPrivacyControls?.blocksPersist()) return;
+    if (haloJourney?.blocksPersist()) return;
+    if (haloFeelingEditor?.blocksPersist()) return;
+    if (haloProactive?.blocksPersist()) return;
+    if (haloMemory?.blocksPersist()) return;
+    if (studioContact?.blocksPersist()) return;
+    if (studioHistory?.blocksPersist()) return;
+    if (studioRecordDetail?.blocksPersist()) return;
+    if (studioCodeLookup?.blocksPersist()) return;
+    if (studioInstitution?.blocksPersist()) return;
+    if (haloHistory?.blocksPersist()) return;
+    if (studioBenefit?.blocksPersist()) return;
+    if (studioTodayReminder?.blocksPersist()) return;
+    // A read-only next-day report must not restore stale health data when its
+    // shared source was removed or cannot be read.
+    if (state.current === "STU-06") {
+      try {
+        const nextDaySource = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY));
+        if (!nextDaySource?.studioRecords || typeof nextDaySource.studioRecords !== "object" || Array.isArray(nextDaySource.studioRecords)) return;
+      } catch { return; }
+    }
+    // Refresh shared Studio records without taking over the authentication flow.
+    studioTransactions?.sync();
     const snapshot = Object.fromEntries(persistedAppKeys.map((key) => [key, state[key]]));
     snapshot.toggles = state.toggles;
     try {
-      localStorage.setItem(APP_PROGRESS_KEY, JSON.stringify(snapshot));
-      localStorage.setItem(SUBJECTIVE_RECORDS_KEY, JSON.stringify(state.subjectiveRecords));
+      writeAppSnapshot(snapshot);
     } catch {
       // The interactive prototype remains usable when storage is unavailable.
     }
@@ -244,7 +455,7 @@
   const DATA_LIFECYCLE = {
     none: {
       label: "暂无数据",
-      headline: "还没有足够数据",
+      headline: "还没有收到戒指记录",
       summary: "戴着戒指完成一晚记录并同步后，这里就会开始显示。",
       reason: "还没有收到一段完整的戒指记录。",
       needed: "目前 0 / 7 天；完成第一晚后开始积累",
@@ -277,7 +488,7 @@
       reason: "已有 5 天完整记录，可以初步比较，但个人范围还没有稳定。",
       needed: "目前 5 / 7 天，还差 2 天；之后会继续用 14 个有效夜晚校准",
       next: "继续按平时的方式佩戴和生活。",
-      signals: [["睡眠", "初步范围"], ["身体能量", "还在校准"], ["今天怎么动", "按感受"]],
+      signals: [["睡眠", "已有 5 晚"], ["身体能量", "还在校准"], ["今天怎么动", "按感受"]],
       variants: [
         { headline: "再完成 2 天，就能看到第一版", summary: "已经能看见一些规律，还差两天确认你的常见范围。", next: "照常佩戴，别为了记录刻意早睡或增加活动。" },
         { headline: "你的平时范围快建立好了", summary: "目前完成 5 / 7 天。再有两天完整记录，就能开始每天比较。", next: "继续过平常的生活，让记录更接近真实日常。" },
@@ -302,7 +513,7 @@
       label: "数据质量受限",
       headline: "昨晚少了一段记录",
       summary: "今天的判断会保守一些。照常生活，运动先以自己的感受为准。",
-      reason: "最近一次同步未完成，昨晚 02:10–03:00 的记录缺失。",
+      reason: "最近一次同步未完成，昨晚 02:10–03:00 的记录缺失。这是记录缺口，不代表身体异常；以前的完整记录仍然保留。",
       needed: "重新同步，或完成下一晚完整记录",
       next: "先试一次同步；仍没有更新，再检查戒指连接。",
       signals: [["睡眠", "缺少 50 分钟"], ["身体能量", "暂不下结论"], ["今天怎么动", "按感受"]],
@@ -585,6 +796,34 @@
     const { variants, ...defaults } = config;
     return rotatingCopy(`body-weather:${state.bodyWeather}`, defaults, variants);
   }
+  // Shared demo observations: raw readings remain available before personal comparisons.
+  // Missing overnight segments must never reuse the complete-night demo aggregates.
+  function healthObservation(id) {
+    const stage = state.dataLifecycle;
+    const labels = { "TOD-05": "睡眠", "TOD-06": "夜间 HRV", "TOD-07": "活动", "HLT-01": "心率", "HLT-02": "夜间呼吸率", "HLT-05": "血氧", "HLT-06": "皮肤温度" };
+    const measured = {
+      "TOD-05": [["总睡眠", "6h 42m", "最近一晚记录"], ["夜间清醒", "34m", "夜醒 2 次"]],
+      "TOD-06": [["夜间 HRV 估算", "42 ms", "暂不与个人范围比较"], ["夜间静息心率", "58 bpm", "最近一晚记录"]],
+      "TOD-07": [["步数", "4,862", "截至最近一次同步"], ["活动消耗", "284 千卡", "已同步记录"]],
+      "HLT-01": [["最近心率", "72 bpm", "08:38 · 已同步片段"]],
+      "HLT-02": [["夜间平均", "15.2 次/分", "最近一晚记录"]],
+      "HLT-05": [["夜间平均", "98%", "最近一晚有效片段"]],
+      "HLT-06": [],
+    };
+    if (stage === "none") return { title: labels[id], value: "暂无数据", detail: "还没有收到戒指记录", metrics: [] };
+    if (stage === "limited") {
+      if (id === "HLT-01") return { title: labels[id], value: "72 bpm", detail: "08:38 已同步片段 · 夜间有缺口", metrics: measured[id] };
+      if (id === "TOD-07") return { title: labels[id], value: "4,862 步", detail: "已同步活动 · 不代表全天", metrics: measured[id] };
+      return { title: labels[id], value: "记录不完整", detail: "02:10–03:00 缺失，暂不汇总整晚或比较个人范围", metrics: [] };
+    }
+    return { title: labels[id], value: id === "TOD-07" ? "4,862 步" : measured[id]?.[0]?.[1] || "已有记录", detail: id === "HLT-06" ? "记录已保留，个人范围建立后显示相对变化" : "记录可看，暂不与个人范围比较", metrics: measured[id] || [] };
+  }
+  function pendingHealthObservations(id) {
+    if (state.dataLifecycle === "none") return emptyHealthData();
+    if (id === "TOD-03") return `${notice("已有记录可以查看", "Body Weather 需要完整记录和个人范围。现在可先看已同步项目，暂不生成状态评分或比较结论。")}${["TOD-05", "TOD-06", "TOD-07"].map(route => { const observation = healthObservation(route); return setting(observation.title, observation.detail, `go:${route}`, observation.value); }).join("")}`;
+    const observation = healthObservation(id);
+    return `${observation.metrics.length ? metrics(observation.metrics) : ""}${notice(observation.value, observation.detail, state.dataLifecycle === "limited" ? "warm" : "sage")}`;
+  }
   function currentNightCopy() {
     const { variants, ...defaults } = NIGHT_COPY;
     return rotatingCopy("night:main", defaults, variants);
@@ -603,30 +842,103 @@
     "pilates-morning": { title: "晨间核心普拉提", date: "9 月 13 日 09:30", startsAt: "2026-09-13T09:30:00+08:00", place: "静安体验室", duration: 50, category: "普拉提", price: 0, host: "Mia", seats: 4, cancellationHours: 24 },
     "breath-night": { title: "夜间呼吸与冥想", date: "9 月 12 日 20:00", startsAt: "2026-09-12T20:00:00+08:00", place: "Halo 体验室", duration: 30, category: "冥想", price: 0, host: "Halo Studio", seats: 0, cancellationHours: 24 },
   };
-  function currentNightContent() { const base = NIGHT_CONTENT[state.nightChoice] || NIGHT_CONTENT.scan; if (isHardwareActive()) return base; const content = { breath: ["5 分钟睡前呼吸", 5], scan: ["10 分钟身体扫描", 10], sound: ["15 分钟安睡音频", 15] }[state.nightChoice] || ["10 分钟身体扫描", 10]; return { ...base, title: content[0], duration: content[1] }; }
+  function currentNightContent(id = state.nightChoice) { const base = NIGHT_CONTENT[id] || NIGHT_CONTENT.scan; if (isHardwareActive()) return base; const content = { breath: ["5 分钟睡前呼吸", 5], scan: ["10 分钟身体扫描", 10], sound: ["15 分钟安睡音频", 15] }[id] || ["10 分钟身体扫描", 10]; return { ...base, title: content[0], duration: content[1] }; }
   function selectedStudioEvent(id = state.selectedStudioEventId) { return state.studioRecords?.[id]?.eventSnapshot || STUDIO_EVENTS[id] || STUDIO_EVENTS["yoga-evening"]; }
+  function studioBookingUnavailable(id = state.selectedStudioEventId) {
+    if (!Object.prototype.hasOwnProperty.call(STUDIO_EVENTS, id)) return "暂时无法打开这场活动";
+    const event = selectedStudioEvent(id);
+    if (!Number.isFinite(Date.parse(event.startsAt))) return "本场时间待确认";
+    if (Date.parse(event.startsAt) <= Date.now()) return "本场预约已结束";
+    if (!Number.isInteger(event.seats) || event.seats < 0 || !Number.isFinite(event.price) || event.price < 0) return "本场预约信息待确认";
+    return event.seats === 0 ? "本场已满" : "";
+  }
+
+  function writeAppSnapshot(snapshot) {
+    try {
+      // Logout writes this compatibility field explicitly; keep subsequent view
+      // writes aligned instead of retaining its stale empty value from storage.
+      if (!Object.prototype.hasOwnProperty.call(snapshot, "navigationHistory")) snapshot.navigationHistory = state.navigationHistory;
+      if (!Object.prototype.hasOwnProperty.call(snapshot, "subjectiveMarkers")) snapshot.subjectiveMarkers = state.subjectiveMarkers;
+      let next = todayRhythmStorage ? todayRhythmStorage.prepare(snapshot) : snapshot;
+      if (personalScope) next = personalScope.prepare(next);
+      localStorage.setItem(APP_PROGRESS_KEY, JSON.stringify(next));
+      todayRhythmStorage?.accept(next);
+      personalScope?.accept(next);
+      return next;
+    } catch (error) { todayRhythmStorage?.fail(error); throw error; }
+  }
+  function writeNotificationProgress(changes) {
+    const snapshot = { ...Object.fromEntries(persistedAppKeys.map(key => [key, state[key]])), ...changes, toggles: changes.toggles || state.toggles };
+    try { const saved = writeAppSnapshot(snapshot); for (const key of Object.keys(changes)) changes[key] = saved[key]; } catch { return false; }
+    Object.assign(state, changes);
+    return true;
+  }
+  function writePrivacyProgress(changes, records) {
+    const snapshot = { ...Object.fromEntries(persistedAppKeys.map(key => [key, state[key]])), ...changes, toggles: changes.toggles || state.toggles };
+    let oldRecords, mergedRecords;
+    try {
+      oldRecords = localStorage.getItem(SUBJECTIVE_RECORDS_KEY);
+      if (records !== undefined) {
+        mergedRecords = todayRhythmStorage?.mergeRecords(records) || { all: records, active: records };
+        localStorage.setItem(SUBJECTIVE_RECORDS_KEY, JSON.stringify(mergedRecords.all));
+      }
+      const latest = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY) || "{}");
+      const saved = writeAppSnapshot({ ...latest, ...snapshot });
+      for (const key of Object.keys(changes)) changes[key] = saved[key];
+    } catch {
+      if (records !== undefined) { try { if (oldRecords === null) localStorage.removeItem(SUBJECTIVE_RECORDS_KEY); else if (oldRecords !== undefined) localStorage.setItem(SUBJECTIVE_RECORDS_KEY, oldRecords); } catch { /* No successful deletion is reported. */ } }
+      return false;
+    }
+    Object.assign(state, changes);
+    if (records !== undefined) {
+      records.splice(0, records.length, ...mergedRecords.active);
+      todayRhythmStorage?.acceptRecords(records);
+      state.subjectiveRecords = records;
+    }
+    return true;
+  }
   function experienceDay() { return new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10); }
   function experienceTime(value) { return new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
   function initializeExperienceState() {
-    state.wakeSettings = { time: "07:20", window: "30", sound: state.alarmSound || "晨雾", enabled: state.toggles.wake !== false, ...(state.wakeSettings || {}) };
+    state.wakeSettings = { snoozeMinutes: 5, time: "07:20", window: "30", sound: state.alarmSound || "晨雾", enabled: state.toggles.wake !== false, ...(state.wakeSettings || {}) };
     state.wakeDraft = { ...state.wakeSettings, ...(state.wakeDraft || {}) };
     state.haloFeelingNote = state.haloFeelingNote || "";
     state.haloFeelingRecords = Array.isArray(state.haloFeelingRecords) ? state.haloFeelingRecords : [];
     state.haloQuietHours = { start: "23:30", end: "08:00", ...(state.haloQuietHours || {}) };
-    state.haloPreferences = { tone: "direct", length: "short", ...(state.haloPreferences || {}) };
+    state.haloPreferences = { tone: state.haloPreferences?.tone === "gentle" ? "gentle" : "direct", length: state.haloPreferences?.length === "detailed" ? "detailed" : "short" };
     state.haloQuota = state.haloQuota?.day === experienceDay() ? state.haloQuota : { day: experienceDay(), used: 0 };
     state.conversations = Array.isArray(state.conversations) ? state.conversations : [];
     state.chat = Array.isArray(state.chat) ? state.chat : [];
     if (!state.conversations.length && state.chat.length) state.conversations.push({ id: state.activeConversationId || `hc-${Date.now()}`, title: state.chat.find((m) => m.role === "user")?.text.slice(0, 30) || "当前对话", status: "active", messages: state.chat, updatedAt: new Date().toISOString() });
+    state.conversations.forEach((entry) => {
+      entry.messages = Array.isArray(entry.messages) ? entry.messages : [];
+      entry.draft = String(entry.draft || "");
+      // Legacy chats have no reliable source association. Retain their messages without attributing today's record to them.
+      entry.source = cloneHaloSource(entry.source);
+      entry.context = entry.source?.kind || "none";
+      entry.title = String(entry.title || entry.messages.find((message) => message.role === "user")?.text?.slice(0, 30) || entry.draft.slice(0, 30) || "未命名对话");
+      entry.updatedAt = typeof entry.updatedAt === "string" ? entry.updatedAt : "";
+    });
     const conversation = state.conversations.find((entry) => entry.id === state.activeConversationId && entry.status !== "deleted");
-    state.chat = conversation ? conversation.messages : [];
+    state.chat = conversation ? conversation.messages.map((message) => ({ ...message })) : [];
     state.conversationStatus = conversation?.status || "new";
-    if (!Array.isArray(state.haloMemories)) state.haloMemories = state.haloMemoryCleared ? [] : [{ id: "brief", text: "你更喜欢简短、直接的建议", confirmed: true }, { id: "quiet", text: "晚上压力大时更偏好无引导声音", confirmed: Boolean(state.memoryProposalConfirmed) }];
+    state.haloDraft = conversation ? conversation.draft : String(state.haloDraft || "");
+    state.haloSource = conversation ? cloneHaloSource(conversation.source) : Object.prototype.hasOwnProperty.call(storedAppProgress, "haloSource") ? cloneHaloSource(state.haloSource) : createHaloSource(state.haloContext);
+    state.haloContext = state.haloSource?.kind || "none";
+    if (!conversation) state.activeConversationId = "";
+    if (!Array.isArray(state.haloMemories)) state.haloMemories = [];
     state.journeyRecords = state.journeyRecords && typeof state.journeyRecords === "object" ? state.journeyRecords : {};
     for (const theme of Object.keys(JOURNEY_THEMES)) {
-      if (!state.journeyRecords[theme]) state.journeyRecords[theme] = { days: [], entries: [], note: "" };
+      const journey = state.journeyRecords[theme] || (state.journeyRecords[theme] = { days: [], entries: [], note: "" });
+      journey.days = Array.isArray(journey.days) ? journey.days : [];
+      journey.entries = Array.isArray(journey.entries) ? journey.entries : [];
+      journey.previous = Array.isArray(journey.previous) ? journey.previous : [];
+      if (!journey.status) journey.status = journey.days.length >= 7 ? "completed" : theme !== state.journeyTheme ? "active" : state.journeyDecision === "unsuitable" ? "ended" : state.journeyPaused ? "paused" : state.journeyDecision === "deferred" ? "deferred" : "active";
+      journey.variant = journey.variant ?? (theme === state.journeyTheme ? state.journeyVariant : 0);
+      journey.reason = journey.reason ?? (theme === state.journeyTheme ? state.journeyReason : "");
+      journey.missCount = journey.missCount ?? (theme === state.journeyTheme ? state.journeyMissCount : 0);
     }
-    state.journeyProgress = state.journeyRecords[state.journeyTheme].days.length;
+    syncJourneyAliases();
     state.nightHistory = Array.isArray(state.nightHistory) ? state.nightHistory.filter((entry) => entry.id && entry.startedAt && entry.endedAt) : [];
     if (state.nightSession && !state.nightSession.id) state.nightSession = null;
     state.selectedNightSessionId = state.selectedNightSessionId || state.nightHistory[0]?.id || "";
@@ -635,16 +947,10 @@
     state.playing = Boolean(state.nightSession?.status === "playing");
     syncStudioAliases();
     if (!initializeExperienceState.playbackTimer) initializeExperienceState.playbackTimer = setInterval(() => {
-      if (state.current !== "NIG-04" || state.nightSession?.status !== "playing") return;
-      const session = state.nightSession;
-      const position = nightPosition(session);
-      const label = document.querySelector(".player-meta .eyebrow");
-      if (label) label.textContent = `正在播放 · ${Math.floor(position / 60)}:${String(position % 60).padStart(2, "0")} / ${session.duration}:00`;
-      const bar = document.querySelector(".night-screen .progress i");
-      if (bar) bar.style.width = `${Math.round(position / (session.duration * 60) * 100)}%`;
-      const part = document.getElementById("night-current-part");
-      if (part) part.textContent = position >= session.primaryDuration * 60 ? "接续白噪音 · 20分钟" : `第一段 ${session.primaryDuration}分钟，接白噪音20分钟`;
-      if (position >= session.duration * 60) handleAction("night-end");
+      if (personalScope?.accessError() || todayRhythmStorage?.accessError()) return;
+      if (nightSessionDue() && finishNightSession.failedKey !== nightCompletionKey()) render();
+      if (["NIG-01", "NIG-04"].includes(state.current)) nightHome.tick();
+      if (state.current === "NIG-08") nightWake.tick();
     }, 1000);
   }
   function studioRecord(id = state.selectedStudioEventId) {
@@ -659,103 +965,685 @@
     state.studioMode = record.mode; state.studioReportStatus = record.reportStatus; state.studioBenefitStatus = record.benefitStatus; state.studioDeletionStatus = record.deletionStatus;
     state.toggles.studioHealth = record.healthConsent; state.toggles.studioActivity = record.activityConsent; state.toggles.studioContact = record.contactConsent; state.toggles.studioMarketing = record.marketingConsent;
   }
-  function studioConfirmed(record = studioRecord()) { return record.booked && record.paid && record.refundStatus === "none" && record.deletionStatus !== "deleted"; }
-  function studioCanReport(record = studioRecord()) { return record.sessionDone && record.mode === "ring" && record.healthConsent && record.activityConsent && isHardwareActive() && state.dataLifecycle === "interpretable" && record.deletionStatus === "ready"; }
+  function studioIdentityValid(id = state.selectedStudioEventId) {
+    const r = state.studioRecords?.[id];
+    return Object.prototype.hasOwnProperty.call(STUDIO_EVENTS, id) && r?.booked === true && typeof r.bookingId === "string" && r.bookingId.trim().length > 0
+      && (!r.eventId || r.eventId === id) && (!r.eventSnapshot?.id || r.eventSnapshot.id === id) && (!r.eventSnapshot?.eventId || r.eventSnapshot.eventId === id);
+  }
+  function studioSessionIdentityValid(record = state.studioRecords?.[state.selectedStudioEventId]) {
+    const account = String(state.authPhone || state.authForm?.phone || "local-demo");
+    return (!record?.accountRef || record.accountRef === account) && (!record?.sessionAccountRef || record.sessionAccountRef === account)
+      && (!record?.sessionScope || record.sessionScope.eventId === state.selectedStudioEventId && record.sessionScope.bookingId === record.bookingId);
+  }
+  function studioConfirmed(record = state.studioRecords?.[state.selectedStudioEventId]) { return Boolean(record?.booked && typeof record.bookingId === "string" && record.bookingId.trim() && record.paid && (!record.source || ["app", "institution"].includes(record.source)) && record.refundStatus === "none" && !["submitting", "accepted", "checking", "unknown"].includes(record.refundRequest?.status) && !["processing", "checking", "unknown"].includes(record.paymentRequest?.status) && (!record.deletionStatus || record.deletionStatus === "ready")); }
+  function studioCanReport(record = studioRecord(), id = state.selectedStudioEventId) { return studioReport.canReport(record, id); }
   function experienceRouteGuard(id) {
     if (!id.startsWith("STU-")) return id;
+    if (id === "STU-01") return id;
+    if (id === "STU-02") return studioCodeLookup?.receipt()?.eventId === state.selectedStudioEventId ? id : "STU-01";
+    if (id === "STU-10") return id; // Exact-booking empty/error states are rendered by preparation itself.
+    if (["STU-11", "STU-03", "STU-04", "STU-05", "STU-06", "STU-12", "STU-13", "STU-14"].includes(id) && !studioIdentityValid()) return "STU-18";
+    if (id === "STU-18") return id; // This page validates the exact booking; never substitute another event.
+    if (id === "STU-17" && !Object.prototype.hasOwnProperty.call(STUDIO_EVENTS, state.selectedStudioEventId)) return id;
     const record = studioRecord();
     if (["STU-17", "STU-18"].includes(id) && !record.booked) return "STU-16";
+    if (["STU-05", "STU-06"].includes(id) && studioReport.summary(record).kind === "blocked") return "STU-12";
     if (["STU-10", "STU-11", "STU-03", "STU-04"].includes(id) && !studioConfirmed(record)) return record.booked ? "STU-18" : "STU-09";
-    if (["STU-11", "STU-03", "STU-04"].includes(id) && !record.activityConsent) return "STU-10";
+    if (["STU-03", "STU-04"].includes(id) && !studioSessionIdentityValid(record)) return "STU-03";
+    if (["STU-11", "STU-03", "STU-04"].includes(id) && record.sessionDone) return "STU-15";
+    if (["STU-11", "STU-03"].includes(id) && record.sessionStarted) return "STU-04";
+    if (["STU-11", "STU-03", "STU-04"].includes(id) && !record.activityConsent && !(id === "STU-04" && record.sessionStarted)) return "STU-10";
     if (id === "STU-04" && !record.sessionStarted) return "STU-03";
     if (["STU-05", "STU-06"].includes(id) && (!studioCanReport(record) || record.reportStatus !== "generated")) return "STU-12";
+    if (id === "STU-06" && (typeof record.completedAt !== "string" || !Number.isFinite(Date.parse(record.completedAt)) || Date.parse(record.completedAt) > Date.now())) return "STU-05";
     return id;
   }
   function handleExperienceInput(target) {
-    const fields = { "wake-time": [state.wakeDraft, "time"], "wake-window": [state.wakeDraft, "window"], "halo-quiet-start": [state.haloQuietHours, "start"], "halo-quiet-end": [state.haloQuietHours, "end"] };
+    if (nightSound.input(target)) return true;
+    if (nightWake.input(target)) return true;
+    if (target.id === "chat-input") {
+      state.haloDraft = target.value;
+      saveHaloConversation();
+      if (typeof updateHaloComposer === "function") updateHaloComposer();
+      return true;
+    }
+    const fields = { "wake-time": [state.wakeDraft, "time"], "wake-window": [state.wakeDraft, "window"] };
     if (fields[target.id]) { const [object, key] = fields[target.id]; object[key] = target.value; state.wakeSaved = false; persistAppProgress(); return true; }
-    if (target.id === "halo-feeling-note") { state.haloFeelingNote = target.value; persistAppProgress(); return true; }
-    if (target.id === "studio-before-feeling") { studioRecord().beforeDraft = target.value; persistAppProgress(); return true; }
-    if (target.id === "journey-note") { state.journeyRecords[state.journeyTheme].note = target.value; persistAppProgress(); return true; }
+    if (target.id === "halo-feeling-note") { haloFeelingEditor.input(target.value); return true; }
+    if (target.id === "studio-before-feeling") { studioFeeling.input(target.value); return true; }
+    if (target.id === "journey-note") { haloJourney.input(target.value); return true; }
     return false;
   }
   function handleExperienceChoice(key, value) {
-    if (key === "studioMode") { studioRecord().mode = value === "ring" && isHardwareActive() ? "ring" : "basic"; if (studioRecord().mode === "basic") studioRecord().reportStatus = "withdrawn"; syncStudioAliases(); return true; }
-    if (["haloTone", "haloLength"].includes(key)) { state.haloPreferences[key === "haloTone" ? "tone" : "length"] = value; return true; }
+    if (["haloTone", "haloLength"].includes(key)) { selectGeneralPreference(key === "haloTone" ? "tone" : "length", value); return true; }
     return false;
   }
   function handleExperienceToggle(key) {
-    const fields = { studioHealth: "healthConsent", studioActivity: "activityConsent", studioContact: "contactConsent", studioMarketing: "marketingConsent" };
-    if (fields[key]) { const record = studioRecord(); record[fields[key]] = !record[fields[key]]; if (["studioHealth", "studioActivity"].includes(key) && !record[fields[key]]) record.reportStatus = "withdrawn"; syncStudioAliases(); return true; }
-    if (key === "wake") { state.wakeDraft.enabled = !state.wakeDraft.enabled; state.wakeSaved = false; state.toggles.wake = state.wakeDraft.enabled; return true; }
-    if (key === "sleepFade") { state.toggles.sleepFade = !state.toggles.sleepFade; if (state.nightSession && state.nightSession.status !== "ended") state.nightSession.fadeEnabled = isHardwareActive() && state.toggles.sleepFade; return true; }
+    const fields = { studioContact: "contactConsent", studioMarketing: "marketingConsent" };
+    if (fields[key]) { const record = studioRecord(); record[fields[key]] = !record[fields[key]]; syncStudioAliases(); return true; }
+    if (key === "wake") { state.wakeDraft.enabled = !state.wakeDraft.enabled; state.wakeSaved = false; return true; }
     return false;
   }
   function ensureHaloQuota() { if (state.haloQuota.day !== experienceDay()) state.haloQuota = { day: experienceDay(), used: 0 }; return state.haloQuota; }
+  function cloneHaloSource(source) {
+    if (!source || !["body", "feeling", "rhythm", "correction", "inspiration"].includes(source.kind)) return null;
+    return { ...source, kind: source.kind, label: String(source.label || "参考来源"), text: String(source.text || "") };
+  }
+  function rhythmVisibleRecord(date = state.selectedRhythmDate) {
+    if (!state.signedIn || state.rhythmDeleted || state.healthDeletionStatus && state.healthDeletionStatus !== "ready" || state.accountDeletionStatus && state.accountDeletionStatus !== "ready" || !validHealthDate(date)) return null;
+    const record = state.rhythmRecords?.[date];
+    const account = String(state.authPhone || state.authForm?.phone || "legacy-session");
+    const recordAccount = record?.ownerAccount || record?.accountRef || record?.owner;
+    return record && typeof record === "object" && !Array.isArray(record) && record.date === date && record.source === "user-record"
+      && typeof record.id === "string" && record.id && typeof record.feeling === "string"
+      && (record.note === undefined || typeof record.note === "string") && Boolean(record.feeling.trim() || record.note?.trim()) && (!recordAccount || String(recordAccount) === account) ? record : null;
+  }
+  function feelingRecordVisible(record) {
+    const owner = record?.ownerAccount || record?.accountRef || state.haloFeelingEditor?.ownerAccount || state.dataPrivacy?.ownerAccount || state.authPhone;
+    return Boolean(record && owner === state.authPhone && state.signedIn && state.authVerified);
+  }
+  function currentHaloSource() {
+    const source = cloneHaloSource(state.haloSource);
+    if (source?.kind === "feeling" && (source.ownerAccount && source.ownerAccount !== state.authPhone || !state.haloFeelingRecords.some(r => r.id === source.recordId && r.text === source.text && feelingRecordVisible(r)))) return null;
+    const correction = activeWeatherCorrection();
+    // An old body snapshot stays in history; it must not silently become today's health context.
+    if (source?.kind === "body" && (!hasBodyContext() || source.date !== experienceDay())) return null;
+    if (source?.kind === "body" && correction) return createHaloSource("correction");
+    if (source?.kind === "correction" && (!correction || source.correctionId !== correction.id || source.interpretationId !== correction.interpretationId || source.capturedAt !== correction.savedAt)) return null;
+    if (source?.kind === "rhythm" && !createHaloSource("rhythm", source)) return null;
+    return source;
+  }
+  function createHaloSource(kind, snapshot) {
+    if (kind === "rhythm") {
+      const record = rhythmVisibleRecord(snapshot?.date || state.selectedRhythmDate);
+      if (!record) return null;
+      const account = String(state.authPhone || state.authForm?.phone || "legacy-session");
+      const text = [record.date, record.feeling, record.note].filter(value => typeof value === "string" && value.trim()).join(" · ");
+      const recordSavedAt = String(record.savedAt || "");
+      if (snapshot && (snapshot.date !== record.date || snapshot.recordId !== record.id || snapshot.text !== text || snapshot.ownerAccount && snapshot.ownerAccount !== account || snapshot.recordSavedAt !== undefined && snapshot.recordSavedAt !== recordSavedAt)) return null;
+      return { kind, label: "节律 · 用户记录", text, recordId: record.id, date: record.date, capturedAt: snapshot?.capturedAt || new Date().toISOString(), ownerAccount: account, recordSavedAt };
+    }
+    if (snapshot) return cloneHaloSource({ ...snapshot, kind, capturedAt: snapshot.capturedAt || new Date().toISOString() });
+    const capturedAt = new Date().toISOString();
+    if (kind === "body") return hasBodyContext() ? { kind, label: "今天的身体状态", text: currentBodyWeather().homeTitle, date: experienceDay(), capturedAt } : null;
+    if (kind === "feeling") {
+      const record = state.haloFeelingRecords.filter(feelingRecordVisible).at(-1);
+      return record ? { kind, label: "用户记录", text: record.text, recordId: record.id, occurredAt: record.occurredAt, capturedAt, ownerAccount: state.authPhone } : null;
+    }
+    if (kind === "correction") { const correction = activeWeatherCorrection(); return correction ? { kind, label: "用户反馈 · 对今天解释的纠正", text: [correction.reasonLabel, correction.note].filter(Boolean).join(" · "), correctionId: correction.id, interpretationId: correction.interpretationId, date: correction.date, capturedAt: correction.savedAt } : null; }
+    if (kind === "inspiration") return { kind, label: "今日灵感", text: `${DAILY_INSPIRATION.keyword} · ${DAILY_INSPIRATION.message}`, date: experienceDay(), capturedAt };
+    return null;
+  }
+  function startHaloConversation() {
+    saveHaloConversation();
+    state.activeConversationId = "";
+    state.chat = [];
+    state.haloDraft = "";
+    state.conversationStatus = "new";
+    state.haloSource = createHaloSource("body");
+    state.haloContext = state.haloSource?.kind || "none";
+    state.haloToolsOpen = false;
+    persistAppProgress();
+  }
+  function setHaloSource(kind, snapshot, fromEntry = false) {
+    if (fromEntry && ["paused", "archived"].includes(state.conversationStatus)) startHaloConversation();
+    state.haloSource = createHaloSource(kind, snapshot);
+    state.haloContext = state.haloSource?.kind || "none";
+    saveHaloConversation();
+  }
   function saveHaloConversation() {
     let conversation = state.conversations.find((entry) => entry.id === state.activeConversationId && entry.status !== "deleted");
-    if (!conversation) { state.activeConversationId = `hc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`; conversation = { id: state.activeConversationId, status: "active", messages: [] }; state.conversations.push(conversation); }
+    if (!state.chat.length && !state.haloDraft.trim()) {
+      if (conversation?.status === "draft") { state.conversations = state.conversations.filter((entry) => entry.id !== conversation.id); state.activeConversationId = ""; state.conversationStatus = "new"; }
+      else if (conversation) { conversation.draft = ""; conversation.source = cloneHaloSource(state.haloSource); conversation.context = state.haloContext; }
+      persistAppProgress();
+      return;
+    }
+    if (!conversation) { state.activeConversationId = `hc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`; conversation = { id: state.activeConversationId, status: state.chat.length ? "active" : "draft", messages: [] }; state.conversations.push(conversation); }
     conversation.messages = state.chat.map((message) => ({ ...message }));
-    conversation.title = state.chat.find((message) => message.role === "user")?.text.slice(0, 30) || "新的对话";
-    conversation.updatedAt = new Date().toISOString(); conversation.status = "active"; state.conversationStatus = "active";
+    conversation.draft = state.haloDraft;
+    conversation.source = cloneHaloSource(state.haloSource);
+    conversation.context = state.haloContext;
+    conversation.title = state.chat.find((message) => message.role === "user")?.text.slice(0, 30) || `草稿 · ${state.haloDraft.trim().slice(0, 24)}`;
+    conversation.updatedAt = new Date().toISOString();
+    if (!["paused", "archived"].includes(conversation.status)) conversation.status = state.chat.length ? "active" : "draft";
+    state.conversationStatus = conversation.status;
     persistAppProgress();
   }
   function openHaloConversation(id) {
     const conversation = state.conversations.find((entry) => entry.id === id && entry.status !== "deleted");
     if (!conversation) return flash("这条会话已删除或不存在");
+    saveHaloConversation();
     state.activeConversationId = id; state.chat = conversation.messages.map((message) => ({ ...message })); state.conversationStatus = conversation.status; state.haloToolsOpen = false;
+    state.haloDraft = String(conversation.draft || ""); state.haloSource = cloneHaloSource(conversation.source); state.haloContext = state.haloSource?.kind || "none";
     return go("HAL-01");
   }
   function haloSafetySupport() {
     return `<section class="notice warm" role="status"><h3>先照顾眼前的安全</h3><p>如果你正处在危险中，或担心会伤害自己，请立即联系当地急救服务，也可以请一位信任的人过来陪你。Halo 不能提供紧急救援。</p>${buttons([["查看求助方式", "halo-safety-help", "primary"], ["暂停这次对话", "halo-safety-pause", "secondary"]])}</section>`;
   }
-  function showHaloPreferences() {
-    showInfoModal("表达偏好", "选择后自动保存，只调整说话方式，不改变 Halo 的服务边界。", "完成");
-    const options = [["tone", "direct", "直接一点"], ["tone", "gentle", "温和一点"], ["length", "short", "简短回复"], ["length", "detailed", "详细回复"]];
-    modalRoot.querySelector(".button-row").insertAdjacentHTML("beforebegin", `<div class="stack">${options.map(([key, value, label]) => `<button class="choice-row ${state.haloPreferences[key] === value ? "selected" : ""}" data-action="halo-preference:${key}:${value}"><strong>${label}</strong><i></i></button>`).join("")}</div>`);
+  let generalPreferenceDraft = null;
+  let generalPreferenceOwner = "";
+  let generalSettingsMounted = false;
+  function generalSettingsSafe(show = true) {
+    if (state.current !== "SET-03" || !generalSettingsMounted) return true;
+    let error = "";
+    try {
+      const saved = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY));
+      const transient = new Set(["lastVisitedRoute", "navigationHistory", "pageViews", "tabStacks", "activeTab"]);
+      if (!saved?.signedIn || !saved.authVerified || saved.authPhone !== state.authPhone) error = "账号状态已变化，请刷新后重新登录。";
+      else if ([...new Set([...persistedAppKeys, "toggles", ...Object.keys(saved)])].some(key => !transient.has(key) && JSON.stringify(saved[key]) !== JSON.stringify(state[key]))) error = "其他页面已更新设置或记录。本次未保存，请刷新后按最新内容调整。";
+    } catch { error = "暂时无法读取已保存的设置，请稍后重试。"; }
+    if (error && show) {
+      const target = modalRoot.querySelector('.gs-feedback') || screen.querySelector('#gs-system-motion');
+      if (target) { target.textContent = error; target.setAttribute('role', 'alert'); }
+    }
+    return !error;
   }
-  function appendHaloReply(text, reply) {
+  let generalMotionFeedback = "";
+  function generalPreferenceSummary(preferences = state.haloPreferences) {
+    return `${preferences.tone === "gentle" ? "温和一点" : "直接一点"} · ${preferences.length === "detailed" ? "详细回复" : "简短回复"}`;
+  }
+  function generalPreferenceExample(preferences) {
+    const opening = preferences.tone === "gentle" ? "我们可以慢慢来。" : "";
+    const detail = preferences.length === "detailed" ? "可以先把手机放远，给自己留一点安静的时间。如果不合适，我们再换个方式。" : "";
+    return `${opening}今晚先选一段喜欢的放松内容。${detail}`;
+  }
+  function showHaloPreferences(keepDraft = false, feedback = "") {
+    if (!keepDraft || !generalPreferenceDraft || generalPreferenceOwner !== state.authPhone) { generalPreferenceDraft = { ...state.haloPreferences }; generalPreferenceOwner = state.authPhone; }
+    const group = (key, label, options) => `<fieldset class="gs-fieldset"><legend>${label}</legend><div class="gs-options" role="radiogroup" aria-label="${label}">${options.map(([value, title, description]) => `<button type="button" class="gs-option${generalPreferenceDraft[key] === value ? " selected" : ""}" role="radio" aria-checked="${generalPreferenceDraft[key] === value}" data-action="general:preference:${key}:${value}"><strong>${title}</strong><small>${description}</small></button>`).join("")}</div></fieldset>`;
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal gs-modal" data-general-modal="preferences" role="dialog" aria-modal="true" aria-labelledby="gs-preferences-title"><header class="gs-modal-header modal-title-row"><h2 id="gs-preferences-title">Halo 表达偏好</h2><button class="text-button" data-action="general:preferences/cancel">关闭</button></header><p class="gs-note">只调整之后回复的语气和长短，不改动历史对话。</p>${group("tone", "说话语气", [["direct", "直接一点", "先说重点"], ["gentle", "温和一点", "多一点缓冲"]])}${group("length", "回复长短", [["short", "简短回复", "少一些展开"], ["detailed", "详细回复", "多一些解释"]])}<section class="gs-preview" aria-live="polite"><h3>表达示例</h3><p>${esc(generalPreferenceExample(generalPreferenceDraft))}</p><small>仅为表达示例。</small></section><p class="gs-feedback" data-error="${Boolean(feedback)}" role="status">${esc(feedback || "选好后点击保存；关闭或取消不会生效。")}</p><div class="button-row gs-actions"><button class="primary" data-action="general:preferences/save">${feedback ? "重试保存" : "保存偏好"}</button><button class="secondary" data-action="general:preferences/cancel">取消</button></div></section></div>`;
+  }
+  function selectGeneralPreference(key, value) {
+    const allowed = { tone: ["direct", "gentle"], length: ["short", "detailed"] };
+    if (!allowed[key]?.includes(value) || !generalPreferenceDraft || generalPreferenceOwner !== state.authPhone || !state.signedIn || !modalRoot.querySelector('[data-general-modal="preferences"]')) return;
+    generalPreferenceDraft[key] = value;
+    modalRoot.querySelectorAll(`[data-action^="general:preference:${key}:"]`).forEach(button => {
+      const selected = button.dataset.action === `general:preference:${key}:${value}`;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-checked", String(selected));
+    });
+    modalRoot.querySelector(".gs-preview p").textContent = generalPreferenceExample(generalPreferenceDraft);
+  }
+  function handleGeneralAction(action) {
+    if (action.startsWith("general:") && action !== "general:preferences/cancel" && !generalSettingsSafe()) return true;
+    if (action === "general:preferences/open") { showHaloPreferences(); return true; }
+    if (action === "general:preferences/cancel") { generalPreferenceDraft = null; closeModal(); return true; }
+    if (action === "general:preferences/save") {
+      if (!generalPreferenceDraft || !modalRoot.querySelector('[data-general-modal="preferences"]')) return true;
+      if (!state.signedIn || generalPreferenceOwner !== state.authPhone) { generalPreferenceDraft = null; closeModal(); flash("账号已变化，请重新打开表达偏好"); return true; }
+      if (!writeNotificationProgress({ haloPreferences: { ...generalPreferenceDraft } })) { showHaloPreferences(true, "这次没能保存，原偏好没有变化。已保留你的选择，请重试。"); return true; }
+      generalPreferenceDraft = null;
+      closeModal(); render(); flash("表达偏好已保存，将用于之后的回复");
+      return true;
+    }
+    if (action.startsWith("general:preference:")) { const [, , key, value] = action.split(":"); selectGeneralPreference(key, value); return true; }
+    if (action === "general:motion/toggle") {
+      if (state.current !== "SET-03") return true;
+      const enabled = !state.toggles.reduceMotion;
+      const saved = writeNotificationProgress({ toggles: { ...state.toggles, reduceMotion: enabled } });
+      generalMotionFeedback = saved ? `已${enabled ? "开启" : "关闭"} App 内降低动态效果。` : "这次没能保存，开关保持原样。请重试。";
+      render();
+      return true;
+    }
+    if (action === "general:widget") { showWidgetPreview(); return true; }
+    return action.startsWith("general:");
+  }
+  function generalSettingsPage() {
+    const systemReduced = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+    return `<div class="gs-page"><header class="gs-header"><button type="button" data-action="go:MY-01" aria-label="返回我的">‹</button><h1>通用设置</h1><span aria-hidden="true"></span></header><section class="gs-section" aria-labelledby="gs-common-title"><h2 id="gs-common-title">常用</h2><div class="gs-list"><div class="gs-row gs-toggle"><span class="gs-row-copy"><strong id="gs-motion-label">降低动态效果</strong><small id="gs-motion-note">减少呼吸动画和页面转场</small></span><button type="button" class="gs-switch" role="switch" aria-checked="${Boolean(state.toggles.reduceMotion)}" aria-labelledby="gs-motion-label" aria-describedby="gs-motion-note gs-system-motion" data-action="general:motion/toggle"><span aria-hidden="true"></span></button></div><button type="button" class="gs-row" data-action="general:widget"><span class="gs-row-copy"><strong>桌面小组件</strong><small>查看显示内容与隐私范围</small></span><em class="gs-value">预览</em><i aria-hidden="true">›</i></button><button type="button" class="gs-row" data-action="general:preferences/open"><span class="gs-row-copy"><strong>Halo 表达偏好</strong><small>${esc(generalPreferenceSummary())}</small></span><i aria-hidden="true">›</i></button></div><p class="gs-note" id="gs-system-motion">${systemReduced ? "系统已开启减少动画。即使关闭此开关，仍会遵循系统设置。" : "也会遵循系统的减少动画设置。"}</p>${generalMotionFeedback ? `<p class="gs-feedback" data-error="${generalMotionFeedback.startsWith("这次没能保存")}" role="status">${esc(generalMotionFeedback)}</p>` : ""}</section><section class="gs-section" aria-labelledby="gs-display-title"><h2 id="gs-display-title">显示信息</h2><div class="gs-list"><div class="gs-row gs-row-static"><span class="gs-row-copy"><strong>语言</strong></span><em class="gs-value">简体中文</em></div><div class="gs-row gs-row-static"><span class="gs-row-copy"><strong>单位</strong></span><em class="gs-value">公制 · 摄氏度</em></div></div><p class="gs-note">当前版本固定使用以上语言和单位，暂不支持切换。</p></section></div>`;
+  }
+  function appendHaloReply(text, reply, options = {}) {
+    if (["paused", "archived"].includes(state.conversationStatus)) return flash("先继续这段对话，再发送消息");
     const safety = /不想活|自杀|伤害自己|伤害别人|轻生|结束生命|胸痛|喘不过气|呼吸困难/.test(text) || Boolean(state.chat.at(-1)?.safety);
     const quota = ensureHaloQuota();
     if (!isHardwareActive() && quota.used >= 10 && !safety) return flash("今天的 10 条消息已用完，明日北京时间 00:00 恢复");
     if (!isHardwareActive() && !safety) quota.used += 1;
     const detail = state.haloPreferences.length === "detailed" ? `${reply} 如果这个方向不适合，可以告诉我你最在意的部分，我们再一起调整。` : reply;
     const response = safety ? "听起来你现在很难受。先暂停普通建议，眼前的安全更重要。" : state.haloPreferences.tone === "gentle" ? `我们可以慢慢来。${detail}` : detail;
-    state.chat.push({ role: "user", text }, { role: "halo", text: response, safety });
+    const action = !safety && /放松|呼吸|睡前|停下来|睡不着|安静一会|安静一下/.test(text) ? { route: "NIG-01", label: "去选一段放松内容" } : null;
+    state.chat.push({ role: "user", text, source: currentHaloSource() }, { role: "halo", text: response, safety, ...(action ? { action } : {}) });
+    if (!options.preserveDraft) state.haloDraft = "";
     state.haloToolsOpen = false; saveHaloConversation(); render(); revealLatestHaloMessage();
   }
-  function currentNightSession() { return state.nightHistory.find((entry) => entry.id === state.selectedNightSessionId) || state.nightHistory[0] || null; }
-  function nightPosition(session = state.nightSession) { return session ? Math.min(session.duration * 60, Math.floor((session.positionSeconds || 0) + (session.status === "playing" ? (Date.now() - new Date(session.resumedAt).getTime()) / 1000 : 0))) : 0; }
-  function changeNightPlayback() { const session = state.nightSession; if (!session || session.status === "ended") return flash("请先选择内容并开始播放"); session.positionSeconds = nightPosition(session); session.status = session.status === "playing" ? "paused" : "playing"; session.resumedAt = new Date().toISOString(); state.playing = session.status === "playing"; return render(); }
-  function hasBodyContext() { return isHardwareActive() && state.dataLifecycle === "interpretable" && state.toggles.haloBody; }
+  function ownsNightSession(entry) { return window.HaloPersonalScope.ownsNight(state, entry); }
+  function currentNightSession() { const records = state.nightHistory.filter(ownsNightSession); return records.find((entry) => entry.id === state.selectedNightSessionId) || records[0] || null; }
+  function nightPosition(session = state.nightSession) {
+    if (!session) return 0;
+    const total = Number(session.duration) * 60, base = Number(session.positionSeconds) || 0, resumed = Date.parse(session.resumedAt);
+    if (!Number.isFinite(total) || total <= 0) return 0;
+    const elapsed = session.status === "playing" && Number.isFinite(resumed) ? Math.max(0, (Date.now() - resumed) / 1000) : 0;
+    return Math.max(0, Math.min(total, Math.floor(base + elapsed)));
+  }
+  function changeNightPlayback() {
+    const session = state.nightSession;
+    if (!ownsNightSession(session) || session.status === "ended") return flash("请先选择当前账号的内容并开始播放");
+    if (nightPosition(session) >= session.duration * 60) return handleAction("night-end");
+    const next = { ...session, positionSeconds: nightPosition(session), status: session.status === "playing" ? "paused" : "playing", resumedAt: new Date().toISOString() };
+    if (!writeNotificationProgress({ nightSession: next, playing: next.status === "playing" })) return showInfoModal("这次操作没能保存", "播放状态保持不变，请重试。当前原型没有输出真实音频。");
+    return render();
+  }
+  function nightCompletionKey() { return `${state.authPhone || ""}:${state.nightSession?.id || ""}`; }
+  function nightSessionDue() {
+    const session = state.nightSession;
+    if (personalScope?.accessError() || !ownsNightSession(session) || state.accountDeletionStatus === "submitted" || session.status !== "playing") return false;
+    if (session.ownerAccount !== (state.authPhone || "") || session.memberRegistrationId !== (state.memberCreatedAt || "")) return false;
+    if (!Number.isFinite(Date.parse(session.resumedAt)) || !Number.isFinite(Date.parse(session.startedAt))) return false;
+    const tracks = nightPlaylist.sessionTracks(session), duration = Number(session.duration);
+    return duration > 0 && Number.isFinite(duration) && tracks.length > 0 && (!Array.isArray(session.tracks) || tracks.length === session.tracks.length) && Math.abs(tracks.reduce((sum, item) => sum + item.duration, 0) - duration) < .001 && nightPosition(session) >= duration * 60;
+  }
+  function finishNightSession(navigate = true) {
+    const session = state.nightSession;
+    if (personalScope?.accessError() || !ownsNightSession(session)) return false;
+    if (!session || session.status === "ended") { if (navigate) go("NIG-10"); return false; }
+    const seconds = nightPosition(session), completed = seconds >= session.duration * 60;
+    const dueAt = Date.parse(session.resumedAt) + Math.max(0, session.duration * 60 - (Number(session.positionSeconds) || 0)) * 1000;
+    const endedAt = new Date(completed && Number.isFinite(dueAt) ? Math.min(Date.now(), dueAt) : Date.now()).toISOString();
+    let result = { ...session, tracks: nightPlaylist.sessionTracks(session), positionSeconds: seconds, status: "ended", endedAt, stopReason: completed ? "completed" : "stopped", review: { ...DEFAULT_NIGHT_REVIEW, factors: [], observationCount: 0 } };
+    result.detail = `${session.skipped ? "播放进度到" : "听了"} ${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒 · ${experienceTime(endedAt)} 结束`;
+    result.taskVerification = !session.skipped && session.hardwareEligibleAtStart && session.personalized && completed ? "eligible-prototype" : "ineligible";
+    const existing = state.nightHistory.find(item => item.id === result.id), alreadySaved = Boolean(existing);
+    const identity = memberTaskIdentity();
+    delete result.memberTaskEvidence;
+    if (!alreadySaved && result.taskVerification === "eligible-prototype" && identity && session.ownerAccount === identity.accountRef && session.memberRegistrationId === identity.registrationId && (!identity.registrationId || Date.parse(identity.registrationId) <= Date.parse(session.startedAt))) result.memberTaskEvidence = { taskId: "night-repair", ...identity, occurredAt: endedAt, verified: true, hardwareActive: true };
+    if (existing) result = existing;
+    const historyRecords = alreadySaved ? state.nightHistory : [result, ...state.nightHistory];
+    const changes = { nightSession: result, nightHistory: historyRecords, playing: false };
+    if (navigate) Object.assign(changes, { selectedNightSessionId: result.id, nightReview: result.review });
+    if (!writeNotificationProgress(changes)) {
+      if (!navigate) finishNightSession.failedKey = nightCompletionKey();
+      if (navigate) showInfoModal("收听记录暂时没能保存", "本次组合和进度还在，请重试后再离开。", "重试保存", "night-end");
+      return false;
+    }
+    finishNightSession.failedKey = "";
+    if (!alreadySaved && result.memberTaskEvidence) {
+      const evidence = result.memberTaskEvidence, newMember = Boolean(state.newMember);
+      Promise.resolve().then(() => window.HALO_COMMERCIAL_EXTENSION?.completeTask?.({ ...evidence, memberCreatedAt: evidence.registrationId, newMember })).catch(() => false).then(posted => {
+        if (posted !== true && state.signedIn && (state.authPhone || state.authForm?.phone || "") === evidence.accountRef && state.memberCreatedAt === evidence.registrationId) flash("记录已保存，奖励待同步，可在会员任务重试");
+      });
+    }
+    if (!alreadySaved) trackPrototypeEvent("night_content_completed", { content_id: result.contentId, content_ids: result.tracks.map(item => item.id), session_id: result.id, stop_reason: result.stopReason });
+    if (navigate) { closeModal(); go("NIG-10"); }
+    return true;
+  }
+  function hasBodyContext() { return window.HaloPersonalScope.bodyOwner(state) === state.authPhone && isHardwareActive() && state.dataLifecycle === "interpretable" && state.toggles.haloBody; }
 
   const nav = document.getElementById("page-nav");
   const groupNav = document.getElementById("group-nav");
   const screen = document.getElementById("screen");
   const tabbar = document.getElementById("tabbar");
   const search = document.getElementById("search");
+  // TOD-08 commits only after this app snapshot is durably written. Other pages keep their existing persistence behavior.
+  const nightReview = window.createHaloNightReview({ state, pages, go, render, track: trackPrototypeEvent, esc, screen,
+    write: () => {
+      try {
+        const snapshot = Object.fromEntries(persistedAppKeys.map(key => [key, state[key]]));
+        writeAppSnapshot({ ...snapshot, toggles: state.toggles });
+        return true;
+      } catch { return false; }
+    }
+  });
+  const healthReports = window.createHaloHealthReports({ state, pages, go, render, persist: persistAppProgress, track: trackPrototypeEvent, esc, screen, symbol: HALO_SYMBOL, active: isHardwareActive, today: beijingDateKey,
+    write: changes => {
+      const snapshot = { ...Object.fromEntries(persistedAppKeys.map(key => [key, state[key]])), ...changes, toggles: state.toggles };
+      try { const saved = writeAppSnapshot(snapshot); for (const key of Object.keys(changes)) changes[key] = saved[key]; } catch { return false; }
+      Object.assign(state, changes); return true;
+    }
+  });
   const toast = document.getElementById("toast");
   const modalRoot = document.getElementById("modal-root");
+  const stateShare = window.createHaloStateShare({ state, go, render, screen, esc, write: writeCorrectionState, track: trackPrototypeEvent,
+    source: () => {
+      const data = bodyWeatherPageState();
+      if (!data.ready) return null;
+      const weather = currentBodyWeather(), correction = activeWeatherCorrection();
+      return { key: [data.date, state.bodyWeather, correction?.id || "original"].join("|"), date: data.date, title: correction ? "听听自己的感受" : weather.label, description: correction ? "身体记录是一份参考，今天也听听自己的感受。" : weather.shareLine };
+    }
+  });
+  const dataQuality = window.createHaloDataQuality({ state, go, render, screen, esc, write: writeCorrectionState, active: isHardwareActive, today: beijingDateKey, validDate: validHealthDate, dateLabel: healthDateLabel,
+    readings: date => HEALTH_OVERVIEW_ITEMS.filter(item => item.key !== "energy").map(item => healthOverviewReading(item, date)),
+    icon: domainIcon,
+    openMetric: (item, date) => {
+      state.healthDetailContext = { route: item.route, metric: item.key, date };
+      if (item.route === "HLT-02") state.respirationWindowEnd = date;
+      if (item.route === "HLT-05") state.oxygenWindowEnd = date;
+      delete state.pageViews[item.route]; go(item.route);
+    }
+  });
+  const rhythmRecordStore = window.createHaloRhythmRecordStore({ state, write: writePrivacyProgress, validDate: validHealthDate, today: beijingDateKey });
+  let rhythmCycleStore;
+  const rhythmSettingsStore = window.createHaloRhythmSettingsStore({ state, write: writePrivacyProgress, validDate: validHealthDate, today: beijingDateKey, hasPeriodRecords: () => rhythmCycleStore?.hasEvents() || false });
+  rhythmCycleStore = window.createHaloRhythmCycleStore({ state, write: writePrivacyProgress, validDate: validHealthDate, today: beijingDateKey, hasCycle: rhythmHasConfirmedCycle, settingsChanges: rhythmSettingsStore.recordChanges });
+  const rhythmCyclePage = window.createHaloRhythmCyclePage({ state, screen, modalRoot, store: rhythmCycleStore, esc, go, render, closeModal });
+  const rhythmSettingsPage = window.createHaloRhythmSettingsPage({ state, screen, esc, today: beijingDateKey, hasPeriodRecords: () => rhythmCycleStore.hasEvents() });
+  let rhythmSettingsFeedback = "";
+  let rhythmSettingsWriteFailed = false;
+  const rhythmSetupPage = window.createHaloRhythmSetupPage({ state, store: rhythmSettingsStore, screen, modalRoot, esc, today: beijingDateKey, hasPeriodRecords: () => rhythmCycleStore.hasEvents(), go, render, flash, showModal, closeModal, track: trackPrototypeEvent });
+  const bodyWeatherRoute = window.createHaloBodyWeatherRouteCompat({ state, screen, validDate: validHealthDate, today: beijingDateKey, model: bodyWeatherTrendModel, render, go, persist: persistAppProgress, pages });
+  function openRhythmSettings() {
+    const result = rhythmSettingsStore.open();
+    const view = rhythmSettingsStore.inspect();
+    rhythmSettingsWriteFailed = result.code === "storage" || !!result.error && !view.conflict && view.canEdit;
+    rhythmSettingsFeedback = result.error || (view.dirty ? "已恢复未保存的修改" : "");
+    if (state.current === "RHY-00") rhythmSetupPage.opened(result, view);
+  }
+  function handleRhythmSettings(action) {
+    if (!action?.startsWith("rh-settings:")) return false;
+    if (state.current !== "RHY-04") return true;
+    const view = rhythmSettingsStore.inspect();
+    if (action === "rh-settings:manage") { go("RHY-05"); return true; }
+    if (action === "rh-settings:permissions") { go("PERM-01"); return true; }
+    if (action === "rh-settings:periods") { go("RHY-01"); return true; }
+    if (!view.canEdit) { render(); return true; }
+    if (action === "rh-settings:discard") {
+      if (view.dirty || view.conflict) showModal("放弃这次修改？", "只放弃尚未保存的设置，已保存的日期、感受记录和提醒偏好都不会删除。", "放弃修改", "rh-settings:discard-confirm");
+      return true;
+    }
+    let result;
+    if (action === "rh-settings:discard-confirm") {
+      if (!modalRoot.querySelector('[data-action="rh-settings:discard-confirm"]')) return true;
+      result = rhythmSettingsStore.discard(); closeModal();
+    } else if (action === "rh-settings:resume") {
+      if (view.dirty || view.conflict) { rhythmSettingsFeedback = "请先保存或放弃修改，再恢复周期展示。"; rhythmSettingsPage.update(view, rhythmSettingsFeedback); return true; }
+      showModal("恢复周期展示？", "将重新展示你已保存的周期日期，感受记录保持不变。", "恢复展示", "rh-settings:resume-confirm"); return true;
+    } else if (action === "rh-settings:resume-confirm") {
+      if (!modalRoot.querySelector('[data-action="rh-settings:resume-confirm"]')) return true;
+      result = rhythmSettingsStore.resume(); closeModal();
+    } else if (action === "rh-settings:save") result = rhythmSettingsStore.save();
+    else if (action === "rh-settings:notice") result = rhythmSettingsStore.change("notice", !view.values.notice);
+    else if (action === "rh-settings:prediction") result = rhythmSettingsStore.change("prediction", !view.values.prediction);
+    else if (action === "rh-settings:period-notice") result = rhythmSettingsStore.change("periodNotice", !view.values.periodNotice);
+    else if (action.startsWith("rh-settings:mode:")) result = rhythmSettingsStore.change("mode", action.slice("rh-settings:mode:".length));
+    if (!result) return true;
+    rhythmSettingsWriteFailed = result.code === "storage";
+    rhythmSettingsFeedback = !result.ok ? result.error : action === "rh-settings:save" ? result.unchanged ? "没有需要保存的修改" : "设置已保存" : action === "rh-settings:discard-confirm" ? "已回到保存的设置" : action === "rh-settings:resume-confirm" ? "已恢复周期展示" : "修改已保留，保存后生效";
+    if (result.ok && !result.unchanged && action === "rh-settings:save") trackPrototypeEvent("rhythm_settings_saved", { mode: rhythmSettingsStore.inspect().currentMode });
+    render(); return true;
+  }
+  let rhythmEditorProblem = "";
+  const rhythmManagementStore = window.createHaloRhythmManagementStore({ state, write: writePrivacyProgress, settingsStore: rhythmSettingsStore, validDate: validHealthDate, today: beijingDateKey, cycleStore: rhythmCycleStore });
+  const rhythmManagementPage = window.createHaloRhythmManagementPage({ esc });
+  let rhythmManagementFeedback = "";
+  const rhythmHandoff = window.createHaloRhythmHandoff({ state, createSource: snapshot => createHaloSource("rhythm", snapshot), write: writePrivacyProgress });
+  const rhythmHaloPage = window.createHaloRhythmHaloPage({ esc });
+  let rhythmHandoffFeedback = "";
+  function handleRhythmManagement(action) {
+    if (!action?.startsWith("rh-manage:")) return false;
+    if (state.current !== "RHY-05") return true;
+    if (action === "rh-manage:cancel") { rhythmManagementStore.cancelDelete(); closeModal(); return true; }
+    const view = rhythmManagementStore.inspect();
+    if (!view.canManage) { rhythmManagementStore.cancelDelete(); closeModal(); render(); return true; }
+    if (action === "rh-manage:calendar") { go("RHY-01"); return true; }
+    if (action === "rh-manage:settings") { go("RHY-04"); return true; }
+    if (action === "rh-manage:delete") {
+      const result = rhythmManagementStore.prepareDelete();
+      if (!result.ok) { rhythmManagementFeedback = result.error; render(); return true; }
+      modalRoot.innerHTML = rhythmManagementPage.confirmation(result.token, result.summary);
+      return true;
+    }
+    if (action === "rh-manage:delete-confirm") {
+      const dialog = modalRoot.querySelector(".rh-manage-confirm");
+      if (!dialog) return true;
+      const result = rhythmManagementStore.removeAll(dialog.dataset.token);
+      if (!result.ok) {
+        dialog.querySelector(".rh-manage-modal-error").textContent = result.error;
+        if (result.code !== "storage") dialog.querySelector('[data-action="rh-manage:delete-confirm"]').disabled = true;
+        return true;
+      }
+      closeModal(); rhythmManagementFeedback = "已清空节律数据，并关闭记录提醒。"; render(); return true;
+    }
+    if (["rh-manage:pause", "rh-manage:resume"].includes(action)) {
+      const result = action.endsWith(":pause") ? rhythmManagementStore.pause() : rhythmManagementStore.resume();
+      rhythmManagementFeedback = result.ok ? action.endsWith(":pause") ? "已暂停周期展示，感受记录仍然保留。" : "已恢复周期展示。" : result.error;
+      render(); return true;
+    }
+    return true;
+  }
+  let rhythmEditorDraftStatus = "";
+  const rhythmEditor = window.createHaloRhythmEditor({ screen, esc, today: beijingDateKey });
+  const rhythmHome = window.createHaloRhythmHome({ state, go, render, screen, esc, write: writePrivacyProgress, today: beijingDateKey, validDate: validHealthDate, hasCycle: rhythmHasConfirmedCycle, cycleStore: rhythmCycleStore, cyclePage: rhythmCyclePage,
+    openRecord: date => {
+      const result = rhythmRecordStore.open(date);
+      if (result.ok) { rhythmEditorProblem = ""; go("RHY-03"); }
+      else if (result.error.includes("记录已更新")) showModal("这一天的记录已更新", "未保存的草稿仍然保留。你可以取消，或放弃这份草稿后查看最新记录；已保存的记录不会删除。", "放弃草稿并查看最新", `rhythm-draft-latest:${date}`);
+      return result;
+    },
+    reload: () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY) || "{}");
+        const currentOwner = String(state.authPhone || state.authForm?.phone || "legacy-session");
+        const savedOwner = String(saved.authPhone || saved.authForm?.phone || "legacy-session");
+        if (savedOwner !== currentOwner || !saved.rhythmRecords || typeof saved.rhythmRecords !== "object" || Array.isArray(saved.rhythmRecords)) throw new Error("invalid-records");
+        if (!writePrivacyProgress({ rhythmRecords: saved.rhythmRecords, rhythmStatus: rhythmHasConfirmedCycle() ? "ready" : "empty" })) throw new Error("storage");
+        return { ok: true };
+      } catch { return { ok: false, error: "暂时无法读取，现有记录仍保留。请稍后再试。" }; }
+    }
+  });
+  function captureRhythmDraft() {
+    if (state.current !== "RHY-03") return true;
+    const saved = rhythmRecordStore.capture();
+    const view = rhythmRecordStore.inspect();
+    rhythmEditorProblem = saved ? "" : rhythmRecordStore.lastIssue()?.error || "草稿暂未保存到本机。内容还在，请先不要关闭页面。";
+    rhythmEditorDraftStatus = saved && view.dirty ? "草稿已保留" : "";
+    rhythmEditor.update(view, rhythmEditorProblem, rhythmEditorDraftStatus);
+    return saved;
+  }
+  function writeBasicProfile(changes) {
+    if (!state.signedIn || !state.authVerified || state.accountDeletionStatus === "submitted") return false;
+    const snapshot = Object.fromEntries(persistedAppKeys.map(key => [key, state[key]]));
+    Object.assign(snapshot, changes); snapshot.toggles = state.toggles;
+    try { const saved = writeAppSnapshot(snapshot); for (const key of Object.keys(changes)) changes[key] = saved[key]; } catch { return false; }
+    Object.assign(state, changes); return true;
+  }
+  const basicProfileEditor = window.createHaloBasicProfile({ state, pages, go, write: writeBasicProfile, track: trackPrototypeEvent, esc, today: beijingDateKey, screen, modalRoot, closeModal, flash, activeHardware: isHardwareActive });
+  const deviceScan = window.createHaloDeviceScan({ state, go, render, persist: persistAppProgress, track: trackPrototypeEvent, blocker: deviceGuideBlocker, modalRoot, closeModal, showPermissionHelp: () => showConnectionPermission(true) });
+  const deviceBinding = window.createHaloDeviceBinding({ state, scan: deviceScan, go, render, persist: persistAppProgress, track: trackPrototypeEvent, esc, blocker: () => deviceGuideBlocker(true), modalRoot, closeModal });
+  const deviceWear = window.createHaloDeviceWear({ state, pages, go, persist: persistAppProgress, track: trackPrototypeEvent, modalRoot, closeModal });
+  if (window.createHaloDeviceHome) deviceHome = window.createHaloDeviceHome({ state, go, render, persist: persistAppProgress, track: trackPrototypeEvent, esc, symbol: HALO_SYMBOL, modalRoot, closeModal, showInfoModal, binding: deviceBinding, initialSync: () => initialSync, maintenance: () => deviceMaintenance, operationBlocker: deviceOperationUnavailable, showPermissionHelp: () => showInfoModal("开启蓝牙后再连接", "请开启手机蓝牙，并允许 Halo 使用蓝牙或访问附近设备。", "查看权限设置", "go:PERM-01") });
+  initialSync = window.createHaloInitialSync({ state, pages, go, render, persist: persistAppProgress, track: trackPrototypeEvent, esc, symbol: HALO_SYMBOL, binding: deviceBinding, home: () => deviceHome, firmware: () => deviceInfo, maintenance: () => deviceMaintenance, modalRoot, closeModal,
+    saveSync: (receipt, at) => deviceHome?.recordInitialSync(at, receipt) === true,
+    activate: (receipt, at) => {
+      if (!deviceHome?.recordActivation(at, receipt)) return false;
+      // Activation is not a connection, consent change or a new health result.
+      state.membershipHardwareState = "active";
+      localStorage.setItem(MEMBERSHIP_STATE_KEY, "active");
+      state.hardwareActivatedAt ||= at;
+      state.connectionIntro.completed = true;
+      persistAppProgress(); return true;
+    },
+    finish: receipt => {
+      // Channel applications no longer depend on hardware; ignore legacy channel destinations.
+      if (/^CHN-/.test(receipt.destination || "")) receipt.destination = "";
+      if (receipt.destination === "ONB-04" && ["completed", "skipped"].includes(state.basicProfile.status)) receipt.destination = "DEV-10";
+      if (!receipt.destination) {
+        if (!["completed", "skipped"].includes(state.basicProfile.status)) {
+          basicProfileDraft(); state.basicProfile.status = "pending"; receipt.destination = "ONB-04";
+        } else receipt.destination = /^CHN-/.test(receipt.returnRoute || "") ? "DEV-10" : receipt.returnRoute || "DEV-10";
+      }
+      persistAppProgress(); go(receipt.destination, false);
+    }
+  });
+  if (window.createHaloDeviceInfo) deviceInfo = window.createHaloDeviceInfo({ state, go, render, persist: persistAppProgress, track: trackPrototypeEvent, esc, symbol: HALO_SYMBOL, showInfoModal, closeModal, binding: deviceBinding, initialSync: () => initialSync, maintenance: () => deviceMaintenance });
+  deviceMaintenance = window.createHaloDeviceMaintenance({ state, go, render, persist: persistAppProgress, track: trackPrototypeEvent, esc, symbol: HALO_SYMBOL, modalRoot, closeModal, showInfoModal, binding: deviceBinding, home: () => deviceHome, firmware: () => deviceInfo, initialSync: () => initialSync });
+  dataPrivacy = window.createHaloDataPrivacy({ state, go, render, write: writePrivacyProgress, persist: persistAppProgress, track: trackPrototypeEvent, esc, modalRoot, closeModal, exportPayload: accountExportPayload, download: downloadBlob, flash, measurementRecords: allMeasurementRecords, measurementDeletionChanges: () => oxygenMeasurement?.deletionChanges() || {}, accessError: () => personalScope?.accessError() || todayRhythmStorage?.accessError() || "" });
+  notificationSettings = window.createHaloNotificationSettings({ state, go, render, write: writeNotificationProgress, persist: persistAppProgress, track: trackPrototypeEvent, esc, modalRoot, closeModal, flash, legacyGoalSaved: localStorage.getItem(SLEEP_GOAL_KEY) !== null || Object.prototype.hasOwnProperty.call(storedAppProgress || {}, "sleepGoal") });
+  haloProactive = window.createHaloProactive({state,screen,modalRoot,esc,go,write:writeNotificationProgress,closeModal,track:trackPrototypeEvent,
+    checkSaved: () => {
+      let saved; try { saved=JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); } catch { return "暂时无法读取本机设置，请重试。"; }
+      if (!saved || typeof saved!=="object" || Array.isArray(saved)) return "暂时无法读取本机设置，请重试。";
+      if (!saved.signedIn || !saved.authVerified || !state.signedIn || !state.authVerified || saved.authPhone!==state.authPhone) return "登录状态已变化，请刷新后重新登录。原设置没有改变。";
+      const transient=new Set(["lastVisitedRoute","navigationHistory","pageViews","tabStacks","activeTab"]);
+      return [...new Set([...persistedAppKeys,"toggles",...Object.keys(saved)])].some(key=>!transient.has(key)&&JSON.stringify(saved[key])!==JSON.stringify(state[key])) ? "设置已在其他页面更新。请刷新后继续，最新内容会保留。" : "";
+    }});
+  haloFeelingEditor = window.createHaloFeeling({state,screen,modalRoot,esc,go,write:writeNotificationProgress,closeModal,track:trackPrototypeEvent,
+    checkSaved: () => {
+      let saved; try { saved=JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); } catch { return "暂时无法读取本机设置，请重试。"; }
+      if (!saved || typeof saved!=="object" || Array.isArray(saved)) return "暂时无法读取本机设置，请重试。";
+      if (!saved.signedIn || !saved.authVerified || !state.signedIn || !state.authVerified || saved.authPhone!==state.authPhone) return "登录状态已变化，请刷新后重新登录。原设置没有改变。";
+      const transient=new Set(["lastVisitedRoute","navigationHistory","pageViews","tabStacks","activeTab"]);
+      return [...new Set([...persistedAppKeys,"toggles",...Object.keys(saved)])].some(key=>!transient.has(key)&&JSON.stringify(saved[key])!==JSON.stringify(state[key])) ? "设置已在其他页面更新。请刷新后继续，最新内容会保留。" : "";
+    }});
+  haloJourney = window.createHaloJourney({state,screen,modalRoot,esc,go,write:writeNotificationProgress,closeModal,track:trackPrototypeEvent,themes:JOURNEY_THEMES,day:experienceDay,
+    checkSaved: () => {
+      let saved; try { saved=JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); } catch { return "暂时无法读取本机计划记录，请重试。"; }
+      if (!saved || typeof saved!=="object" || Array.isArray(saved)) return "暂时无法读取本机计划记录，请重试。";
+      if (!saved.signedIn || !saved.authVerified || !state.signedIn || !state.authVerified || saved.authPhone!==state.authPhone) return "登录状态已变化，请刷新后重新登录。原计划记录没有改变。";
+      const transient=new Set(["lastVisitedRoute","navigationHistory","pageViews","tabStacks","activeTab"]);
+      return [...new Set([...persistedAppKeys,"toggles",...Object.keys(saved)])].some(key=>!transient.has(key)&&JSON.stringify(saved[key])!==JSON.stringify(state[key])) ? "计划记录已在其他页面更新。请刷新后继续，最新内容会保留。" : "";
+    }});
+  haloPrivacyControls = window.createHaloPrivacyPage({state,screen,modalRoot,esc,go,write:writeNotificationProgress,closeModal,track:trackPrototypeEvent,source:currentHaloSource,newBody:()=>createHaloSource("body"),available:()=>window.HaloPersonalScope.bodyOwner(state)===state.authPhone&&isHardwareActive()&&state.dataLifecycle==="interpretable",
+    checkSaved: () => {
+      let saved; try { saved=JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); } catch { return "暂时无法读取本机设置与记录，请重试。"; }
+      if (!saved || typeof saved!=="object" || Array.isArray(saved)) return "暂时无法读取本机设置与记录，请重试。";
+      if (!saved.signedIn || !saved.authVerified || !state.signedIn || !state.authVerified || saved.authPhone!==state.authPhone) return "登录状态已变化，请刷新后重新登录。原设置与记录没有改变。";
+      const transient=new Set(["lastVisitedRoute","navigationHistory","pageViews","tabStacks","activeTab"]);
+      return [...new Set([...persistedAppKeys,"toggles",...Object.keys(saved)])].some(key=>!transient.has(key)&&JSON.stringify(saved[key])!==JSON.stringify(state[key])) ? "设置与记录已在其他页面更新。请刷新后继续，最新内容会保留。" : "";
+    }});
+  haloSettingsHub = window.createHaloSettingsPage({state,screen,modalRoot,esc,go,write:writeNotificationProgress,closeModal,track:trackPrototypeEvent,summary:generalPreferenceSummary,example:generalPreferenceExample,showInfoModal,showSafety:()=>handleAction("halo-safety-help"),
+    checkSaved: () => {
+      let saved; try { saved=JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); } catch { return "暂时无法读取本机设置与记录，请重试。"; }
+      if (!saved || typeof saved!=="object" || Array.isArray(saved)) return "暂时无法读取本机设置与记录，请重试。";
+      if (!saved.signedIn || !saved.authVerified || !state.signedIn || !state.authVerified || saved.authPhone!==state.authPhone) return "登录状态已变化，请刷新后重新登录。原设置与记录没有改变。";
+      const transient=new Set(["lastVisitedRoute","navigationHistory","pageViews","tabStacks","activeTab"]);
+      return [...new Set([...persistedAppKeys,"toggles",...Object.keys(saved)])].some(key=>!transient.has(key)&&JSON.stringify(saved[key])!==JSON.stringify(state[key])) ? "设置与记录已在其他页面更新。请刷新后继续，最新内容会保留。" : "";
+    }});
+  systemHealth = window.createHaloSystemHealth({ state, write: writeNotificationProgress, render, esc, modalRoot, closeModal, screen });
+  helpCenter = window.createHaloHelpCenter({ state, go, persist: persistAppProgress, esc, screen, showInfoModal });
+  feedbackEditor = window.createHaloFeedback({ state, write: writeNotificationProgress, go, render, esc, screen, leave: () => supportContact?.backFromFeedback() || helpCenter.back(), commerceContext: () => supportContact?.commerceContext() });
+  supportContact = window.createHaloSupportContact({ state, pages, go, persist: persistAppProgress, esc, closeModal, commercial: () => window.HALO_COMMERCIAL_EXTENSION, openFeedback: commerce => { go("HELP-02"); if (commerce) feedbackEditor.prepareCommerce(); else feedbackEditor.handle("feedback:new"); } });
+  aboutLegal = window.createHaloAboutLegal({ state, go, esc, symbol: HALO_SYMBOL });
+  accountSecurity = window.createHaloAccountSecurity({ state, go, write: writeNotificationProgress, readSession: () => { try { const value = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(value && typeof value === "object"), value }; } catch { return { ok: false }; } },
+    hasUnmergedChanges: saved => { const transient = new Set(["signedIn", "authVerified", "authCodeRequested", "authReturnRoute", "authForm", "welcomeShopping", "lastVisitedRoute", "navigationHistory", "pageViews", "tabStacks", "activeTab", "dataQualityView"]); return [...new Set([...persistedAppKeys, "toggles", ...Object.keys(saved)])].some(key => !transient.has(key) && JSON.stringify(saved[key]) !== JSON.stringify(state[key])); },
+    invalidateAuth: invalidateAuthRequest, track: trackPrototypeEvent, esc, modalRoot, closeModal });
+  accountDeletion = window.createHaloAccountDeletion({ state, go, render, write: writeNotificationProgress, readSession: () => { try { const value = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(value && typeof value === "object"), value }; } catch { return { ok: false }; } },
+    hasUnmergedChanges: saved => { const transient = new Set(["lastVisitedRoute", "navigationHistory", "pageViews", "tabStacks", "activeTab"]); return [...new Set([...persistedAppKeys, "toggles", ...Object.keys(saved)])].some(key => !transient.has(key) && JSON.stringify(saved[key]) !== JSON.stringify(state[key])); },
+    getAssets: () => window.HALO_COMMERCIAL_EXTENSION?.getDeletionSnapshot({ membershipState: state.membershipHardwareState }), track: trackPrototypeEvent, esc, screen, modalRoot, closeModal });
+  haloHistory = window.createHaloHistory({ state, screen, modalRoot, esc, go, write: writeNotificationProgress, newSource: () => createHaloSource("body"), closeModal, track: trackPrototypeEvent,
+    checkSaved: () => {
+      let saved; try { saved = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); } catch { return "暂时无法读取本机记录，请重试。原对话没有改变。"; }
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return "暂时无法读取本机记录，请重试。原对话没有改变。";
+      if (!saved.signedIn || !saved.authVerified || !state.signedIn || !state.authVerified || saved.authPhone !== state.authPhone) return "登录状态已变化，请刷新后重新登录。原对话没有改变。";
+      const transient = new Set(["lastVisitedRoute", "navigationHistory", "pageViews", "tabStacks", "activeTab"]);
+      return [...new Set([...persistedAppKeys, "toggles", ...Object.keys(saved)])].some(key => !transient.has(key) && JSON.stringify(saved[key]) !== JSON.stringify(state[key])) ? "记录已在其他页面更新。请刷新后再操作，最新内容会保留。" : "";
+    } });
+  haloMemory = window.createHaloMemory({state,screen,modalRoot,esc,go,write:writeNotificationProgress,closeModal,track:trackPrototypeEvent,
+    checkSaved: () => {
+      let saved; try { saved=JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); } catch { return "暂时无法读取本机记录，请重试。原记忆没有改变。"; }
+      if (!saved || typeof saved!=="object" || Array.isArray(saved)) return "暂时无法读取本机记录，请重试。原记忆没有改变。";
+      if (!saved.signedIn || !saved.authVerified || !state.signedIn || !state.authVerified || saved.authPhone!==state.authPhone) return "登录状态已变化，请刷新后重新登录。原记忆没有改变。";
+      const transient=new Set(["lastVisitedRoute","navigationHistory","pageViews","tabStacks","activeTab"]);
+      return [...new Set([...persistedAppKeys,"toggles",...Object.keys(saved)])].some(key=>!transient.has(key)&&JSON.stringify(saved[key])!==JSON.stringify(state[key])) ? "记录已在其他页面更新。请刷新后再操作，最新内容会保留。" : "";
+    }});
+  oxygenMeasurement = window.createHaloOxygenMeasurement({ state, write: writeBasicProfile, render, go, esc, unavailable: oxygenMeasurementUnavailable, saveUnavailable: oxygenSaveUnavailable,
+    symbol: HALO_SYMBOL,
+    recovery: () => measurementPrivacyBlocked() ? { label: "查看数据与隐私", action: "go:SET-01" } : !isHardwareActive() ? { label: "连接 Halo Ring", action: "go:DEV-01" } : !["supported", "off", "quality"].includes(state.oxygenReviewScenario) ? { label: "查看设备信息", action: "go:DEV-11" } : !state.toggles.bluetooth ? { label: "开启蓝牙权限", action: "go:PERM-01" } : { label: "查看连接与同步", action: "go:DEV-10" },
+    requestDiscard: q => {
+      modalReturnFocus = document.activeElement;
+      showModal("放弃这次未保存的结果？", "放弃后，这次结果不会加入记录，也无法找回。此前已保存的记录不受影响。", "放弃结果", `oxygen-measure:discard-confirm:${q.id}`);
+      const dialog = modalRoot.querySelector(".modal"), title = dialog.querySelector("h2");
+      title.id = "oxygen-discard-title"; dialog.setAttribute("role", "alertdialog"); dialog.setAttribute("aria-modal", "true"); dialog.setAttribute("aria-labelledby", title.id);
+      const keep = dialog.querySelector('[data-action="close-modal"]'); keep.textContent = "继续保留";
+      screen.inert = true; tabbar.inert = true; keep.focus();
+    },
+    discardIsOpen: id => Array.from(modalRoot.querySelectorAll("button[data-action]")).some(button => button.dataset.action === `oxygen-measure:discard-confirm:${id}`), closeDiscard: closeModal,
+    returnContext: () => { capturePageView(); return state.current === "HLT-05" ? oxygenReturnContext() : { route: "HLT-03" }; }, onReturn: returnFromOxygenMeasurement });
+  const measurementCenter = window.createHaloMeasurementCenter({ state, esc, icon: domainIcon, chevron: healthChevron, oxygen: () => oxygenMeasurement, active: isHardwareActive,
+    blocked: type => type === "oxygen" ? oxygenMeasurementUnavailable() : deviceOperationUnavailable("measurement"), privacyBlocked: measurementPrivacyBlocked,
+    render, go, persist: persistAppProgress, capture: capturePageView, screen, showInfo: showInfoModal, closeModal, getRecords: allMeasurementRecords, openOxygen: record => returnFromOxygenMeasurement({ route: "HLT-03" }, record, true) });
+  studioTransactions = window.createHaloStudioTransactions(state, APP_PROGRESS_KEY);
+  const studioPayment = window.createHaloStudioPayment({ state, events: STUDIO_EVENTS, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], go, render, transactions: studioTransactions, track: trackPrototypeEvent, esc, icon: studioHomeIcon, screen });
+  const studioReservation = window.createHaloStudioReservation({ state, events: STUDIO_EVENTS, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], payment: studioPayment, go, render, transactions: studioTransactions, track: trackPrototypeEvent, esc, icon: studioHomeIcon, screen, modalRoot, closeModal });
+  function writeStudioPreparation(id, changes) {
+    if (!studioIdentityValid(id)) return false;
+    const next = { ...state.studioRecords[id], ...changes };
+    const snapshot = Object.fromEntries(persistedAppKeys.map(key => [key, state[key]]));
+    snapshot.studioRecords = { ...state.studioRecords, [id]: next }; snapshot.toggles = state.toggles;
+    try { writeAppSnapshot(snapshot); } catch { return false; }
+    Object.assign(state.studioRecords[id], changes); return true;
+  }
+  const studioPreparation = window.createHaloStudioPreparation({ state, events: STUDIO_EVENTS, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], payment: studioPayment, reservation: studioReservation, go, render, persist: persistAppProgress, write: writeStudioPreparation, track: trackPrototypeEvent, esc, icon: studioHomeIcon, screen, modalRoot, closeModal, flash });
+  const studioFeeling = window.createHaloStudioFeeling({ state, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], preparation: studioPreparation, go, render, write: writeStudioPreparation, readStored: () => { try { return { ok: true, records: JSON.parse(localStorage.getItem(APP_PROGRESS_KEY))?.studioRecords || {} }; } catch { return { ok: false }; } }, track: trackPrototypeEvent, esc, icon: studioHomeIcon, screen, modalRoot, closeModal, flash });
+  const studioPreflight = window.createHaloStudioPreflight({ state, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], preparation: studioPreparation, feeling: studioFeeling, deviceBlock: () => deviceOperationUnavailable("studio"), go, render, write: writeStudioPreparation, readStored: () => { try { const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(progress && progress.studioRecords && typeof progress.studioRecords === "object"), progress, hardware: localStorage.getItem("membershipHardwareState") }; } catch { return { ok: false }; } }, track: trackPrototypeEvent, esc, icon: studioHomeIcon, screen, modalRoot, closeModal });
+  const studioSession = window.createHaloStudioSession({ state, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], preparation: studioPreparation, sessionValid: studioSessionIdentityValid, deviceBlock: () => deviceOperationUnavailable("studio"), readStored: () => { try { const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(progress && progress.studioRecords && typeof progress.studioRecords === "object"), progress, hardware: localStorage.getItem("membershipHardwareState") }; } catch { return { ok: false }; } }, write: writeStudioPreparation, go, render, track: trackPrototypeEvent, esc, icon: studioHomeIcon, screen, modalRoot, closeModal, flash });
+  const studioReport = window.createHaloStudioReport({ state, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], eligible: studioSession.reportEligible, readStored: () => { try { const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(progress && progress.studioRecords && typeof progress.studioRecords === "object"), progress }; } catch { return { ok: false }; } }, write: writeStudioPreparation, go, render, track: trackPrototypeEvent, esc, icon: studioHomeIcon, screen, flash });
+  const studioPostReport = window.createHaloStudioPostReport({ state, report: studioReport, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], feeling: studioFeeling, go, render, esc, icon: studioHomeIcon, screen, modalRoot, closeModal, flash });
+  const studioNextDay = window.createHaloStudioNextDay({ state, report: studioReport, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], go, render, esc, icon: studioHomeIcon, screen, flash });
+  studioCodeLookup = window.createHaloStudioCode({ state, events: STUDIO_EVENTS,
+    read: () => { try { return { progress: JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)) }; } catch { return {}; } },
+    select: id => { state.selectedStudioEventId = id; }, go, render, esc, icon: studioHomeIcon, screen });
+  studioInstitution = window.createHaloStudioConfirm({ state, events: STUDIO_EVENTS, lookup: () => studioCodeLookup.receipt(), media: id => STUDIO_HOME_MEDIA[id],
+    read: () => { try { const raw = localStorage.getItem(APP_PROGRESS_KEY); return { raw, progress: JSON.parse(raw) }; } catch { return {}; } },
+    commit: (raw, updates) => { try { const p = JSON.parse(raw); if (!p || localStorage.getItem(APP_PROGRESS_KEY) !== raw) return false; localStorage.setItem(APP_PROGRESS_KEY, JSON.stringify({ ...p, ...updates })); return true; } catch { return false; } },
+    recordStatus: studioHomeRecordState, go, render, esc, icon: studioHomeIcon });
+  studioRecordDetail = window.createHaloStudioRecord({ state, events: STUDIO_EVENTS, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id], report: studioReport, feeling: studioFeeling,
+    read: () => { try { return { progress: JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)) }; } catch { return {}; } },
+    write: (id, expected, changes) => {
+      try {
+        const p = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY));
+        const account = v => String(v.authPhone || v.authForm?.phone || "local-demo");
+        if (!p?.signedIn || !p.authVerified || p.accountDeletionStatus === "submitted" || account(p) !== account(state) || JSON.stringify(p.studioRecords?.[id]) !== expected) return false;
+        const next = { ...p.studioRecords[id], ...changes };
+        localStorage.setItem(APP_PROGRESS_KEY, JSON.stringify({ ...p, studioRecords: { ...p.studioRecords, [id]: next } }));
+        state.studioRecords[id] = next; syncStudioAliases(); return true;
+      } catch { return false; }
+    }, go, render, esc, icon: studioHomeIcon, screen });
+  studioHistory = window.createHaloStudioHistory({ state, events: STUDIO_EVENTS, status: studioHomeRecordState,
+    read: () => { try { return { progress: JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)) }; } catch { return {}; } },
+    select: id => { state.selectedStudioEventId = id; state.selectedStudioHistoryId = id; syncStudioAliases(); }, go, render, esc, icon: studioHomeIcon });
+  studioContact = window.createHaloStudioContact({ state, events: STUDIO_EVENTS, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id],
+    read: () => { try { const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(progress), progress }; } catch { return { ok: false }; } },
+    write: (id, changes, before, field) => {
+      try {
+        const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)), r = progress?.studioRecords?.[id];
+        const account = value => String(value.authPhone || value.authForm?.phone || "local-demo");
+        if (!r || !progress.signedIn || !progress.authVerified || progress.accountDeletionStatus === "submitted" || account(progress) !== account(state)
+          || JSON.stringify([account(progress), id, r.bookingId]) !== before.scope || (r[field] === true) !== before[field]) return false;
+        const next = { ...r, ...changes };
+        localStorage.setItem(APP_PROGRESS_KEY, JSON.stringify({ ...progress, studioRecords: { ...progress.studioRecords, [id]: next } }));
+        state.studioRecords[id] = next; state.toggles.studioContact = next.contactConsent === true; state.toggles.studioMarketing = next.marketingConsent === true; return true;
+      } catch { return false; }
+    }, render, go, esc, icon: studioHomeIcon });
+  studioBenefit = window.createHaloStudioBenefit({ state, event: selectedStudioEvent, media: id => STUDIO_HOME_MEDIA[id],
+    read: () => { try { const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(progress), progress }; } catch { return { ok: false }; } },
+    write: (id, changes) => {
+      try {
+        const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)), current = progress?.studioRecords?.[id], expected = state.studioRecords?.[id];
+        const account = value => String(value.authPhone || value.authForm?.phone || "local-demo");
+        if (!current || !expected || account(progress) !== account(state) || !progress.signedIn || !progress.authVerified || progress.accountDeletionStatus === "submitted"
+          || current.bookingId !== expected.bookingId || current.sessionId !== expected.sessionId || current.completedAt !== expected.completedAt) return false;
+        const next = { ...current, ...changes };
+        localStorage.setItem(APP_PROGRESS_KEY, JSON.stringify({ ...progress, studioRecords: { ...progress.studioRecords, [id]: next } }));
+        state.studioRecords[id] = next; return true;
+      } catch { return false; }
+    }, go, render, esc, icon: studioHomeIcon, screen, modalRoot, closeModal, flash, track: trackPrototypeEvent });
+  studioTodayReminder = window.createHaloStudioTodayReminder({ state, report: studioReport, nextDay: studioNextDay, read: () => { try { const progress = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY)); return { ok: Boolean(progress), progress }; } catch { return { ok: false }; } }, select: id => { state.selectedStudioEventId = id; state.selectedStudioHistoryId = id; syncStudioAliases(); }, go, render, esc, icon: studioHomeIcon, screen, modalRoot, closeModal, flash });
 
   function esc(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
   }
   function filteredPages() {
     return pages.filter((item) => {
+      if (item.id === "TOD-04") return false;
       const groupMatch = state.group === "全部" || item.group === state.group;
       const text = [item.id, item.name, item.function, item.note].join(" ").toLowerCase();
       return groupMatch && (!state.query || text.includes(state.query.toLowerCase()));
     });
   }
-  const SIGNED_OUT_ROUTES = new Set(["ONB-01", "AUTH-01", "AUTH-02", "LEGAL-01"]);
-  const DELETION_STATUS_ROUTES = new Set(["ACC-02", "ACC-03", "HELP-03", "LEGAL-02"]);
+  const SIGNED_OUT_ROUTES = new Set(["SYS-01", "ONB-01", "AUTH-01", "AUTH-02", "LEGAL-01", "SEL-03"]);
+  const DELETION_STATUS_ROUTES = new Set(["SYS-01", "ACC-02", "ACC-03", "HELP-03", "LEGAL-02"]);
   function guardedRoute(id) {
+    accountDeletion?.syncStatus();
+    if (id === "SEL-08") id = "SEL-05";
+    if (id === "CHN-05") id = window.HALO_COMMERCIAL_EXTENSION?.channelJoinNext?.().route || "CHN-01";
+    if (id === "AUTH-02") id = "AUTH-01";
+    if (id === "AUTH-01" && state.signedIn && state.authForm.login?.status === "complete") id = state.authForm.login.destination === "SEL-03" ? "SEL-03" : state.connectionIntro.completed ? "TOD-01" : "ONB-03";
     if (!state.signedIn && !SIGNED_OUT_ROUTES.has(id)) return "AUTH-01";
-    if (!state.signedIn && id === "AUTH-02" && !state.authCodeRequested) return "AUTH-01";
-    if (!state.signedIn && id === "LEGAL-01" && !state.authVerified) return state.authCodeRequested ? "AUTH-02" : "AUTH-01";
+    if (!state.signedIn && id === "LEGAL-01") return "AUTH-01";
     if (state.signedIn && state.accountDeletionStatus === "submitted" && !DELETION_STATUS_ROUTES.has(id)) return "ACC-03";
+    if (state.signedIn && id === "TOD-01" && !state.connectionIntro.completed) id = "ONB-03";
     if (typeof accountRouteGuard === "function") id = accountRouteGuard(id);
+    if (id === "DEV-03" && !deviceBinding.resumeRoute() && !deviceWear.canReturnToBinding() && (!state.deviceScan.handoff || !deviceScan.selected())) id = "DEV-02";
     if (typeof experienceRouteGuard === "function") id = experienceRouteGuard(id);
+    if (id === "TOD-04") id = bodyWeatherRoute.legacy();
     return id;
   }
   function tabForRoute(id) {
@@ -768,19 +1656,82 @@
     return "";
   }
   function capturePageView() {
+    bodyWeatherRoute.capture();
+    feedbackEditor?.capture();
+    helpCenter?.capture();
+    rhythmHome.capture();
+    captureRhythmDraft();
+    dataQuality.capture();
+    basicProfileEditor.capture();
     const id = screen.dataset.page;
     if (!id) return;
     state.pageViews[id] = {
-      top: screen.scrollTop,
+      top: (id === "RHY-03" ? screen.querySelector(".rh-editor-scroll") || screen : id === "RHY-00" ? screen.querySelector(".rh-setup-scroll") || screen : id === "RHY-04" ? screen.querySelector(".rh-settings-scroll") || screen : id === "RHY-06" ? screen.querySelector(".rh-halo-scroll") || screen : id === "TOD-02" ? screen.querySelector(".record-page-scroll") || screen : ["STU-01", "STU-02", "STU-09", "STU-16", "STU-17", "STU-18", "STU-10", "STU-11", "STU-03", "STU-04", "STU-12", "STU-05", "STU-06", "STU-07", "STU-13", "STU-14", "STU-15"].includes(id) ? screen.querySelector(".studio-detail-scroll") || screen : screen).scrollTop,
       open: [...screen.querySelectorAll("details")].map((el, index) => el.open ? index : -1).filter(index => index >= 0),
+      ...(id === "NIG-10" ? nightHistoryPage.capture() : {}),
+      ...(["RHY-02", "RHY-06"].includes(id) ? { rhythmDate: state.selectedRhythmDate, rhythmOwner: String(state.authPhone || state.authForm?.phone || "legacy-session") } : {}),
+      ...(["RHY-00", "RHY-04", "RHY-05"].includes(id) ? { rhythmOwner: String(state.authPhone || state.authForm?.phone || "legacy-session") } : {}),
+      ...(id === "HLT-05" ? { oxygenMode: screen.querySelector(".oxygen-detail")?.dataset.oxygenMode || "day" } : {}),
+      ...(id === "TOD-07" ? { activitySections: Object.fromEntries([...screen.querySelectorAll("details[data-activity-section]")].map(el => [el.dataset.activitySection, el.open])) } : {}),
+      ...(["STU-09", "STU-16", "STU-17", "STU-18", "STU-10", "STU-11", "STU-03", "STU-04"].includes(id) ? { eventId: state.selectedStudioEventId } : {}),
     };
   }
   function go(id, recordHistory = true) {
+    if (!generalSettingsSafe()) return;
+    if (state.current === "HAL-08" && id !== "HAL-08" && !haloSettingsHub.canLeave()) return;
+    if (state.current === "HAL-07" && id !== "HAL-07" && !haloPrivacyControls.canLeave()) return;
+    if (state.current === "NIG-07" && id !== "NIG-07") nightSound.leave();
+    if (state.current === "HAL-06" && id !== "HAL-06" && !haloJourney.canLeave()) return;
+    if (state.current === "HAL-05" && id !== "HAL-05" && !haloFeelingEditor.canLeave()) return;
+    if (state.current === "NIG-06" && id !== "NIG-06" && !nightWake.canLeave()) return;
+    if (state.current === "HAL-04" && id !== "HAL-04" && !haloProactive.canLeave()) return;
+    if (state.current === "HAL-03" && id !== "HAL-03" && !haloMemory.canLeave()) return;
+    if (state.current === "HAL-02" && id !== "HAL-02" && !haloHistory.canLeave()) return;
+    if (state.current === "ACC-03" && id !== "ACC-03" && !accountDeletion.canLeave()) return;
+    if (state.current === "STU-04" && !studioSession.prepare()) return;
+    if (["STU-12", "STU-15", "STU-05", "STU-06"].includes(state.current) && !studioReport.prepare()) return;
+    if (state.current === "STU-03" && !studioPreflight.prepare()) return;
     const target = guardedRoute(id);
+    haloFeelingEditor?.enter(target, state.current);
+    haloJourney?.enter(target, state.current);
+    haloPrivacyControls?.enter(target, state.current);
+    haloSettingsHub?.enter(target, state.current);
+    studioTodayReminder?.enter(target, state.current);
     if (!pages.some((item) => item.id === target)) return;
+    if (target !== state.current && (target === "PERM-01" || state.current === "PERM-01")) permissionFeedback = "";
+    if (modalRoot.querySelector(".legal-reading-modal, .permission-system-modal, .system-health-modal")) closeModal(true);
+    helpCenter?.enter(target, state.current);
+    supportContact?.enter(target, state.current);
+    aboutLegal?.enter(target, state.current);
+    nightReview.enter(target, state.current);
+    nightHome.enter(target, state.current);
+    healthReports.enter(target, state.current);
+    stateShare.enter(target, state.current);
+    dataQuality.enter(target, state.current);
+    rhythmHome.enter(target, state.current);
+    deviceWear.enter(target, state.current);
+    initialSync?.enter(target, state.current);
+    basicProfileEditor.enter(target, state.current);
     capturePageView();
+    if (target === "DEV-10" && state.current !== "DEV-10") state.heartDeviceReturn = state.current === "HLT-01" ? heartReturnContext() : state.current === "HLT-02" ? respirationReturnContext() : null;
+    if (["TOD-05", "DEV-10", "DEV-11", "DEV-01"].includes(target)) {
+      if (state.current === "HLT-06") state.temperatureExternalReturn = { ...temperatureReturnContext(), destination: target };
+      else if (!["TOD-05", "DEV-10", "DEV-11", "DEV-01"].includes(state.current)) state.temperatureExternalReturn = null;
+    }
+    if (["DEV-10", "DEV-11"].includes(target) && state.current === "HLT-05") state.oxygenDeviceReturn = { ...oxygenReturnContext(), destination: target };
+    else if (["DEV-10", "DEV-11"].includes(target) && !/^DEV-/.test(state.current)) state.oxygenDeviceReturn = null;
+    if (["TOD-05", "HLT-02"].includes(target) && !["HLT-05", "HLT-02", "TOD-05"].includes(state.current)) state.oxygenRelatedReturn = null;
+    if (target === "TOD-05" && !["HLT-02", "TOD-05"].includes(state.current)) state.respirationSleepReturn = null;
+    if (target === "TOD-02" && !["HLT-01", "HLT-02", "HLT-05", "HLT-06", "TOD-02"].includes(state.current)) state.recordEntryContext = null;
     if (target === "RHY-00" && state.current !== target) state.rhythmSetupReturn = /^DEV-|^ONB-/.test(state.current) ? "ONB-02" : "RHY-01";
-    if (recordHistory && state.current !== target) state.navigationHistory.push(state.current);
+    if (target === "DEV-01" && !["DEV-01", "DEV-02", "DEV-03", "SYS-01"].includes(state.current)) state.connectionIntro.returnRoute = state.current;
+    if (target === "HELP-03" && state.current === "DEV-01") {
+      // A direct review link may not yet be present in the tab stack.
+      const deviceStack = state.tabStacks["MY-01"] || (state.tabStacks["MY-01"] = ["MY-01"]);
+      if (deviceStack.at(-1) !== "DEV-01") deviceStack.push("DEV-01");
+    }
+    if (target === "SYS-01" && state.current !== target) startup?.begin(state.lastVisitedRoute);
+    if (recordHistory && state.current !== target && state.current !== "SYS-01") state.navigationHistory.push(state.current);
     if (state.navigationHistory.length > 100) state.navigationHistory.splice(0, state.navigationHistory.length - 100);
     const tab = tabForRoute(target);
     if (tab) {
@@ -791,14 +1742,167 @@
     }
     const changed = state.current !== target;
     state.current = target;
+    if (["RHY-00", "RHY-04"].includes(target) && changed) openRhythmSettings();
+    if (target === "RHY-03") {
+      const result = rhythmRecordStore.open(state.selectedRhythmDate);
+      rhythmEditorProblem = result.ok ? "" : result.error; rhythmEditorDraftStatus = result.ok && rhythmRecordStore.inspect().dirty ? "已恢复未保存的草稿" : "";
+    }
     const trail = Array.isArray(history.state?.trail) ? history.state.trail : [location.hash.slice(1) || "TOD-01"];
-    const nextTrail = changed && recordHistory ? [...trail, target] : [...trail.slice(0, -1), target];
-    if (changed && recordHistory) history.pushState({ halo: true, id: target, trail: nextTrail }, "", `#${target}`);
-    else history.replaceState({ halo: true, id: target, trail: nextTrail }, "", `#${target}`);
+    const nextTrail = bodyWeatherRoute.mapTrail(changed && recordHistory ? [...trail, target] : [...trail.slice(0, -1), target]);
+    if (changed && recordHistory) history.pushState({ halo: true, id: target, ...window.HALO_MEMBER_TASKS.historyFields(target), ...window.HALO_COUPON_WALLET?.historyFields?.(target), ...window.HALO_MEMBER_TASK_DETAIL.historyFields(target), trail: nextTrail, ...deviceWear.historyFields(target), ...nightReview.historyFields(target), ...nightHome.historyFields(target), ...healthReports.historyFields(target), ...stateShare.historyFields(target), ...dataQuality.historyFields(target), ...rhythmHome.historyFields(target), ...bodyWeatherRoute.historyFields(target) }, "", `#${target}`);
+    else history.replaceState({ halo: true, id: target, ...window.haloChannelStorage?.historyFields(target), ...window.HALO_MEMBER_TASKS.historyFields(target), ...window.HALO_COUPON_WALLET?.historyFields?.(target), ...window.HALO_MEMBER_TASK_DETAIL.historyFields(target), trail: nextTrail, ...window.HALO_MEMBER_LEVELS.historyFields(target), ...window.HALO_MEMBER_UPGRADE.historyFields(target), ...deviceWear.historyFields(target), ...nightReview.historyFields(target), ...nightHome.historyFields(target), ...healthReports.historyFields(target), ...stateShare.historyFields(target), ...dataQuality.historyFields(target), ...rhythmHome.historyFields(target), ...bodyWeatherRoute.historyFields(target) }, "", `#${target}`);
     render();
   }
   function goBack() {
+    if (nightFade.back()) return;
+    if (nightSupport.back()) return;
+    if (state.current === "REF-01") {
+      if (history.state?.referralPanel === "share") { history.back(); return; }
+      const source = history.state?.trail?.at(-2);
+      if (["MEM-01", "MY-01"].includes(source)) { history.back(); return; }
+      return go("MY-01", false);
+    }
+    if (bodyWeatherRoute.back()) return;
+    if (["CHN-24", "CHN-17", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-26") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (state.current === "HELP-03" && history.state?.trail?.at(-2) === "CHN-25") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (["CHN-25", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-24") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (state.current === "HELP-03" && history.state?.trail?.at(-2) === "CHN-23") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (["CHN-23", "CHN-20", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-22") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (["CHN-22", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-21") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (["CHN-21", "CHN-22", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-20") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (["CHN-20", "CHN-22", "CHN-24", "CHN-26", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-19") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (["CHN-26", "CHN-24", "CHN-20", "CHN-19", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-18") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (accountDeletion?.back()) return;
+    if (state.current === "RHY-04" && history.state?.trail?.at(-2) === "RHY-05") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (state.current === "RHY-05" && history.state?.trail?.at(-2) === "RHY-04") { capturePageView(); persistAppProgress(); history.back(); return; }
+    if (accountSecurity?.back()) return;
+    if (aboutLegal?.back()) return;
+    if (state.current === "HLT-03") { if (history.state?.trail?.at(-2) === "HLT-00") { persistAppProgress(); history.back(); return; } return go("HLT-00", false); }
+    if (supportContact?.back()) return;
+    if (["HLT-01", "HLT-05", "HLT-06", "DEV-10", "DEV-11", "PERM-01"].includes(state.current) && history.state?.trail?.at(-2) === "HLT-03") { persistAppProgress(); history.back(); return; }
+    if (state.current === "PERM-01") {
+      const source = history.state?.trail?.at(-2);
+      if (source && source !== "PERM-01" && pages.some(item => item.id === source)) { persistAppProgress(); history.back(); return; }
+      return go("SET-01", false);
+    }
+    if (feedbackEditor?.back()) return;
     capturePageView();
+    if (state.current === "LEGAL-01") {
+      const source = history.state?.trail?.at(-2);
+      if (source && source !== "LEGAL-01" && pages.some(item => item.id === source)) { persistAppProgress(); history.back(); return; }
+      return go("LEGAL-02", false);
+    }
+    if (helpCenter?.back()) return;
+    if (state.current === "HLT-04" && state.measurementType === "oxygen") return oxygenMeasurement.handle("oxygen-measure:return");
+    if (["DEV-10", "DEV-11"].includes(state.current) && history.state?.trail?.at(-2) === "HLT-04" && state.measurementType === "oxygen" && oxygenMeasurement.request()) { persistAppProgress(); history.back(); return; }
+    if ((state.current === "HELP-03" && history.state?.trail?.at(-2) === "CHN-07") || (["CHN-07", "CHN-12", "CHN-14", "HELP-03"].includes(state.current) && history.state?.trail?.at(-2) === "CHN-11") || (["CHN-07", "HELP-03"].includes(state.current) && ["CHN-12", "CHN-13", "CHN-14", "CHN-15", "CHN-16", "CHN-17"].includes(history.state?.trail?.at(-2)))) {
+      const applicationHelpStack = state.tabStacks["MY-01"];
+      if (applicationHelpStack?.at(-1) === state.current) applicationHelpStack.pop();
+      persistAppProgress(); history.back(); return;
+    }
+    if (state.current === "ONB-02") {
+      const source = history.state?.trail?.at(-2);
+      if (source && source !== "ONB-02" && !/^(SYS|AUTH)-/.test(source) && pages.some(item => item.id === source)) { persistAppProgress(); history.back(); return; }
+      return go("TOD-01", false);
+    }
+    if (state.current === "ONB-04") return basicProfileEditor.handle("basic-profile:back");
+    if (state.current === "TOD-08") return nightReview.back();
+    if (state.current === "TOD-09") return healthReports.back();
+    if (state.current === "TOD-10") return stateShare.back();
+    if (state.current === "TOD-11") return dataQuality.back();
+    if (dataQuality.backFromExternal()) return;
+    if (["TOD-05", "DEV-10", "DEV-11", "DEV-01"].includes(state.current) && state.temperatureExternalReturn?.destination === state.current) {
+      const context = state.temperatureExternalReturn;
+      state.temperatureExternalReturn = null;
+      if (restoreHealthDetailReturn(context)) {
+        const stack = state.tabStacks[tabForRoute(state.current)];
+        if (stack?.at(-1) === state.current) stack.pop();
+        if (history.state?.trail?.at(-2) === "HLT-06") { persistAppProgress(); history.back(); return; }
+        return go("HLT-06", false);
+      }
+    }
+    if (healthReports.backFromExternal()) return;
+    if (state.current === "DEV-05") return initialSync.handle("initial-sync:back");
+    if (initialSync?.backFromHelp()) return;
+    if (["TOD-05", "HLT-02"].includes(state.current) && state.oxygenRelatedReturn?.destination === state.current) {
+      const context = state.oxygenRelatedReturn;
+      state.oxygenRelatedReturn = null;
+      if (restoreHealthDetailReturn(context)) {
+        if (state.tabStacks["TOD-01"]?.at(-1) === state.current) state.tabStacks["TOD-01"].pop();
+        if (history.state?.trail?.at(-2) === context.route) { persistAppProgress(); history.back(); return; }
+        return go(context.route, false);
+      }
+    }
+    if (["DEV-10", "DEV-11"].includes(state.current) && state.oxygenDeviceReturn?.destination === state.current) {
+      const context = state.oxygenDeviceReturn;
+      state.oxygenDeviceReturn = null;
+      if (restoreHealthDetailReturn(context)) {
+        if (state.tabStacks["MY-01"]?.at(-1) === state.current) state.tabStacks["MY-01"].pop();
+        if (history.state?.trail?.at(-2) === context.route) { persistAppProgress(); history.back(); return; }
+        return go(context.route, false);
+      }
+    }
+    if (state.current === "TOD-05" && state.respirationSleepReturn?.route === "HLT-02") {
+      const context = state.respirationSleepReturn;
+      state.respirationSleepReturn = null;
+      if (restoreHealthDetailReturn(context)) {
+        if (state.tabStacks["TOD-01"]?.at(-1) === "TOD-05") state.tabStacks["TOD-01"].pop();
+        if (history.state?.trail?.at(-2) === context.route) { persistAppProgress(); history.back(); return; }
+        return go(context.route, false);
+      }
+    }
+    if (state.current === "DEV-10" && ["HLT-01", "HLT-02"].includes(state.heartDeviceReturn?.route)) {
+      const context = state.heartDeviceReturn;
+      state.heartDeviceReturn = null;
+      if (restoreHealthDetailReturn(context)) {
+        if (state.tabStacks["MY-01"]?.at(-1) === "DEV-10") state.tabStacks["MY-01"].pop();
+        if (history.state?.trail?.at(-2) === context.route) { persistAppProgress(); history.back(); return; }
+        return go(context.route, false);
+      }
+    }
+    if (state.current === "DEV-04") return deviceWear.back();
+    if (deviceWear.canReturnFromHelp()) return deviceWear.returnFromHelp();
+    if (state.current === "TOD-02" && pages.some(item => item.id === history.state?.trail?.at(-2))) {
+      const recordStack = state.tabStacks["TOD-01"];
+      if (recordStack?.at(-1) === "TOD-02") recordStack.pop();
+      persistAppProgress(); history.back(); return;
+    }
+    if (state.current === "DEV-03") return deviceBinding.back();
+    if (state.current === "DEV-02") return deviceScan.back();
+    if (state.current === "DEV-01" && state.connectionIntro.returnRoute !== "DEV-01" && pages.some(item => item.id === state.connectionIntro.returnRoute)) {
+      const destination = state.connectionIntro.returnRoute;
+      // Returning changes the navigation decision, not a permission already granted by the system.
+      // A pending mock result may still be recorded, but cannot complete or navigate this intro.
+      if (destination === "ONB-03") {
+        state.connectionIntro.choice = "";
+        state.connectionIntro.completed = false;
+      }
+      state.connectionIntro.returnRoute = "";
+      const deviceStack = state.tabStacks["MY-01"];
+      if (deviceStack?.at(-1) === "DEV-01") deviceStack.pop();
+      trackPrototypeEvent(destination === "ONB-03" ? "onboarding_connection_returned" : "device_guide_returned", { source_page: "DEV-01", destination, simulated: true });
+      if (history.state?.trail?.at(-2) === destination) { persistAppProgress(); history.back(); return; }
+      return go(destination, false);
+    }
+    if (state.current === "ONB-03") return handleAction("connect-intro-skip");
+    if (state.current === "AUTH-01") return go(state.authReturnRoute === "SEL-03" ? "SEL-03" : "ONB-01", false);
+    if (["TOD-06", "TOD-07", "HLT-01", "HLT-02", "HLT-05", "HLT-06"].includes(state.current) && ["HLT-00", "TOD-01", "TOD-03", "TOD-05", "TOD-06", "TOD-07", "TOD-08"].includes(history.state?.trail?.at(-2))) {
+      // A directly opened health overview may not yet be in the tab stack.
+      // Prefer this detail's actual entry so Back does not jump to an unrelated home page.
+      const detailStack = state.tabStacks["TOD-01"];
+      if (detailStack?.at(-1) === state.current) detailStack.pop();
+      persistAppProgress();
+      history.back();
+      return;
+    }
+    if (state.current === "HLT-06") return go("HLT-00", false);
+    if (["SEL-01", "STU-08"].includes(state.current) && history.state?.trail?.at(-2) === "TOD-01") {
+      const selectStack = state.tabStacks["MY-01"];
+      if (selectStack?.at(-1) === state.current) selectStack.pop();
+      history.back();
+      return;
+    }
+    if (state.current === "SEL-03" && (!state.signedIn || state.welcomeShopping || history.state?.trail?.at(-2) === "ONB-01")) return go("ONB-01", false);
     const tab = tabForRoute(state.current);
     const stack = state.tabStacks[tab] || [];
     if (stack.at(-1) === state.current && stack.length > 1) {
@@ -840,52 +1944,6 @@
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 500);
   }
-  function shareContent() {
-    const ready = isHardwareActive() && state.dataLifecycle === "interpretable";
-    const data = currentDataLifecycle();
-    const weather = currentBodyWeather();
-    return { title: ready ? weather.label : data.label, description: ready ? weather.shareLine : data.summary, background: state.shareBackground, photo: state.sharePhotoUrl, zoom: state.shareZoom };
-  }
-  function loadShareImage(src) {
-    return new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; });
-  }
-  async function buildShareCanvas(content = shareContent()) {
-    const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
-    const ctx = canvas.getContext("2d");
-    const dark = content.background === "night" || (content.background === "photo" && content.photo);
-    ctx.fillStyle = dark ? "#101915" : "#eee9df"; ctx.fillRect(0, 0, 1080, 1350);
-    const scale = Math.max(.8, Math.min(1.25, Number(content.zoom) / 100 || 1));
-    ctx.save(); ctx.translate(540, 675); ctx.scale(scale, scale); ctx.translate(-540, -675);
-    if (content.background === "photo" && content.photo) {
-      const photo = await loadShareImage(content.photo);
-      const ratio = Math.max(1080 / photo.width, 1350 / photo.height);
-      ctx.drawImage(photo, (1080-photo.width*ratio)/2, (1350-photo.height*ratio)/2, photo.width*ratio, photo.height*ratio);
-      ctx.fillStyle = "rgba(12,23,17,.55)"; ctx.fillRect(0,0,1080,1350);
-    }
-    if (window.HALO_SHARE_SYMBOL_DATA) { const symbol = await loadShareImage(window.HALO_SHARE_SYMBOL_DATA); ctx.drawImage(symbol,460,175,160,160); }
-    ctx.fillStyle = dark ? "#f6f2e9" : "#343a32"; ctx.textAlign = "center";
-    ctx.font = "28px sans-serif"; ctx.fillText("HALO BODY WEATHER",540,425);
-    ctx.font = "bold 96px sans-serif"; ctx.fillText(content.title,540,650,920);
-    ctx.font = "40px sans-serif";
-    const lines = []; let line = "";
-    for (const char of content.description) { if (ctx.measureText(line + char).width > 820) { lines.push(line); line = char; } else line += char; }
-    if (line) lines.push(line);
-    lines.slice(0,4).forEach((text,index) => ctx.fillText(text,540,755+index*62));
-    ctx.font = "26px sans-serif"; ctx.fillText("HALORING · 每日身体状态参考",540,1190);
-    ctx.restore(); return canvas;
-  }
-  async function paintShareCards(root = screen) {
-    const targets = [...root.querySelectorAll("canvas[data-share-canvas]")];
-    if (!targets.length) return;
-    try {
-      const canvas = await buildShareCanvas();
-      for (const target of targets) { if (!target.isConnected) continue; target.width=canvas.width; target.height=canvas.height; target.getContext("2d").drawImage(canvas,0,0); target.dataset.ready="true"; }
-    } catch { for (const target of targets) target.setAttribute("aria-label","图片未载入，请重新选择背景"); }
-  }
-  async function saveShareImage() {
-    try { const canvas = await buildShareCanvas(); canvas.toBlob(blob => { if (blob) { downloadBlob("HALORING-Body-Weather.png",blob); flash("已发起分享卡图片下载"); } }, "image/png"); }
-    catch { showInfoModal("图片暂时无法生成","请重新选择相册图片，或改用雾白背景后重试。"); }
-  }
   function showModal(title, message, confirmLabel, action) {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal"><h2>${esc(title)}</h2><p>${esc(message)}</p><div class="button-row"><button class="danger-button" data-action="${esc(action)}">${esc(confirmLabel)}</button><button class="secondary" data-action="close-modal">取消</button></div></section></div>`;
   }
@@ -897,13 +1955,66 @@
     const tierCards = DAILY_INSPIRATION.outfits.map((outfit) => `<article class="outfit-tier"><div class="outfit-tier-head"><span>${esc(outfit.level)}</span><div class="outfit-swatches" aria-label="${esc(outfit.colors)}">${outfit.swatches.map((color) => `<i style="--outfit-swatch:${esc(color)}" aria-hidden="true"></i>`).join("")}</div></div><strong>${esc(outfit.colors)}</strong><p>${esc(outfit.meaning)}</p></article>`).join("");
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal outfit-modal" role="dialog" aria-modal="true" aria-labelledby="outfit-title"><div class="modal-title-row"><div><span class="modal-eyebrow">五行穿衣 · 文化灵感</span><h2 id="outfit-title">今天的旺运穿衣</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><p>想借颜色给今天换个心情，可以从下面三组里选一组。</p><div class="outfit-tier-list">${tierCards}</div><p class="inspiration-modal-note">这是文化寓意，不预测贵人、合作或收益结果，也不读取健康数据。穿你已有、舒服并适合场合的衣服就好。</p>${buttons([["和 Halo 聊穿搭", "outfit-inspiration-chat", "primary"], ["返回今日", "close-modal", "secondary"]])}</section></div>`;
   }
-  function showAiCorrectionModal() {
-    trackPrototypeEvent("ai_interpretation_correction_started", { source_page: state.current });
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal correction-modal" role="dialog" aria-modal="true" aria-labelledby="correction-title"><div class="modal-title-row"><div><span class="modal-eyebrow">你的感受更重要</span><h2 id="correction-title">哪里和你不太一样？</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><p>这不会改动戒指记录，只会纠正 Halo 对今天的解释。</p><div class="correction-options">${Object.entries(AI_CORRECTION_REASONS).map(([value, label]) => `<button class="choice-row" data-action="ai-correction-select:${value}"><span><strong>${esc(label)}</strong></span><i aria-hidden="true"></i></button>`).join("")}</div></section></div>`;
+  function bodyWeatherInterpretationKey() {
+    return ["body-weather", beijingDateKey(), state.healthDemoRecordDate, state.bodyWeather, state.dataLifecycle].join("|");
   }
-  function showAiCorrectionConfirm(reason) {
-    const label = AI_CORRECTION_REASONS[reason] || AI_CORRECTION_REASONS.other;
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal correction-modal" role="dialog" aria-modal="true" aria-labelledby="correction-confirm-title"><div class="modal-title-row"><div><span class="modal-eyebrow">确认纠正</span><h2 id="correction-confirm-title">${esc(label)}</h2></div><button class="text-button" data-action="close-modal">关闭</button></div>${notice("戒指数据保持原样", "Halo 会把你的反馈作为用户纠正单独保存，不再把原来的解释当作你的实际感受。", "sage")}<label class="field-label">想补充的话（选填）<textarea id="ai-correction-note" class="field" placeholder="例如：今天精神还可以，只是身体有点酸。">${esc(state.aiCorrection.note || "")}</textarea></label>${buttons([["保存这次纠正", `ai-correction-save:${reason}:current`, "primary"], ["保存并检查 Halo 记忆", `ai-correction-save:${reason}:memory`, "secondary"], ["返回重选", "ai-correction:open", "text-button"]])}</section></div>`;
+  function canCorrectBodyWeather() {
+    return state.signedIn && isHardwareActive() && state.dataLifecycle === "interpretable" && state.healthDemoRecordDate === beijingDateKey();
+  }
+  function activeWeatherCorrection() {
+    const correction = state.aiCorrection;
+    if (!canCorrectBodyWeather() || correction?.status !== "saved" || !correction.id || !Number.isFinite(Date.parse(correction.savedAt))) return null;
+    return beijingDateKey(new Date(correction.savedAt)) === beijingDateKey() && correction.interpretationId === bodyWeatherInterpretationKey() ? correction : null;
+  }
+  function writeCorrectionState(changes) {
+    const snapshot = { ...Object.fromEntries(persistedAppKeys.map(key => [key, state[key]])), ...changes, toggles: state.toggles };
+    try { const saved = writeAppSnapshot(snapshot); for (const key of Object.keys(changes)) changes[key] = saved[key]; }
+    catch { return false; }
+    Object.assign(state, changes);
+    return true;
+  }
+  function correctionDraftIsCurrent() {
+    return canCorrectBodyWeather() && state.aiCorrectionDraft?.interpretationId === bodyWeatherInterpretationKey() && state.aiCorrectionDraft?.date === beijingDateKey();
+  }
+  function correctionModalIsCurrent() {
+    return correctionDraftIsCurrent() && modalRoot.querySelector("[data-correction-token]")?.dataset.correctionToken === state.aiCorrectionDraft.id;
+  }
+  function showAiCorrectionModal() {
+    if (!canCorrectBodyWeather()) return showInfoModal("暂时没有今天的解释可纠正", "可以先记录此刻感受。今天的身体天气可用后，再告诉 Halo 哪里不准确。", "记下感受", "go:TOD-02");
+    if (!correctionDraftIsCurrent()) {
+      const correction = activeWeatherCorrection();
+      const previousDraft = state.aiCorrectionDraft;
+      if (previousDraft && (previousDraft.reason || previousDraft.note)) state.aiCorrectionHistory = [...state.aiCorrectionHistory, { ...previousDraft, status: "draft", archivedAt: new Date().toISOString() }];
+      state.aiCorrectionDraft = { id: `correction-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, date: beijingDateKey(), interpretationId: bodyWeatherInterpretationKey(), reason: correction?.reason || "", note: correction?.note || "" };
+    }
+    const draft = state.aiCorrectionDraft;
+    persistAppProgress();
+    trackPrototypeEvent("ai_interpretation_correction_started", { source_page: state.current });
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal correction-modal" data-correction-token="${esc(draft.id)}" role="dialog" aria-modal="true" aria-labelledby="correction-title"><div class="modal-title-row"><div><span class="modal-eyebrow">${esc(draft.date)} · 用户反馈</span><h2 id="correction-title">哪里和你不太一样？</h2></div><button class="text-button" data-action="close-modal">暂不修改</button></div><p>选好后再保存。戒指数据保持原样，未保存的选择不会替换之前的反馈。</p><div class="correction-options">${Object.entries(AI_CORRECTION_REASONS).map(([value, label]) => `<button class="choice-row ${draft.reason === value ? "selected" : ""}" data-action="ai-correction-select:${value}" aria-pressed="${draft.reason === value}"><span><strong>${esc(label)}</strong></span><i aria-hidden="true">${draft.reason === value ? "✓" : ""}</i></button>`).join("")}</div></section></div>`;
+  }
+  function showAiCorrectionConfirm(reason, error = "") {
+    if (!correctionDraftIsCurrent() || !AI_CORRECTION_REASONS[reason]) return;
+    const draft = state.aiCorrectionDraft;
+    const label = AI_CORRECTION_REASONS[reason];
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal correction-modal" data-correction-token="${esc(draft.id)}" role="dialog" aria-modal="true" aria-labelledby="correction-confirm-title"><div class="modal-title-row"><div><span class="modal-eyebrow">${esc(draft.date)} · 确认反馈</span><h2 id="correction-confirm-title">${esc(label)}</h2></div><button class="text-button" data-action="close-modal">暂不修改</button></div><p>保存为你的反馈，不改动戒指数据，也不会自动加入 Halo 记忆。</p><label class="field-label" for="ai-correction-note">想补充的话（选填）</label><textarea id="ai-correction-note" class="field" maxlength="500" aria-describedby="ai-correction-feedback" placeholder="例如：今天精神还可以，只是身体有点酸。">${esc(draft.note)}</textarea><p id="ai-correction-feedback" class="caption" role="status">${esc(error || "最多 500 字，关闭后草稿会保留。")}</p>${buttons([["保存这次反馈", `ai-correction-save:${reason}:current:${draft.id}`, "primary"], ["保存并查看 Halo 记忆", `ai-correction-save:${reason}:memory:${draft.id}`, "secondary"], ["返回重选", "ai-correction:open", "text-button"]])}</section></div>`;
+  }
+  function saveAiCorrection(reason, mode, token) {
+    if (!correctionModalIsCurrent() || state.aiCorrectionDraft.id !== token || state.aiCorrectionDraft.reason !== reason || !AI_CORRECTION_REASONS[reason] || !["current", "memory"].includes(mode)) {
+      if (modalRoot.querySelector("[data-correction-token]")) showInfoModal("这次解释已更新", "未保存的内容仍在草稿中。请返回查看当前状态，再决定是否纠正。", "返回身体天气", "go:TOD-03");
+      return;
+    }
+    const note = String(state.aiCorrectionDraft.note || "").trim();
+    if (note.length > 500) return showAiCorrectionConfirm(reason, "最多 500 字，请缩短后再保存。");
+    const savedAt = new Date().toISOString();
+    const correction = { id: token.replace("draft-", ""), status: "saved", source: "user-correction", reason, reasonLabel: AI_CORRECTION_REASONS[reason], note, savedAt, date: beijingDateKey(), interpretationId: bodyWeatherInterpretationKey(), recordDate: state.healthDemoRecordDate, memoryReview: false };
+    const previous = state.aiCorrection;
+    const history = previous.status !== "none" ? [...state.aiCorrectionHistory, { ...previous, archivedAt: savedAt }] : state.aiCorrectionHistory;
+    if (!writeCorrectionState({ aiCorrection: correction, aiCorrectionDraft: null, aiCorrectionHistory: history })) return showAiCorrectionConfirm(reason, "这次没保存成功，原反馈没有变化，草稿也还在。请稍后重试。");
+    setHaloSource("correction", null, true);
+    trackPrototypeEvent("ai_interpretation_correction_saved", { correction_type: reason, interpretation_id: correction.interpretationId, memory_view_requested: mode === "memory" });
+    closeModal();
+    if (mode === "memory") go("HAL-03"); else render();
+    return flash(mode === "memory" ? "反馈已保存；你可以逐条查看 Halo 记忆" : "反馈已保存，戒指数据保持原样");
   }
   function showJourneyDeferModal() {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal journey-decision-modal" role="dialog" aria-modal="true" aria-labelledby="journey-defer-title"><div class="modal-title-row"><div><span class="modal-eyebrow">今天先不做也可以</span><h2 id="journey-defer-title">这一步卡在哪里？</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><p>只用来帮你调整下一步，不评价是否坚持。</p><div class="correction-options">${[["time","今天没时间"],["hard","这一步还是太难"],["timing","现在不是合适的时候"],["mood","今天不想做"]].map(([value, label]) => `<button class="choice-row" data-action="journey-defer:${value}"><span><strong>${label}</strong></span><i aria-hidden="true"></i></button>`).join("")}</div></section></div>`;
@@ -920,27 +2031,29 @@
     const records = [
       ...(Array.isArray(state.subjectiveRecords) ? state.subjectiveRecords : []),
       ...(Array.isArray(state.haloFeelingRecords) ? state.haloFeelingRecords : []),
-      ...Object.entries(state.studioRecords || {}).filter(([, record]) => record.beforeFeeling && record.deletionStatus !== "deleted").map(([eventId, record]) => ({ id: `studio-user-${eventId}`, eventId, original: record.beforeFeeling, occurredAt: record.beforeSavedAt || null, source: "user-record", category: "studio" })),
+      ...Object.entries(state.studioRecords || {}).filter(([eventId, record]) => studioFeeling.savedText(record, eventId)).map(([eventId, record]) => ({ id: `studio-user-${eventId}`, eventId, bookingId: record.bookingId, accountRef: record.accountRef, ownerAccount: record.ownerAccount, original: studioFeeling.savedText(record, eventId), occurredAt: record.beforeSavedAt || null, source: "user-record", category: "studio" })),
     ];
-    return { exported_at: new Date().toISOString(), prototype_only: true, encrypted: false, user_records: records, legacy_user_tags: records.length ? [] : state.subjectiveMarkers, measurement_records: state.lastMeasurement ? [state.lastMeasurement] : [], scope_note: "仅当前浏览器原型记录。未接入设备真实健康档案，不包含云端数据。" };
+    return { exported_at: new Date().toISOString(), prototype_only: true, encrypted: false, user_records: records, legacy_user_tags: records.length ? [] : state.subjectiveMarkers, measurement_records: allMeasurementRecords(), scope_note: "仅当前浏览器原型记录。未接入设备真实健康档案，不包含云端数据。" };
   }
   function showWidgetPreview() {
-    const connection = isHardwareActive() ? DEVICE_STATUS[state.deviceStatus] || DEVICE_STATUS.connected : DEVICE_STATUS.disconnected;
-    const connectionLabel = state.deviceStatus === "low" ? "低电量" : connection.label;
+    const active = isHardwareActive();
+    const connection = active ? DEVICE_STATUS[state.deviceStatus] || DEVICE_STATUS.disconnected : DEVICE_STATUS.disconnected;
+    const connectionLabel = !active ? "尚未绑定戒指" : state.deviceStatus === "low" ? "戒指低电量" : `戒指${connection.label}`;
     const weather = currentBodyWeather();
-    const canInterpretWeather = isHardwareActive() && state.dataLifecycle === "interpretable";
+    const canInterpretWeather = active && state.dataLifecycle === "interpretable";
     const dataState = currentDataLifecycle();
-    const bodyWeather = canInterpretWeather ? weather.label : isHardwareActive() ? dataState.label : "尚未生成";
-    const tonight = canInterpretWeather ? `今晚建议：${weather.nightTitle.replace("今晚", "")}` : isHardwareActive() ? "今晚建议：按平时时间准备睡觉" : "今晚可选：手动选择基础内容";
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal widget-modal"><div class="modal-title-row"><div><span class="modal-eyebrow">DESKTOP WIDGET</span><h2>桌面小组件预览</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><section class="widget-preview"><div class="widget-heading"><img src="${HALO_SYMBOL}" alt=""><span>BODY WEATHER</span></div><strong>${esc(bodyWeather)}</strong><div class="widget-status"><i class="${esc(state.deviceStatus)}"></i><span>戒指${esc(connectionLabel)}</span></div><p>${esc(tonight)}</p></section>${notice("隐私边界", "小组件只显示 Body Weather、戒指连接状态和今晚建议，不显示心率、HRV、血氧、温度或其他敏感健康数值。", "sage")}${buttons([["添加到桌面", "widget-add", "primary"], ["暂不添加", "close-modal", "secondary"]])}</section></div>`;
+    const bodyWeather = canInterpretWeather ? weather.label : active ? dataState.label : "尚未生成";
+    const tonight = canInterpretWeather ? `今晚建议：${weather.nightTitle.replace("今晚", "")}` : "有足够数据后再显示今晚建议";
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal widget-modal gs-modal" data-general-modal="widget" role="dialog" aria-modal="true" aria-labelledby="gs-widget-title"><header class="gs-modal-header modal-title-row"><h2 id="gs-widget-title">桌面小组件预览</h2><button class="text-button" data-action="close-modal">关闭</button></header><p class="gs-note">仅预览显示样式；本原型不会向系统桌面添加小组件。</p><section class="widget-preview"><div class="widget-heading"><img src="${HALO_SYMBOL}" alt=""><span>BODY WEATHER</span></div><strong>${esc(bodyWeather)}</strong><div class="widget-status"><i class="${active ? esc(state.deviceStatus) : "disconnected"}"></i><span>${esc(connectionLabel)}</span></div><p>${esc(tonight)}</p></section><section class="gs-preview"><h3>桌面上会显示什么</h3><p>Body Weather、戒指连接状态与今晚建议。不展示心率、HRV、血氧、温度或对话内容。</p><small>桌面内容可能被旁人看到，请按你的隐私需求决定是否使用。当前内容来自原型状态，并非实时设备数据。</small></section><div class="button-row gs-actions"><button class="primary" data-action="close-modal">知道了</button></div></section></div>`;
   }
   function showWidgetAdded() {
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal widget-modal"><div class="modal-title-row"><div><span class="modal-eyebrow">DESKTOP WIDGET</span><h2>小组件已准备好</h2></div><button class="text-button" data-action="close-modal">关闭</button></div><section class="widget-added-state"><span aria-hidden="true">✓</span><strong>请在系统面板中完成添加</strong><p>接下来可以选择小组件尺寸和桌面位置。</p></section>${notice("保护屏幕隐私", "添加后只显示 Body Weather、戒指连接状态和今晚建议。", "sage")}${buttons([["完成", "close-modal", "primary"], ["返回预览", "widget-preview", "secondary"]])}</section></div>`;
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal widget-modal gs-modal" role="dialog" aria-modal="true" aria-labelledby="gs-widget-limit-title"><header class="gs-modal-header modal-title-row"><h2 id="gs-widget-limit-title">当前仅支持预览</h2><button class="text-button" data-action="close-modal">关闭</button></header><p>本原型尚未接入系统小组件，没有向你的桌面添加内容。</p><div class="button-row gs-actions"><button class="primary" data-action="close-modal">知道了</button><button class="secondary" data-action="widget-preview">返回预览</button></div></section></div>`;
   }
   function showRecordDetail(label) {
     const record = state.subjectiveRecords.find(item => item.id === label || item.label === label);
     if (!record) return showInfoModal("记录不存在", "这条记录可能已被删除。返回后可以查看其他记录。");
-    showInfoModal(`${record.label} · 用户记录`, `${record.occurredAt ? recordDateTime(record.occurredAt) : "原记录未保存日期"}\n${record.original || "仅选择了标签，没有补充原话。"}\n\n这条记录不会改写设备数据，也不代表因果。`);
+    if (record.category === "rhythm") return showInfoModal(`${record.label} · 用户记录`, `${record.occurredAt ? recordDateTime(record.occurredAt) : "原记录未保存日期"}\n${record.original || "没有补充文字。"}`, "修改或删除这一天", `rhythm-date:${record.occurredAt}`);
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal record-detail-modal" aria-labelledby="record-detail-title"><header class="modal-title-row"><div><small>用户记录</small><h2 id="record-detail-title">${esc(record.label)}</h2></div><button class="text-button" data-action="close-modal">关闭</button></header><p class="record-detail-date">${esc(record.occurredAt ? recordDateTime(record.occurredAt) : "原记录未保存日期")}${record.updatedAt ? `<br>修改于 ${esc(recordDateTime(record.updatedAt))}` : ""}</p><p class="record-detail-note">${esc(record.original || "没有补充文字。")}</p><details class="record-detail-info"><summary>关于这条记录</summary><p>这是你主动记下的感受，不会改动戒指数据。修改后仍保留原记录时间。</p></details>${buttons([["修改", `record-edit:${record.id}`, "secondary"], ["删除这条记录", `record-delete:${record.id}`, "text-button record-delete-link"]])}</section></div>`;
   }
   function showMembershipRules() {
     const active = isHardwareActive();
@@ -954,11 +2067,7 @@
   }
   function showCommerceBoundary() {
     trackPrototypeEvent("commerce_entry_viewed", { channel_status: "pending-confirmation" });
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal membership-rules-modal commerce-boundary-modal"><div class="modal-title-row"><div><span class="modal-eyebrow">HALO SERVICES</span><h2>商城、推荐与体验顾问</h2></div><button class="text-button" data-action="close-modal">关闭</button></div>${rows([["Halo Select", "浏览精选商品、订单与售后"], ["会员推荐", "邀请朋友并查看奖励进度"], ["体验顾问", "先提交申请；身份生效后才能查看服务订单、收益和经营工具"]])}${notice("一个订单只记录一种来源", "订单来源由系统根据有效进入路径和已确认关系判定，用户不需要选择；会员推荐奖励与体验顾问服务收益不会同时产生。", "sage")}${notice("授权彼此独立", "参加活动、接收消息和系统判定的订单来源不会互相自动推导。")} ${buttons([["进入 Halo Select", "go:SEL-01", "primary"], ["会员推荐", "go:REF-01", "secondary"], ["查看体验顾问申请与经营", "go:CHN-01", "secondary"]])}</section></div>`;
-  }
-  function showAccountDeletionConfirm() {
-    trackPrototypeEvent("account_deletion_started", { entry_point: "ACC-03" });
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal account-deletion-modal"><span class="modal-eyebrow">FINAL CONFIRMATION</span><h2>确认提交账号注销？</h2><p>能立即完成的部分会马上处理；需要人工核对时，最长不超过 15 个工作日。再次注册将从 L1 开始，原会员资产不会恢复。</p>${buttons([["确认提交注销", "account-deletion-confirm", "danger-button"], ["返回检查资产", "close-modal", "secondary"]])}</section></div>`;
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal membership-rules-modal commerce-boundary-modal"><div class="modal-title-row"><div><span class="modal-eyebrow">HALO SERVICES</span><h2>商城、推荐与体验顾问</h2></div><button class="text-button" data-action="close-modal">关闭</button></div>${rows([["Halo Select", "浏览精选商品、订单与售后"], ["会员推荐", "邀请朋友并查看奖励进度"], ["体验顾问", "先提交申请；身份生效后才能查看服务订单、收益和经营工具"]])} ${buttons([["进入 Halo Select", "go:SEL-01", "primary"], ["会员推荐", "go:REF-01", "secondary"], ["查看体验顾问申请与经营", "go:CHN-01", "secondary"]])}</section></div>`;
   }
   function currentMemberAssetSnapshot() {
     return window.HALO_COMMERCIAL_EXTENSION?.getMemberSnapshot({
@@ -967,32 +2076,29 @@
       newMember: Boolean(state.newMember),
       memberCreatedAt: state.memberCreatedAt || "",
       hardwareActivatedAt: state.hardwareActivatedAt || "",
+      applicationContext: () => ({accountRef: state.authPhone || "", signedIn: state.signedIn === true}),
     }) || {
-      level: isHardwareActive() ? "Halo Premier（L2）" : "Halo Member（L1）",
-      growth: isHardwareActive() ? 1860 : 0,
-      badges: isHardwareActive() ? 1 : 0,
-      points: 18800,
-      coupons: 2,
-      unusedBenefits: 1,
+      level: "会员资料待取得", growth: null, badges: null, points: null,
+      coupons: 0, unusedBenefits: 0, pending: 0,
     };
   }
-  function accountDeletionPage(item) {
-    if (state.accountDeletionStatus === "submitted") {
-      return `${head(item, "DELETE ACCOUNT")}<div class="stack"><section class="deletion-result"><span>REQUEST RECEIVED</span><h2>注销申请已受理</h2><p>可以立即完成的部分已经开始处理；需要人工核对时，最长不超过 15 个工作日。</p></section>${rows([["申请状态", "处理中"], ["会员等级与资产", "已停止使用，不可提现或转让"], ["订单、退款与售后", "仍会继续处理"], ["健康及会员数据", "删除或匿名化"], ["必须保留的交易记录", "只用于履约与合规"], ["再次注册", "从 Halo Member（L1）开始"]])}${notice("同时拥有体验顾问身份？", "会员账号注销不会自动结束体验顾问合作。请通过下方客服入口处理合同、历史结算和待办事项，无需重新进入经营中心。")}${buttons([["联系客服查看进度", "go:HELP-03", "primary"], ["处理体验顾问合作", "account-channel-support", "secondary"], ["返回账号与安全", "go:ACC-02", "secondary"]])}</div>`;
-    }
-    const snapshot = currentMemberAssetSnapshot();
-    return `${head(item, "DELETE ACCOUNT")}<div class="stack">${notice("注销前请确认将失效的资产", "未完成的订单、退款、售后或申诉不会阻止你提交注销；提交后这些事项仍会继续处理。", "danger")}<section class="asset-snapshot"><span>ASSET SNAPSHOT</span><h2>注销资产快照</h2>${rows([["会员等级", snapshot.level], ["HALO成长值", snapshot.growth.toLocaleString()], ["徽章", `${snapshot.badges} 枚`], ["Halo Points", snapshot.points.toLocaleString()], ["优惠券", `${snapshot.coupons} 张`], ["未使用权益", snapshot.unusedBenefits ? `${snapshot.unusedBenefits} 项 Studio 体验权益` : "无"]])}</section>${notice("注销后会怎样", "以上资产将失效，不可提现或转让。健康及会员数据会删除或匿名化；法律要求保留的记录只用于履约与合规。再次注册将从 Halo Member（L1）开始。")}${buttons([["提交注销申请", "account-deletion-submit", "danger-button"], ["取消", "go:ACC-02", "secondary"]])}</div>`;
-  }
   function showSupportHandoff() {
-    trackPrototypeEvent("customer_service_handoff_started", { channel: "enterprise-wechat", ticket_transport: "reference-only" });
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal service-ticket-modal"><div class="modal-title-row"><div><span class="modal-eyebrow">CUSTOMER CARE</span><h2>准备联系企业微信客服</h2></div><button class="text-button" data-action="close-modal">关闭</button></div>${rows([["客服渠道", "企业微信"], ["可协助处理", "会员、订单、设备、权益与售后问题"], ["不会随跳转发送", "健康数据、Halo 对话和其他敏感信息"]])}${notice("联系后仍由你决定提供什么", "客服只会在处理问题所需的范围内向你询问信息。", "sage")}${buttons([["查看企业微信联系指引", "support-instructions", "primary"], ["取消", "close-modal", "secondary"]])}</section></div>`;
+    supportContact.open();
   }
   let modalReturnFocus = null;
-  function closeModal() {
+  function closeModal(skipReadingHistory = false) {
+    if (haloProactive?.beforeClose() === false) return;
+    if (haloMemory?.beforeClose() === false) return;
+    if (modalRoot.querySelector(".rc-modal")) rhythmCycleStore.clearIntent();
+    if (modalRoot.querySelector(".rh-manage-confirm")) rhythmManagementStore.cancelDelete();
+    if (!skipReadingHistory && modalRoot.querySelector(".legal-reading-modal") && legalReadingView()) { history.back(); return; }
+    systemHealth?.close();
     modalRoot.innerHTML = "";
     screen.inert = false;
     tabbar.inert = false;
     if (modalReturnFocus?.isConnected) modalReturnFocus.focus({ preventScroll: true });
+    else if (/^(legal-read:|perm:open:|health-source:open)/.test(modalReturnFocus?.getAttribute("data-action") || "")) screen.querySelector(`[data-action="${modalReturnFocus.getAttribute("data-action")}"]`)?.focus({ preventScroll: true });
+    else if (state.current === "DEV-05" && modalReturnFocus?.getAttribute("data-action") === "initial-sync:help") screen.querySelector('[data-action="initial-sync:help"]')?.focus({ preventScroll: true });
     modalReturnFocus = null;
   }
   function haloStatus(status = state.deviceStatus, size = "compact", action = "status-detail") {
@@ -1004,7 +2110,7 @@
     const roots = ["TOD-01", "NIG-01", "HAL-01", "RHY-01", "MY-01", "SYS-01", "ONB-01", "STU-08"];
     const back = roots.includes(item.id) ? "" : `<button class="back" data-action="previous">← 返回</button>`;
     const deviceRoots = ["TOD-01", "NIG-01", "HAL-01", "RHY-01", "MY-01"];
-    const deviceAction = deviceRoots.includes(item.id) ? haloStatus(state.deviceStatus, "compact") : "";
+    const deviceAction = item.id === "TOD-01" ? `${haloStatus(state.deviceStatus, "compact", "today-device")}<span class="today-sync-label">${esc(todaySyncLabel())}</span>` : deviceRoots.includes(item.id) ? haloStatus(state.deviceStatus, "compact") : "";
     const actionLabels = { "NIG-10": "查看最近夜间记录", "HAL-02": "查看最近会话", "HAL-08": "打开 Halo 会话设置", "RHY-04": "打开节律设置" };
     const headAction = Object.entries(actionLabels).reduce((html, [route, label]) => html.replace(`data-action="go:${route}"`, `data-action="go:${route}" aria-label="${label}"`), action || "");
     const visibleName = item.id === "HAL-01" ? "Halo" : item.name;
@@ -1017,6 +2123,8 @@
   function notice(title, body, tone) { return `<section class="notice ${tone || ""}"><strong>${esc(title)}</strong><p>${esc(body)}</p></section>`; }
   function domainIcon(kind) {
     const paths = {
+      body: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="7" r="1.5"/><path d="M7 11h10m-5-2v7m0-2-3 4m3-4 3 4"/>',
+      report: '<path d="M6 3h8l4 4v14H6Z M14 3v5h4 M9 12h6 M9 16h6"/>',
       sleep: '<path d="M15.5 3.8a6.8 6.8 0 1 0 4.7 11.7A7.6 7.6 0 0 1 15.5 3.8Z"/>',
       energy: '<path d="M3 13h4l2.2-5.4 3.2 9 2.1-5H21"/>',
       activity: '<path d="M4 18 10 12l3 3 7-8"/><path d="M15 7h5v5"/>',
@@ -1064,7 +2172,7 @@
   }
   function visualSignalCards(signals, empty = false) {
     const routes = ["TOD-05", "TOD-06", "TOD-07"];
-    return `<div class="three-column visual-signals">${signals.map(([label, value], index) => { const [kind, glyph] = visualMeta(label); const levels = empty ? [18,18,18,18] : [[40,58,46,64],[54,68,62,76],[34,52,48,58]][index]; return `<button class="signal-card" data-kind="${kind}" data-action="go:${routes[index]}"><span class="signal-head"><i aria-hidden="true">${glyph}</i><em>${esc(label)}</em></span><strong>${esc(value)}</strong><span class="micro-bars" aria-hidden="true">${levels.map((height, barIndex) => `<i class="${barIndex === levels.length - 1 ? "active" : ""}" style="height:${height}%"></i>`).join("")}</span></button>`; }).join("")}</div>`;
+    return `<div class="three-column visual-signals${empty ? " is-empty" : ""}">${signals.map(([label, value], index) => { const kind = ["sleep", "energy", "activity"][index]; return `<button class="signal-card" data-kind="${kind}" data-action="go:${routes[index]}" aria-label="${esc(label)}：${esc(value)}，查看详情"><span class="signal-head"><i aria-hidden="true">${domainIcon(kind)}</i><em>${esc(label)}</em></span><strong>${esc(value)}</strong><span class="signal-foot">${empty ? "查看说明" : state.dataLifecycle !== "interpretable" ? "查看记录" : index === 2 ? "今天" : "昨晚"}<i aria-hidden="true">›</i></span></button>`; }).join("")}</div>`;
   }
   function weatherDistribution(items) {
     const total = Math.max(1, items.reduce((sum, item) => sum + item[1], 0));
@@ -1074,13 +2182,13 @@
     const total = Math.max(1, items.reduce((sum, item) => sum + item[1], 0));
     return `<section class="activity-mix"><div class="activity-mix-head"><span>今日活动强度</span><strong>${total} 分钟</strong></div><div class="activity-mix-bar" role="img" aria-label="今日活动强度分布">${items.map(([label, value, tone]) => `<i class="${esc(tone)}" style="flex:${value}" title="${esc(`${label} ${value} 分钟`)}"></i>`).join("")}</div><div class="activity-mix-legend">${items.map(([label, value, tone]) => `<span><i class="${esc(tone)}"></i>${esc(label)} <b>${value}m</b></span>`).join("")}</div></section>`;
   }
-  function hrvExplainer() {
-    return `<details class="visual-disclosure hrv-disclosure"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>42 ms 代表什么</strong><small>先看它和你平时相比</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body"><section class="hrv-meaning-card"><span>昨晚 · 42 ms</span><strong>接近你的平时</strong><p>昨晚心跳间隔的变化没有明显偏离近期。只看这一项，不需要改变今天的安排。</p><div class="hrv-meaning-scale" role="img" aria-label="昨晚 HRV 估算接近个人常见范围"><small>比平时低</small><b><i style="left:54%"></i></b><small>比平时高</small></div></section><p class="hrv-plain-definition">在同一个人、同一种测量条件下，数值较大，表示相邻心跳间隔的变化更大；数值较小，表示心跳节奏更均匀。</p><div class="hrv-direction-grid"><article class="higher"><span>高于平时</span><strong>身体可能恢复得不错</strong><p>这常和睡得比较好、压力较小或运动后恢复充分一起出现。</p></article><article class="lower"><span>低于平时</span><strong>身体可能还在恢复</strong><p>没睡够、压力大、饮酒、身体不舒服或前一天运动较重时，都可能偏低。</p></article></div><section class="hrv-medicine-card"><span class="record-glyph" aria-hidden="true">i</span><div><small>一点医学知识</small><strong>它和自主神经有关</strong></div><p>自主神经会自动调节心跳。休息时，迷走神经等副交感调节通常会让心跳间隔出现更多细微变化；紧张、活动或身体负担增加时，这种变化可能减少。</p></section>${notice("不是越高越好", "HRV 的个体差异很大。突然大幅偏高或偏低，也可能和呼吸节奏、记录质量或心律变化有关。连续几晚的方向，比单次数字更有参考价值。")}${notice("身体能量不只看 HRV", "Halo 还会结合静息心率、睡眠连续性和近期活动。HRV 接近平时，不代表昨晚一定睡得好。") }<p class="health-boundary compact">HRV 不能单独判断压力、恢复或疾病。如果同时有持续心慌、胸闷、晕厥或明显不适，请及时寻求专业帮助。</p></div></details>`;
+  function hrvExplainer({ hasReading = false, canCompare = false, date = beijingDateKey() } = {}) {
+    return `<details class="hrv-disclosure"><summary>HRV 怎么看${healthChevron()}</summary><div class="energy-hrv-education">${hasReading ? `<p class="energy-hrv-reading"><strong>${esc(healthDateLabel(date))} · 42 ms</strong><br>${canCompare ? "这一晚的数值接近你的平时，不需要仅因这一项改变安排。" : "已有读数，个人范围还在积累中，暂不判断偏高或偏低。"}</p>` : ""}<p class="hrv-plain-definition">在同一个人、同一种测量条件下，数值较大，表示相邻心跳间隔的变化更大；数值较小，表示心跳节奏更均匀。</p><div class="hrv-direction-grid"><article class="higher"><span>高于平时</span><strong>身体可能恢复得不错</strong><p>这常和睡得比较好、压力较小或运动后恢复充分一起出现。</p></article><article class="lower"><span>低于平时</span><strong>身体可能还在恢复</strong><p>没睡够、压力大、饮酒、身体不舒服或前一天运动较重时，都可能偏低。</p></article></div><section class="hrv-medicine-card"><span class="record-glyph" aria-hidden="true">i</span><div><small>一点医学知识</small><strong>它和自主神经有关</strong></div><p>自主神经会自动调节心跳。休息时，迷走神经等副交感调节通常会让心跳间隔出现更多细微变化；紧张、活动或身体负担增加时，这种变化可能减少。</p></section>${notice("不是越高越好", "HRV 的个体差异很大。突然大幅偏高或偏低，也可能和呼吸节奏、记录质量或心律变化有关。连续几晚的方向，比单次数字更有参考价值。")}${notice("身体能量不只看 HRV", "Halo 还会结合静息心率、睡眠连续性和近期活动。HRV 接近平时，不代表这一晚一定睡得好。") }<p class="health-boundary compact">HRV 不能单独判断压力、恢复或疾病。如果同时有持续心慌、胸闷、晕厥或明显不适，请及时寻求专业帮助。</p><p class="energy-hrv-sources"><a href="https://www.health.harvard.edu/blog/heart-rate-variability-new-way-track-well-201711221470" target="_blank" rel="noopener noreferrer">HRV 与自主神经 · Harvard Health</a><a href="https://my.clevelandclinic.org/health/symptoms/21773-heart-rate-variability-hrv" target="_blank" rel="noopener noreferrer">HRV 的使用边界 · Cleveland Clinic</a></p></div></details>`;
   }
   function waveform(active = true) { return `<div class="audio-wave ${active ? "active" : "paused"}" aria-hidden="true">${[32,52,76,44,68,88,58,38,72,48,64,34].map((height, index) => `<i style="height:${height}%;--delay:${index * 45}ms"></i>`).join("")}</div>`; }
   function buttons(items) { return `<div class="button-row">${items.map(([label, action, kind = "secondary", disabled = false]) => `<button class="${kind}" data-action="${esc(action)}" ${disabled ? "disabled" : ""}>${esc(label)}</button>`).join("")}</div>`; }
   function setting(title, detail, action, value) { const [kind, glyph] = visualMeta(title); return `<button class="setting-row visual-setting" data-kind="${kind}" data-action="${esc(action)}"><span class="setting-glyph" aria-hidden="true">${glyph}</span><div><strong>${esc(title)}</strong><span>${esc(detail || "")}</span></div><i>${esc(value || "›")}</i></button>`; }
-  function toggle(key, title, detail) { return `<section class="setting-row"><div><strong>${esc(title)}</strong><span>${esc(detail || "")}</span></div><button class="switch ${state.toggles[key] ? "on" : ""}" data-action="toggle:${esc(key)}" aria-label="切换${esc(title)}"></button></section>`; }
+  function toggle(key, title, detail) { const enabled = key === "rhythmNotice" && state.current === "RHY-00" ? rhythmSettingsStore.inspect().values.notice : key === "wake" && state.current === "NIG-06" ? !!state.wakeDraft.enabled : !!state.toggles[key]; return `<section class="setting-row"><div><strong>${esc(title)}</strong><span>${esc(detail || "")}</span></div><button class="switch ${enabled ? "on" : ""}" data-action="toggle:${esc(key)}" role="switch" aria-checked="${enabled}" aria-label="切换${esc(title)}"></button></section>`; }
   function choice(key, value, title, body) { return `<button class="choice-row ${state[key] === value ? "selected" : ""}" data-action="choose:${esc(key)}:${esc(value)}"><span><strong>${esc(title)}</strong><p>${esc(body)}</p></span><i></i></button>`; }
   function quality(source = "Halo Ring", qualityText = "数据可用", updated = "08:42 更新") {
     if (/^(TOD|HLT)-/.test(state.current) && !["HLT-03", "HLT-04"].includes(state.current) && state.dataLifecycle !== "interpretable") {
@@ -1094,7 +2202,13 @@
     const stages = Object.entries(DATA_LIFECYCLE);
     return `<section class="lifecycle-card compact-lifecycle"><div class="lifecycle-heading"><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(title)}</strong><small>${esc(data.label)}</small></div></div><div class="lifecycle-track">${stages.map(([key, value]) => `<span class="lifecycle-step ${stage === key ? "active" : ""}" title="${esc(value.label)}"><i></i><span>${esc(value.label)}</span></span>`).join("")}</div><dl><div><dt>原因</dt><dd>${esc(data.reason)}</dd></div><div><dt>还需</dt><dd>${esc(data.needed)}</dd></div><div><dt>现在</dt><dd>${esc(data.next)}</dd></div></dl></section>`;
   }
-  function isHardwareActive() { return state.membershipHardwareState === "active"; }
+  function isHardwareActive() {
+    if (state.membershipHardwareState !== "active") return false;
+    if (!state.personalAccountScope) return true;
+    const owner = state.authPhone || "", id = state.pairedDevice?.id, device = state.deviceBindings?.[id];
+    const activated = state.deviceHub?.accounts?.[owner]?.facts?.[id]?.activatedAt || device?.activatedAt;
+    return state.personalAccountScope.legacyHealthOwner === owner || Boolean(device?.accountRef === owner && activated && Number.isFinite(Date.parse(activated)) && (!device.boundAt || Date.parse(activated) >= Date.parse(device.boundAt)));
+  }
   function setMembershipState(value) {
     if (!MEMBERSHIP_STATES.includes(value)) return;
     const previous = state.membershipHardwareState;
@@ -1103,13 +2217,13 @@
     if (value !== "active") {
       state.deviceStatus = "disconnected";
       state.toggles.haloBody = false;
-      state.haloContext = "none";
+      if (state.haloContext === "body") setHaloSource("none");
       state.studioMode = "basic";
       state.toggles.studioHealth = false;
     } else if (state.deviceStatus === "disconnected") {
       state.deviceStatus = "connected";
       state.toggles.haloBody = true;
-      state.haloContext = "body";
+      if (!state.haloSource) setHaloSource("body");
     }
     if (value === "active" && previous === "never-bound") state.dataLifecycle = "none";
     if (value !== "active" && state.toggles.haloBody) state.toggles.haloBody = false;
@@ -1144,6 +2258,200 @@
     const copy = membershipCopy();
     return `<section class="membership-panel ${esc(state.membershipHardwareState)}"><span>${esc(copy.label)}</span><h2>${esc(copy.title)}</h2><p>${esc(copy.body)}</p>${state.membershipHardwareState === "active" ? "" : `<button class="text-button" data-action="go:DEV-01">${esc(copy.action)} ›</button>`}</section>`;
   }
+  function currentRecordDraft() {
+    return state.current === "TOD-02" && state.recordEditorMode === "edit" ? state.recordEditDraft || { labels: [], note: "" } : state.recordDraft;
+  }
+  function restoreHealthDetailReturn(context) {
+    if (!["TOD-07", "HLT-01", "HLT-02", "HLT-05", "HLT-06"].includes(context?.route) || !validHealthDate(context.date)) return false;
+    state.healthSelectedDate = context.date;
+    state.healthDetailContext = { route: context.route, metric: { "TOD-07": "activity", "HLT-01": "heart", "HLT-02": "breath", "HLT-05": "oxygen", "HLT-06": "temperature" }[context.route], date: context.date };
+    if (context.route === "HLT-06") state.temperatureWindowEnd = validHealthDate(context.windowEnd) ? context.windowEnd : context.date;
+    if (context.route === "TOD-07") state.activityRecordsScope = context.scope === "all" ? "all" : "day";
+    if (context.route === "HLT-01" && Object.prototype.hasOwnProperty.call(context, "trendSelection")) state.heartTrendSelection = context.trendSelection;
+    if (context.route === "HLT-02") state.respirationWindowEnd = validHealthDate(context.windowEnd) ? context.windowEnd : context.date;
+    if (context.route === "HLT-05") {
+      state.oxygenWindowEnd = validHealthDate(context.windowEnd) ? context.windowEnd : context.date;
+      state.oxygenMode = context.mode === "night" ? "night" : "day";
+      state.oxygenDaySelection = context.daySelection || null;
+    }
+    if (context.view) state.pageViews[context.route] = { ...context.view };
+    return true;
+  }
+  function recordEditorValidation() {
+    const draft = currentRecordDraft();
+    const editing = state.recordEditorMode === "edit";
+    const record = editing ? state.subjectiveRecords.find(item => item.id === draft.id && item.category !== "rhythm") : null;
+    if (editing && !record) return { valid: false, hint: "这条记录已不存在，可以返回查看其他记录。" };
+    if (draft.note.length > 500) return { valid: false, hint: "最多写 500 字，请稍微缩短一下。" };
+    if (!draft.labels.length && !draft.note.trim()) return { valid: false, hint: "选一项，或写一句再保存。" };
+    if (editing && draft.note.trim() === String(record.original || "") && JSON.stringify([...draft.labels].sort()) === JSON.stringify([...(record.labels || [record.label])].sort())) return { valid: false, hint: "还没有修改。" };
+    return { valid: true, hint: "" };
+  }
+  function updateRecordEditorControls() {
+    const button = screen.querySelector("#record-save-button");
+    if (!button) return;
+    const validation = recordEditorValidation();
+    button.disabled = !validation.valid;
+    screen.querySelector("#record-save-hint").textContent = state.recordEditorError || validation.hint;
+    screen.querySelector("#record-note-count").textContent = `${currentRecordDraft().note.length}/500`;
+  }
+  function recordWeatherIcon(label) {
+    // Same visual vocabulary as HAL-05; icons do not change subjective record values.
+    const icons = {
+      "有精神": '<g class="record-weather-sun"><circle cx="16" cy="16" r="6"/><path d="M16 2v4m0 20v4M2 16h4m20 0h4M6 6l3 3m14 14 3 3M26 6l-3 3M9 23l-3 3"/></g>',
+      "还好": '<g class="record-weather-sun"><path d="M12 3v2M4 11H2m3-7 1.5 1.5M19 4l-1.5 1.5"/><circle cx="12" cy="11" r="5"/></g><path class="record-weather-cloud" d="M10 25a4.5 4.5 0 0 1-.5-9 6.5 6.5 0 0 1 12.5 1H24a4 4 0 0 1 0 8Z"/>',
+      "有点累": '<path d="M10 13a5.5 5.5 0 0 1 10.5-2H23a4 4 0 0 1 3 6" opacity=".6"/><path class="record-weather-cloud" d="M7 26a5 5 0 0 1-.5-10 6.5 6.5 0 0 1 12.5 1H21a4.5 4.5 0 0 1 0 9Z"/>',
+      "紧绷": '<path class="record-weather-wind" d="M3 12h16a4 4 0 1 0-4-4M3 17h23a3 3 0 1 0-3-3M7 22h10a3 3 0 1 1-3 3"/>',
+      "低落": '<path class="record-weather-cloud" d="M7 19a4.5 4.5 0 0 1 0-9 6.5 6.5 0 0 1 12.5 0H23a4.5 4.5 0 0 1 0 9Z"/><path class="record-weather-rain" d="m10 24-1 3m8-3-1 3m8-3-1 3"/>'
+    };
+    return icons[label] ? `<svg class="record-weather-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${icons[label]}</svg>` : "";
+  }
+  function recordEditorPage() {
+    const draft = currentRecordDraft();
+    const editing = state.recordEditorMode === "edit";
+    const record = editing ? state.subjectiveRecords.find(item => item.id === draft.id) : null;
+    const activity = record?.category === "activity";
+    const feelings = activity ? ACTIVITY_FEELINGS : RECORD_FEELINGS;
+    const validation = recordEditorValidation();
+    const chip = label => { const weather = !activity && RECORD_FEELINGS.includes(label) ? recordWeatherIcon(label) : ""; return `<button type="button" class="record-choice${weather ? " record-weather-option" : ""}${draft.labels.includes(label) ? " selected" : ""}" data-action="record-option:${esc(label)}" aria-pressed="${draft.labels.includes(label)}">${weather}<span>${esc(label)}</span><i aria-hidden="true">${draft.labels.includes(label) ? "✓" : weather ? "" : "+"}</i></button>`; };
+    const legacy = [...new Set([...draft.labels, ...(record?.labels || (record ? [record.label] : []))])].filter(label => !(activity ? ACTIVITY_FEELINGS : [...RECORD_FEELINGS, ...RECORD_CIRCUMSTANCES]).includes(label));
+    const context = editing ? record?.occurredAt ? recordDateTime(record.occurredAt) : "原记录未保存日期" : draft.reportMonth ? `${Number(draft.reportMonth.slice(5))} 月回顾反馈` : ["HLT-01", "HLT-02", "HLT-05", "HLT-06"].includes(state.recordEntryContext?.route) ? `${healthDateLabel(beijingDateKey())} · 用户记录` : "用户记录";
+    return `<article class="record-page"><header class="record-page-header"><div class="record-page-toolbar"><button type="button" class="record-icon-button" data-action="record-back" aria-label="返回，保留未保存内容">${healthChevron("left")}</button><span>${esc(context)}</span><button type="button" class="record-icon-button record-help-button" data-action="record-help" aria-label="关于用户记录">i</button></div><h1>${activity ? "修改活动感受" : editing ? "修改这条记录" : "记下此刻感受"}</h1></header><div class="record-page-scroll"><fieldset class="record-feelings"><legend>${activity ? "那次活动后，感觉怎么样？" : editing ? "当时感觉怎么样？" : "现在感觉怎么样？"}</legend><p>${activity ? "选一种感受，也可以只写一句。" : "可多选，也可以只写一句。"}</p><div class="record-choice-grid${activity ? "" : " record-weather-grid"}">${feelings.map(chip).join("")}</div></fieldset>${legacy.length ? `<section class="record-legacy"><h2>原记录标签</h2><div class="record-choice-grid">${legacy.map(chip).join("")}</div></section>` : ""}${activity ? "" : `<details class="record-circumstances" ${draft.labels.some(label => RECORD_CIRCUMSTANCES.includes(label)) ? "open" : ""}><summary><span>${editing ? "当时的情况" : "今天的情况"} <small>选填</small></span><i aria-hidden="true">＋</i></summary><div class="record-choice-grid">${RECORD_CIRCUMSTANCES.map(chip).join("")}</div></details>`}<label class="record-note-label" for="record-note">想补充一句吗？ <small>选填</small></label><textarea class="record-note-input" id="record-note" maxlength="500" placeholder="${activity ? "比如：散步回来，感觉轻松了些。" : "比如：今天有点累，想早点休息。"}" aria-describedby="record-note-count">${esc(draft.note)}</textarea><div class="record-note-meta"><span>返回后也能继续写</span><span id="record-note-count">${draft.note.length}/500</span></div></div><footer class="record-page-footer">${editing && state.recordEditorError ? '<button type="button" class="text-button" data-action="record-conflict-review">查看最新记录</button>' : ''}<p id="record-save-hint" aria-live="polite">${esc(state.recordEditorError || validation.hint)}</p><button type="button" class="primary" id="record-save-button" data-action="record-save" aria-describedby="record-save-hint" ${validation.valid ? "" : "disabled"}>${editing ? "保存修改" : "保存"}</button></footer></article>`;
+  }
+  function startRecordEdit(id) {
+    const record = state.subjectiveRecords.find(item => item.id === id && item.category !== "rhythm");
+    if (!record) return showInfoModal("记录不存在", "这条记录可能已被删除。可以返回查看其他记录。");
+    if (state.recordEditDraft?.id !== id && !recordEditHasChanges()) state.recordEditDraft = null;
+    if (state.recordEditDraft && state.recordEditDraft.id !== id) return showInfoModal("还有一条修改未保存", "先继续上一条修改，或返回原记录后再决定。新记录草稿也会保留。", "继续上一条修改", `record-edit:${state.recordEditDraft.id}`);
+    state.recordEditDraft = state.recordEditDraft || { id, labels: [...(record.labels || [record.label])], note: String(record.original || ""), returnRoute: state.current === "TOD-02" ? "TOD-01" : state.current };
+    if (!state.recordEditDraft.baseRecord) state.recordEditDraft.baseRecord = JSON.parse(JSON.stringify(record));
+    if (state.current === "TOD-07") {
+      capturePageView();
+      state.recordEditDraft.returnRoute = "TOD-07";
+      state.recordEditDraft.returnContext = { route: "TOD-07", date: activityRecordDate(), view: { ...state.pageViews["TOD-07"] }, scope: state.activityRecordsScope };
+    }
+    if (state.current === "HLT-01") {
+      capturePageView();
+      state.recordEditDraft.returnRoute = "HLT-01";
+      state.recordEditDraft.returnContext = heartReturnContext();
+    }
+    if (state.current === "HLT-02") {
+      capturePageView();
+      state.recordEditDraft.returnRoute = "HLT-02";
+      state.recordEditDraft.returnContext = respirationReturnContext();
+    }
+    if (state.current === "HLT-05") {
+      capturePageView();
+      state.recordEditDraft.returnRoute = "HLT-05";
+      state.recordEditDraft.returnContext = oxygenReturnContext();
+    }
+    if (state.current === "HLT-06") {
+      capturePageView();
+      state.recordEditDraft.returnRoute = "HLT-06";
+      state.recordEditDraft.returnContext = temperatureReturnContext();
+    }
+    state.recordEditorMode = "edit";
+    state.recordEditorError = "";
+    closeModal(); go("TOD-02");
+  }
+  function recordEditHasChanges() {
+    const draft = state.recordEditDraft;
+    const record = draft && state.subjectiveRecords.find(item => item.id === draft.id);
+    return Boolean(record && (draft.note.trim() !== String(record.original || "") || JSON.stringify([...draft.labels].sort()) !== JSON.stringify([...(record.labels || [record.label])].sort())));
+  }
+  let recordConflictSnapshot = null;
+  function reviewRecordConflict() {
+    if (state.current !== "TOD-02" || state.recordEditorMode !== "edit" || !state.recordEditDraft) return;
+    const records = readStoredJson(SUBJECTIVE_RECORDS_KEY, null);
+    if (!Array.isArray(records)) return flash("暂时无法读取最新记录，输入仍保留，请稍后重试。");
+    const record = records.find(value => todayRhythmStorage.own(value) && value.id === state.recordEditDraft.id);
+    recordConflictSnapshot = record ? JSON.parse(JSON.stringify(record)) : null;
+    if (!record) return showInfoModal("原记录已不在这里", "当前输入仍然保留。可以将它作为一条今天的新记录继续编辑，不会恢复已删除的原记录。", "另存为新记录", "record-conflict-copy");
+    showInfoModal("最新保存的内容", `${record.label}\n\n${record.original || "没有补充文字。"}\n\n你的修改仍保留在输入框。核对后可继续编辑，再决定是否保存。`, "保留我的修改，继续编辑", "record-conflict-rebase");
+  }
+  function commitUserRecords(records) {
+    let merged;
+    try {
+      merged = todayRhythmStorage?.mergeRecords(records, state.current === "TOD-02" && state.recordEditorMode === "edit" ? state.recordEditDraft?.baseRecord : null) || { all: records, active: records };
+      localStorage.setItem(SUBJECTIVE_RECORDS_KEY, JSON.stringify(merged.all));
+    }
+    catch (error) {
+      const context = state.recordEditorMode === "edit" ? state.recordEditDraft?.returnContext : state.recordEntryContext;
+      state.recordEditorError = error?.name === "Error" ? error.message : ["HLT-02", "HLT-05", "HLT-06"].includes(context?.route) ? "这次没保存成功，内容仍在本页。请先不要关闭，稍后重试。" : "这次没保存成功，内容还在，请稍后重试。";
+      return false;
+    }
+    records.splice(0, records.length, ...merged.active);
+    todayRhythmStorage?.acceptRecords(records);
+    state.subjectiveRecords = records;
+    state.subjectiveMarkers = [...new Set(records.flatMap(record => record.labels || [record.label]))];
+    return true;
+  }
+  function clearRecordReference(id) {
+    if (state.haloSource?.recordId === id) setHaloSource("none");
+    state.conversations?.forEach(entry => { if (entry.source?.recordId === id) { entry.source = null; entry.context = "none"; } });
+  }
+  function memberTaskIdentity() {
+    const accountRef = state.authPhone || state.authForm?.phone || "", registrationId = state.memberCreatedAt || "";
+    try {
+      const app = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY) || "null");
+      if (!state.signedIn || !accountRef || app?.signedIn !== true || app.authVerified !== true || (app.authPhone || app.authForm?.phone) !== accountRef || (app.memberCreatedAt || "") !== registrationId) return null;
+      if (registrationId) return typeof registrationId === "string" && /T.*(?:Z|[+-]\d{2}:\d{2})$/.test(registrationId) && Number.isFinite(Date.parse(registrationId)) && Date.parse(registrationId) <= Date.now() ? { accountRef, registrationId } : null;
+      if (state.newMember === true || app.newMember === true) return null;
+      const ledger = JSON.parse(localStorage.getItem("haloV5CommercialProgress") || "null");
+      const owners = [ledger?.accountRef, ledger?.memberAssets?.accountRef].filter(value => value !== undefined);
+      if (!ledger?.memberAssets || !owners.length || owners.some(owner => owner !== accountRef) || [ledger.registrationId, ledger.memberAssets.registrationId].some(value => value !== undefined && value !== "")) return null;
+      return { accountRef, registrationId: "" };
+    } catch { return null; }
+  }
+  function saveRecordEditor() {
+    if (state.current !== "TOD-02") return;
+    const validation = recordEditorValidation();
+    if (!validation.valid) { updateRecordEditorControls(); return; }
+    const draft = currentRecordDraft();
+    const labels = [...draft.labels];
+    const note = draft.note.trim();
+    const editing = state.recordEditorMode === "edit";
+    const now = new Date().toISOString();
+    let record;
+    if (editing) {
+      const original = state.subjectiveRecords.find(item => item.id === draft.id && item.category !== "rhythm");
+      if (!original) return;
+      record = { ...original, labels, label: labels.join("、") || "感受", original: note, updatedAt: now };
+      if (!commitUserRecords(state.subjectiveRecords.map(item => item.id === record.id ? record : item))) { render(); return; }
+      clearRecordReference(record.id);
+      const destination = pages.some(item => item.id === draft.returnRoute) && draft.returnRoute !== "TOD-02" ? draft.returnRoute : "TOD-01";
+      restoreHealthDetailReturn(draft.returnContext);
+      state.recordEditDraft = null; state.recordEditorMode = "new"; state.recordEditorError = "";
+      if (state.tabStacks["TOD-01"]?.at(-1) === "TOD-02") state.tabStacks["TOD-01"].pop();
+      go(destination, false); showRecordDetail(record.id); flash("修改已保存");
+    } else {
+      record = { id: `record-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, label: labels.join("、") || "感受", labels, original: note, occurredAt: now, source: "user-record", ...(draft.reportMonth ? { reportMonth: draft.reportMonth } : {}) };
+      const identity = memberTaskIdentity();
+      if (draft.reportMonth && isHardwareActive() && state.dataLifecycle === "interpretable" && identity) record.memberTaskEvidence = { taskId: "monthly-review", ...identity, occurredAt: now, verified: true, hardwareActive: true };
+      if (!commitUserRecords([...state.subjectiveRecords, record])) { render(); return; }
+      if (record.memberTaskEvidence) {
+        const evidence = record.memberTaskEvidence, newMember = Boolean(state.newMember);
+        Promise.resolve().then(() => window.HALO_COMMERCIAL_EXTENSION?.completeTask?.({ ...evidence, memberCreatedAt: evidence.registrationId, newMember })).catch(() => false).then(posted => {
+          if (posted !== true && state.signedIn && (state.authPhone || state.authForm?.phone || "") === evidence.accountRef && state.memberCreatedAt === evidence.registrationId) flash("记录已保存，奖励待同步，可在会员任务重试");
+        });
+      }
+      const heartReturn = ["HLT-01", "HLT-02", "HLT-05", "HLT-06"].includes(state.recordEntryContext?.route) && restoreHealthDetailReturn(state.recordEntryContext);
+      const destination = heartReturn ? state.recordEntryContext.route : draft.returnRoute === "TOD-03" ? "TOD-03" : "TOD-01";
+      state.recordEntryContext = null;
+      state.recordDraft = { labels: [], note: "" }; state.recordEditorError = "";
+      if (state.tabStacks["TOD-01"]?.at(-1) === "TOD-02") state.tabStacks["TOD-01"].pop();
+      go(destination, false); if (heartReturn) showRecordDetail(record.id); flash("用户记录已保存");
+    }
+  }
+  function deleteUserRecord(id) {
+    const record = state.subjectiveRecords.find(item => item.id === id && item.category !== "rhythm");
+    if (!record) return showInfoModal("记录已不存在", "可以返回查看其他记录。");
+    if (!commitUserRecords(state.subjectiveRecords.filter(item => item.id !== id))) return showInfoModal("删除未完成", "这条记录仍然保留，请稍后重试。", "返回这条记录", `record-detail:${id}`);
+    if (state.recordEditDraft?.id === id) { state.recordEditDraft = null; state.recordEditorMode = "new"; }
+    clearRecordReference(id);
+    state.recordEditorError = "";
+    closeModal(); render(); flash("这条记录已删除");
+  }
   function subjectiveMarkers() {
     return `<div class="subjective-markers">${SUBJECTIVE_OPTIONS.map(label => `<button class="${state.recordDraft.labels.includes(label) ? "active" : ""}" data-action="marker:${esc(label)}" aria-pressed="${state.recordDraft.labels.includes(label)}">${esc(label)}</button>`).join("")}</div><label class="field-label">想补充的话（选填）<textarea id="record-note" class="field" maxlength="500" placeholder="用自己的话记下此刻的感受">${esc(state.recordDraft.note)}</textarea></label><p class="caption">当前为草稿。点击保存才会加入“用户记录”，不会改动设备数据。</p>${state.current !== "TOD-02" ? buttons([["保存这条记录", "record-save-inline", "secondary"]]) : ""}`;
   }
@@ -1167,12 +2475,7 @@
     return `${content}<div class="record-editor"><span class="section-label">补充今天的感受</span>${subjectiveMarkers()}</div>`;
   }
   function monthlyReport() {
-    return `<section class="monthly-report"><div class="monthly-report-head"><div><span>MONTHLY REPORT</span><h3>${Number((state.selectedReportMonth || "2026-08").split("-")[1])} 月回顾</h3></div><strong>记录 26 天</strong></div>${radialProgress(87, "26 / 30", "本月有记录", "其中 24 晚完整")}<div class="monthly-change-grid"><article><i aria-hidden="true">${domainIcon("sleep")}</i><strong>后半月睡得更整</strong><span>夜醒主要集中在月初</span></article><article><i aria-hidden="true">${domainIcon("energy")}</i><strong>有几天需要放慢</strong><span>常和晚睡、疲惫同时出现</span></article><article><i aria-hidden="true">${domainIcon("activity")}</i><strong>休息后通常会回稳</strong><span>只是同期变化，不能证明因果</span></article></div><details class="visual-disclosure compact-note"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>哪些天没算进去</strong><small>4 天记录不完整</small></div><i aria-hidden="true">＋</i></summary><p>戒指没戴好或关键时段缺少记录的 4 天没有纳入；月报不展示敏感的单次健康数值。</p></details>${buttons([["记下这份回顾的感受", "monthly-review-start", "secondary"]])}</section>`;
-  }
-  function sleepGoalPanel() {
-    const goal = state.sleepGoal;
-    const durationOptions = [["7.5", "7 小时 30 分"], ["8", "8 小时"], ["8.5", "8 小时 30 分"]];
-    return `<section class="sleep-goal-card"><div class="sleep-goal-heading"><div><span>SLEEP GOAL</span><h3>睡眠目标</h3></div><strong>${esc(goal.duration)} 小时</strong></div><label class="field-label">目标睡眠时长<select class="field" id="sleep-duration">${durationOptions.map(([value, label]) => `<option value="${value}" ${String(goal.duration) === value ? "selected" : ""}>${label}</option>`).join("")}</select></label><div class="sleep-goal-grid"><label class="field-label">工作日上床<input class="field" id="sleep-workday-bedtime" type="time" value="${esc(goal.workdayBedtime)}"></label><label class="field-label">工作日起床<input class="field" id="sleep-workday-wake" type="time" value="${esc(goal.workdayWake)}"></label><label class="field-label">休息日上床<input class="field" id="sleep-rest-bedtime" type="time" value="${esc(goal.restBedtime)}"></label><label class="field-label">休息日起床<input class="field" id="sleep-rest-wake" type="time" value="${esc(goal.restWake)}"></label></div>${buttons([["保存睡眠目标", "sleep-goal-save", "primary"]])}<p class="caption">目标只用于睡前建议和回顾，不评价你做得好不好，也不会覆盖实际睡眠记录。</p></section>`;
+    return `<section class="monthly-report"><h3>月度回顾</h3><p>在健康报告中，查看已经生成的月度回顾。</p>${buttons([["查看我的报告", "go:TOD-09", "primary"]])}</section>`;
   }
   function detailSection(title, content, className = "") {
     return `<section class="detail-section ${esc(className)}"><span class="section-label">${esc(title)}</span>${content}</section>`;
@@ -1187,80 +2490,66 @@
     return [["查看佩戴与同步", "go:DEV-10", "primary"], ["记录今天的感受", "go:TOD-02", "secondary"]];
   }
   function interpretationCorrectionCard() {
-    if (state.aiCorrection.status !== "saved") {
+    if (!canCorrectBodyWeather()) return "";
+    const correction = activeWeatherCorrection();
+    if (!correction) {
       return `<button class="interpretation-feedback" data-action="ai-correction:open"><span aria-hidden="true">≠</span><span><strong>和我现在的感受不太一样</strong><small>纠正这次解释，不改动戒指数据</small></span><i aria-hidden="true">›</i></button>`;
     }
-    const note = state.aiCorrection.note ? ` · ${state.aiCorrection.note}` : "";
-    return `<section class="correction-result" role="status"><span class="correction-result-icon" aria-hidden="true">✓</span><div><small>已按你的反馈调整</small><strong>${esc(state.aiCorrection.reasonLabel)}${esc(note)}</strong><p>原解释不会继续作为你的实际感受，也不会自动写入 Halo 记忆。</p><button class="text-button" data-action="ai-correction:open">重新纠正</button></div></section>`;
+    return `<section class="correction-result" role="status"><span class="correction-result-icon" aria-hidden="true">✓</span><div><small>用户反馈 · ${esc(correction.date)}</small><strong>${esc(correction.reasonLabel)}</strong>${correction.note ? '<button class="text-button correction-note-link" data-action="bw-feedback-note">查看补充文字</button>' : ""}<p>这份反馈与戒指记录分开保存。</p><div class="suggestions"><button class="text-button" data-action="ai-correction:open">修改反馈</button><button class="text-button" data-action="ai-correction-reset">撤销反馈</button></div></div></section>`;
   }
   function currentJourneyStep() {
     const theme = JOURNEY_THEMES[state.journeyTheme] || JOURNEY_THEMES.boundary;
     return theme[Math.max(0, Math.min(theme.length - 1, state.journeyVariant))];
   }
-  function journeyPage(item) {
+  function syncJourneyAliases() {
     const journey = state.journeyRecords[state.journeyTheme];
     state.journeyProgress = journey.days.length;
+    state.journeyPaused = journey.status === "paused";
+    state.journeyDecision = journey.status === "deferred" ? "deferred" : journey.status === "ended" ? "unsuitable" : "active";
+    state.journeyVariant = journey.variant || 0;
+    state.journeyReason = journey.reason || "";
+    state.journeyMissCount = journey.missCount || 0;
+  }
+  function updateJourney(patch) {
+    Object.assign(state.journeyRecords[state.journeyTheme], patch);
+    syncJourneyAliases();
+  }
+  function journeyHistory(journey) {
+    const runs = [...(journey.previous || []), ...(journey.days.length || journey.note ? [journey] : [])];
+    if (!runs.length) return notice("还没有完成记录", "完成一步后，这里会保留日期、行动和当时写下的感受。");
+    const total = runs.reduce((sum, run) => sum + run.days.length, 0);
+    return `<details class="visual-disclosure journey-history"><summary><span class="record-glyph" aria-hidden="true">${domainIcon("time")}</span><div><strong>完成记录与历史</strong><small>${runs.length} 轮 · 累计记录 ${total} 次</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${runs.map((run, index) => `<section class="card"><h3>第 ${index + 1} 轮 · ${run.days.length} / 7 天</h3><p>${run === journey ? "本轮" : "历史轮次"} · ${({ active: "进行中", paused: "已暂停", deferred: "今天先放下", ended: "已结束", completed: "已完成" })[run.status] || "已保留"}</p>${run.endedAt ? `<p>结束于 ${esc(experienceTime(run.endedAt))}</p>` : ""}${run.entries?.length ? run.entries.map(entry => `<p><strong>${esc(entry.day)}</strong> · ${esc(entry.action)}${entry.note ? `<br>${esc(entry.note)}` : ""}</p>`).join("") : `<p>${esc(run.days.join("、") || "尚未完成练习")}</p>`}${run.note ? `<p>本轮感受：${esc(run.note)}</p>` : ""}</section>`).join("")}</div></details>`;
+  }
+  function journeyPage(item) {
+    const journey = state.journeyRecords[state.journeyTheme];
+    syncJourneyAliases();
     const doneToday = journey.days.includes(experienceDay());
-    const completed = state.journeyProgress >= 7;
     const step = currentJourneyStep();
     const themeTitle = state.journeyTheme === "pause" ? "白天留一个短暂停顿" : "晚上别把工作带上床";
-    if (state.journeyDecision === "unsuitable") {
-      return `${head(item, "JOURNEYS")}<div class="stack">${notice("这个主题已经停下", "Halo 不会再提醒你做这组练习。进度仍然保留，你可以换一个方向。", "sage")}<section class="journey-summary-card"><span class="journey-state-label">已标记为不适合</span><h2>${esc(themeTitle)}</h2><p>${esc(state.journeyReason || "这组练习不符合你现在的需要。")}</p></section>${buttons([["换成白天短暂停顿", "journey-replace-theme", "primary"], ["保留记录，返回 Halo", "go:HAL-01", "secondary"]])}</div>`;
-    }
-    const adjusted = state.journeyVariant > 0;
-    const statusTitle = completed ? "这个主题已经完成" : state.journeyDecision === "deferred" ? "今天先放下，没关系" : state.journeyPaused ? "这个主题已暂停" : adjusted ? "这一步已经变简单" : "每天只做一件小事";
-    const statusBody = completed
-      ? "你完成了 7 天练习，可以回看哪些做法更适合自己。"
-      : state.journeyDecision === "deferred"
-      ? `${state.journeyReason || "今天不做。"} 下次从更轻的一步开始。`
-      : state.journeyPaused
-      ? "之前的进度还在，想继续时再回来。"
-      : adjusted
-      ? "Halo 根据你的选择降低了难度；不追求连续打卡。"
-      : "不追求连续打卡，做完今天这一小步就好。";
-    const activeActions = completed
-      ? [["重新开始这个主题", "journey-reset", "primary"]]
-      : state.journeyDecision === "deferred"
-      ? [["现在想做了", "journey-resume-today", "primary"], ["再换一个更容易的", "journey-replace", "secondary"], ["这个主题不适合我", "journey-unsuitable", "text-button"]]
-      : state.journeyPaused
-      ? [["继续这个主题", "journey-resume", "primary"], ["这个主题不适合我", "journey-unsuitable", "text-button"]]
-      : [[doneToday ? "今天已记下，明天再继续" : "完成今天这一小步", doneToday ? "" : "journey-step", "primary", doneToday], ["换一个更容易的", "journey-replace", "secondary"], ["今天先不做", "journey-defer-open", "text-button"], ["这个主题不适合我", "journey-unsuitable", "text-button"]];
-    return `${head(item, "JOURNEYS")}<div class="stack">${notice(statusTitle, statusBody, "sage")}<section class="journey-summary-card"><div class="journey-summary-head"><span>已记录 ${state.journeyProgress} / 7 天</span><small>${adjusted ? step.detail : "按你的节奏"}</small></div><h2>${esc(step.title)}</h2><p>${esc(step.action)}</p><div class="journey-progress-dots" aria-label="已完成 ${state.journeyProgress} 天">${Array.from({ length: 7 }, (_, index) => `<i class="${index < state.journeyProgress ? "done" : index === state.journeyProgress ? "current" : ""}"></i>`).join("")}</div></section>${completed ? rows([["本次主题", themeTitle], ["你记下的变化", journey.note || "还没有补充感受"], ["已完成日期", journey.days.join("、")]]) : `<label class="field-label">想记下的感受（可选）<textarea class="field" id="journey-note" placeholder="只记录你自己的感受">${esc(journey.note)}</textarea></label>`}${buttons(activeActions)}${!completed && state.journeyDecision !== "deferred" && !state.journeyPaused ? `<button class="journey-pause-link" data-action="journey-pause">暂停整个主题</button>` : ""}</div>`;
+    const themeChoices = segmented([["boundary", "睡前放下工作"], ["pause", "白天短暂停顿"]], state.journeyTheme, "journey-theme");
+    if (journey.status === "deleted") return `${head(item, "JOURNEYS")}<div class="stack">${themeChoices}${notice("这个主题的记录已删除", "本主题的完成统计、感受和历史已清空，其他主题保留。", "sage")}${buttons([["开始这个主题的新计划", "journey-reset", "primary"], ["返回 Halo", "go:HAL-01", "secondary"]])}</div>`;
+    const stopped = ["ended", "completed"].includes(journey.status);
+    const titles = { active: state.journeyVariant > 0 ? "这一步已经变简单" : "每天只做一件小事", paused: "这个主题已暂停", deferred: "今天先放下，没关系", ended: "这个主题已结束", completed: "这个主题已经完成" };
+    const descriptions = { active: "不追求连续打卡，做完今天这一小步就好。", paused: "完成记录保留，暂停期间不提醒。继续后从原进度接着做。", deferred: `${journey.reason || "今天先不做。"} 下次从更轻的一步开始。`, ended: "已停止本轮练习和提醒。完成统计与感受仍可回看，重新开始会建立新一轮。", completed: "你完成了 7 天练习，可以回看记录。重新开始时，本轮会保留在历史中。" };
+    const actions = stopped ? [["重新开始这个主题", "journey-reset", "primary"]]
+      : journey.status === "paused" ? [["继续这个主题", "journey-resume", "primary"]]
+      : journey.status === "deferred" ? [["现在想做了", "journey-resume-today", "primary"], ["再换一个更容易的", "journey-replace", "secondary"]]
+      : [[doneToday ? "今天已记下，明天再继续" : "完成今天这一小步", "journey-step", "primary", doneToday], ["换一个更容易的", "journey-replace", "secondary"], ["今天先不做", "journey-defer-open", "text-button"]];
+    return `${head(item, "JOURNEYS")}<div class="stack">${themeChoices}${notice(titles[journey.status], descriptions[journey.status], "sage")}<section class="journey-summary-card"><div class="journey-summary-head"><span>本轮已记录 ${journey.days.length} / 7 天</span><small>${esc(themeTitle)}</small></div><h2>${esc(step.title)}</h2><p>${esc(step.action)}</p><div class="journey-progress-dots" aria-label="本轮已完成 ${journey.days.length} 天">${Array.from({ length: 7 }, (_, index) => `<i class="${index < journey.days.length ? "done" : !stopped && index === journey.days.length ? "current" : ""}"></i>`).join("")}</div></section>${!stopped ? `<label class="field-label">本轮感受（自动保存，可选）<textarea class="field" id="journey-note" placeholder="只记录你自己的感受">${esc(journey.note || "")}</textarea></label>` : ""}${buttons(actions)}${journeyHistory(journey)}<section class="card"><h3>管理这个主题</h3><p>暂停后可接着做；结束保留统计；删除清空本主题的当前记录和全部历史。</p>${buttons([...(stopped || journey.status === "paused" ? [] : [["暂停这个主题", "journey-pause", "secondary"]]), ...(stopped ? [] : [["结束并保留记录", "journey-end", "secondary"], ["这个主题不适合我", "journey-unsuitable", "text-button"]]), ["删除这个主题的全部记录", "journey-delete", "danger-button"]])}</section></div>`;
   }
-  function nightReviewPage(item) {
-    const selected = currentNightSession();
-    if (!selected) return `${head(item, "NIGHT SUMMARY")}<div class="stack">${notice("还没有可复盘的播放记录", "结束一次播放后，可以记录这一次的感受。", "sage")}${buttons([["选择今晚内容", "go:NIG-01", "primary"]])}</div>`;
-    const review = selected.review || (selected.review = { ...DEFAULT_NIGHT_REVIEW, factors: [], observationCount: 0 });
-    state.nightReview = review;
-    const executionLabels = { complete: "完整做了", partial: "做了一部分", none: "没有执行" };
-    const helpfulnessLabels = { helpful: "自己觉得有帮助", neutral: "没什么感觉", unhelpful: "不太适合", unknown: "无法判断" };
-    const factorLabels = { late: "比平时晚睡", exercise: "当天有运动", alcohol: "有饮酒", emotion: "情绪有起伏", none: "没有明显变化" };
-    if (review.saved) {
-      const factorText = review.factors.length ? review.factors.map((value) => factorLabels[value]).filter(Boolean).join("、") : "没有补充";
-      const observationText = review.execution === "none"
-        ? "昨晚没有执行，因此不会把今天的任何变化和这段内容联系起来。"
-        : review.observationCount < 3
-        ? `目前只有 ${review.observationCount} 次记录，先继续观察，不判断是否有效。`
-        : `已有 ${review.observationCount} 次记录；主观感受和设备变化会分开看，仍不把同时发生当作因果。`;
-      return `${head(item, "NIGHT SUMMARY")}<div class="stack">${notice("本次复盘已记下", "你的执行情况和感受会与设备记录分开保存。", "sage")}${rows([["听了什么", selected.title], ["播放结束", experienceTime(selected.endedAt)], ["实际执行", executionLabels[review.execution]], ["你的感受", helpfulnessLabels[review.helpfulness] || "无法判断"], ["同期变化", factorText]])}${notice("设备观察", "本次播放没有关联已核验的睡眠记录，不展示变化结论。")}${notice("现在能说到哪一步", observationText)}${buttons([["修改本次复盘", "night-review-edit", "secondary"], ["查看身体天气", "go:TOD-03", "primary"], ["返回播放历史", "go:NIG-10", "secondary"]])}</div>`;
-    }
-    const canRateHelp = review.execution && review.execution !== "none";
-    const canSave = Boolean(review.execution) && (review.execution === "none" || Boolean(review.helpfulness));
-    return `${head(item, "LAST NIGHT SUMMARY")}<div class="stack">${notice("本次播放已经结束", "先确认你实际做了多少，再记录自己的感受。设备变化会单独显示。", "sage")}${rows([["听了什么", selected.title], ["播放记录", selected.detail], ["停止方式", "由你结束播放"], ["自动渐弱", selected.fadeEnabled ? "开启" : "关闭"]])}<section class="reflection-block"><span class="section-label">1 · 本次实际做到多少？</span><div class="reflection-options">${[["complete","完整做了"],["partial","做了一部分"],["none","没有执行"]].map(([value, label]) => `<button class="${review.execution === value ? "active" : ""}" data-action="night-review-execution:${value}" aria-pressed="${review.execution === value}">${label}</button>`).join("")}</div></section>${canRateHelp ? `<section class="reflection-block"><span class="section-label">2 · 你自己觉得呢？</span><div class="reflection-options">${[["helpful","有帮助"],["neutral","没什么感觉"],["unhelpful","不太适合"]].map(([value, label]) => `<button class="${review.helpfulness === value ? "active" : ""}" data-action="night-review-help:${value}" aria-pressed="${review.helpfulness === value}">${label}</button>`).join("")}</div></section>` : ""}<section class="reflection-block"><span class="section-label">3 · 当天还有什么不同？（可多选）</span><div class="reflection-options factors">${[["late","晚睡"],["exercise","有运动"],["alcohol","饮酒"],["emotion","情绪起伏"],["none","没有明显变化"]].map(([value, label]) => `<button class="${review.factors.includes(value) ? "active" : ""}" data-action="night-review-factor:${value}" aria-pressed="${review.factors.includes(value)}">${label}</button>`).join("")}</div></section>${notice("为什么要分开记录", "点击、实际执行、自己觉得有帮助和设备变化是四件不同的事。Halo 不会用一次变化证明某项建议有效。")}${buttons([["保存本次复盘", "night-review-save", "primary", !canSave], ["先不复盘", "go:TOD-01", "secondary"]])}</div>`;
-  }
+  function nightReviewPage() { return nightReview.body(); }
   function healthDetail(item, config) {
     if (!isHardwareActive()) return unboundHealthDetail(item);
     const stage = state.dataLifecycle;
     const dataState = currentDataLifecycle(stage);
     const canInterpret = stage === "interpretable";
-    const canShowMeasuredData = stage !== "none";
     const isCorrectedBodyWeather = item.id === "TOD-03" && canInterpret && state.aiCorrection.status === "saved";
     const conclusion = canInterpret ? (isCorrectedBodyWeather ? "今天先按你的真实感受来" : config.conclusion) : dataState.headline;
     const summary = canInterpret ? (isCorrectedBodyWeather ? `你说“${state.aiCorrection.reasonLabel}”。Halo 不再把原来的解读当作你的实际状态。` : config.summary) : dataState.summary;
     const why = canInterpret ? (isCorrectedBodyWeather ? `${config.why} 这些戒指记录保持不变，但不能替代你对当下状态的感受。` : config.why) : dataState.reason;
-    const dataContent = canShowMeasuredData ? config.data : emptyHealthData();
-    const trendContent = ["none", "accumulating"].includes(stage)
-      ? notice("趋势还没形成", `${dataState.needed}。继续正常佩戴，完成同步后会自动更新。`)
+    const dataContent = canInterpret ? config.data : pendingHealthObservations(item.id);
+    const trendContent = !canInterpret
+      ? notice(stage === "limited" ? "本次比较暂缓" : "个人比较还未开放", `${dataState.needed}。${stage === "limited" ? "已有历史记录保留，不用缺失时段推测今天的变化。" : stage === "none" ? "目前没有可显示的测量记录；收到记录后先展示数值，再逐步建立个人范围。" : "已同步的数值可以查看，个人范围建立后再显示比较结论。"}`)
       : `${segmented([["7", "7 天"], ["14", "14 天"], ["30", "30 天"]], state.trendPeriod, "trend")}${config.trend}`;
     const currentActions = canInterpret ? config.actions : dataStageActions(stage);
     const [detailKind, detailGlyph] = visualMeta(item.name);
@@ -1275,7 +2564,7 @@
     }[stage] || dataState.label;
     const copyVariant = canInterpret ? config.copyVariant : dataState.copyVariant;
     const correction = canInterpret && config.allowCorrection ? interpretationCorrectionCard() : "";
-    return `${head(item, config.eyebrow)}<article class="unified-health-detail visual-health-detail" data-detail-page="${esc(item.id)}" data-copy-variant="${esc(copyVariant)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}" data-kind="${detailKind}"><i class="conclusion-glyph" aria-hidden="true">${detailGlyph}</i><span>${esc(isCorrectedBodyWeather ? "已根据你的反馈调整" : statusLabel)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${correction}${detailSection(config.whyTitle || "为什么这么说", `<div class="insight-strip" data-kind="${detailKind}"><i aria-hidden="true">${detailGlyph}</i><p>${esc(why)}</p></div>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection(config.dataTitle || "今天的几个重点", dataContent)}${config.educationExtra ? detailSection(config.educationTitle || "读懂这个指标", config.educationExtra, "education-section") : ""}${detailSection(config.trendTitle || "和你平时比", trendContent)}${detailSection("数据说明", `<details class="visual-disclosure"><summary><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(dataSummaryLabel)}</strong><small>${esc(sourceSummary)}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(stage, config.lifecycleTitle, canInterpret ? config.lifecycleOverride : undefined)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">Halo Ring 是主要来源；其他来源会单独标明，同一时段不会重复计算。</p></div></details>`)}${detailSection("记下你的感受", `<details class="visual-disclosure user-record-disclosure"><summary><span class="record-glyph" aria-hidden="true">＋</span><div><strong>补充今天的感受</strong><small>${state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "保存为用户记录，不会改写戒指数据"}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${subjectiveMarkers()}</div></details>`, "subjective-section")}${detailSection(config.actionSectionTitle || "今天可以怎么做", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p>`;
+    return `${head(item, config.eyebrow)}<article class="unified-health-detail visual-health-detail" data-detail-page="${esc(item.id)}" data-copy-variant="${esc(copyVariant)}"><section class="detail-conclusion ${canInterpret ? "ready" : esc(stage)}" data-kind="${detailKind}"><i class="conclusion-glyph" aria-hidden="true">${detailGlyph}</i><span>${esc(isCorrectedBodyWeather ? "已根据你的反馈调整" : statusLabel)}</span><h2>${esc(conclusion)}</h2><p>${esc(summary)}</p></section>${correction}${detailSection(config.whyTitle || "为什么这么说", `<div class="insight-strip" data-kind="${detailKind}"><i aria-hidden="true">${detailGlyph}</i><p>${esc(why)}</p></div>${canInterpret ? config.reasonExtra || "" : ""}`)}${detailSection(config.dataTitle || "今天的几个重点", dataContent)}${canInterpret && config.educationExtra ? detailSection(config.educationTitle || "读懂这个指标", config.educationExtra, "education-section") : ""}${detailSection(config.trendTitle || "和你平时比", trendContent)}${detailSection("数据说明", `<details class="visual-disclosure"><summary><span class="data-symbol ${esc(stage)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>${esc(dataSummaryLabel)}</strong><small>${esc(sourceSummary)}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(stage, config.lifecycleTitle, canInterpret ? config.lifecycleOverride : undefined)}${quality(config.source, config.quality, config.updated)}<p class="source-priority">Halo Ring 是主要来源；其他来源会单独标明，同一时段不会重复计算。</p></div></details>`)}${detailSection("记下你的感受", `<details class="visual-disclosure user-record-disclosure"><summary><span class="record-glyph" aria-hidden="true">＋</span><div><strong>补充今天的感受</strong><small>${state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "保存为用户记录，不会改写戒指数据"}</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${subjectiveMarkers()}</div></details>`, "subjective-section")}${detailSection(config.actionSectionTitle || "今天可以怎么做", `${notice(canInterpret ? config.actionTitle : dataState.next, canInterpret ? config.actionBody : dataState.needed, "sage")}${buttons(currentActions)}`, "detail-action")}</article><p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p>`;
   }
   function unboundHealthDetail(item) {
     const copy = membershipCopy();
@@ -1283,17 +2572,19 @@
     return `${head(item, "MEMBER MODE")}<article class="unified-health-detail unbound-detail"><section class="detail-conclusion unbound"><span>${esc(copy.label)}</span><h2>这里还没有身体数据</h2><p>没有足够记录时，Halo 不会猜你的身体状态。</p></section>${detailSection("还差什么", `<p>${retained ? "目前没有已激活的 Halo Ring。以前的会员资产和用户记录还在；重新绑定后，才会继续记录新的身体数据和成长。" : "你已经是 Halo Member。绑定并激活 Halo Ring 后，戴着它完成夜间记录，才会开始生成 Body Weather。"}</p>`)}${detailSection("你记下的感受", retainedUserRecords(), "retained-user-records")}${detailSection("现在可以用", `<ul class="availability-list"><li>会员、Halo Points、Halo Select、订单、推荐和客服</li><li>每天 10 条不读取身体数据的 Halo 对话</li><li>手动记录节律、情绪和睡眠感受</li><li>浏览和预约 Studio，播放 3 项基础睡前内容</li></ul>`)}${detailSection("绑定戒指后会多什么", `<ul class="availability-list"><li>Body Weather 和健康数据详情</li><li>根据身体状态推荐的夜间内容</li><li>7 / 14 / 30 天趋势与身体报告</li><li>会员成长任务、徽章和升级</li></ul>`)}${detailSection("现在先做什么", buttons([[retained ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"], ["先听基础睡前内容", "go:NIG-01", "secondary"]]), "detail-action")}</article>`;
   }
   function unboundToday(item) {
-    return `${head(item, "TODAY · MEMBER MODE")}<div class="stack"><button class="body-weather unbound-weather" data-action="go:TOD-03"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · 等待数据</span><h2>还没有今天的 Body Weather</h2><p>绑定并激活戒指后，戴着它完成夜间记录。</p></button>${visualSignalCards([["睡眠","等待戒指记录"],["身体能量","等待戒指记录"],["今天怎么动","按感受"]], true)}${buttons([[state.membershipHardwareState === "unbound-retained" ? "重新绑定 Halo Ring" : "绑定 Halo Ring", "go:DEV-01", "primary"]])}${setting("记下今天的感受", state.subjectiveMarkers.length ? `已有 ${state.subjectiveMarkers.length} 条用户记录` : "不用绑定戒指", "go:TOD-02")}${dailyInspirationCard()}${card("今晚先听一段", "3 项基础睡前内容", "PUBLIC CONTENT", "go:NIG-01")}${setting("和 Halo 聊聊", "不读取身体数据 · 今天 10 条", "go:HAL-01")}${setting("Halo Studio", "浏览与预约", "go:STU-08")}</div>`;
+    return todayWeatherHome(item);
   }
   function unboundNight(item) {
     return `${head(item, "PUBLIC NIGHT")}<div class="night-screen"><section class="night-hero"><span>HALO MEMBER</span><h2>今晚先选一段喜欢的</h2><p>三项公共内容，不读取身体数据。</p></section><div class="stack public-night-list">${state.nightSession && state.nightSession.status !== "ended" ? setting(state.nightSession.title, state.nightSession.status === "playing" ? "继续查看播放" : "已暂停 · 继续播放", "go:NIG-04") : ""}${setting("5 分钟睡前呼吸", "5 分钟 · 手动播放", "public-play:breath")}${setting("10 分钟身体扫描", "10 分钟 · 手动播放", "public-play:scan")}${setting("15 分钟安睡音频", "15 分钟 · 手动播放", "public-play:sound")}${setting("播放历史", "回看自己的播放与复盘记录", "go:NIG-10")}${notice("无需设备也可使用", "这些公共内容不生成身体结论，不奖励成长、积分或徽章。本地原型只演示播放操作，不输出真实音频。")}</div></div>`;
   }
   function dailyInspirationCard() {
     if (!state.toggles.inspiration) return "";
-    return `<section class="daily-inspiration"><div class="inspiration-heading"><div><span>DAILY HALO</span><h3>今日灵感</h3></div><button class="inspiration-info" data-action="info:inspiration" aria-label="了解今日灵感">i</button></div><div class="inspiration-keyword"><span>今日关键词</span><strong>${esc(DAILY_INSPIRATION.keyword)}</strong></div><p>${esc(DAILY_INSPIRATION.message)}</p><span class="daily-cues-label">今日小线索 · DAILY CUES</span><div class="daily-cues"><div class="daily-cue"><span class="cue-swatch" aria-hidden="true"></span><span class="daily-cue-copy"><small>今日色彩</small><strong>${esc(DAILY_INSPIRATION.color)}</strong></span></div><div class="daily-cue"><span class="cue-number">${esc(DAILY_INSPIRATION.number)}</span><span class="daily-cue-copy"><small>今日数字</small><strong>保持简单</strong></span></div><button class="daily-cue daily-cue-button outfit-cue" data-action="open-outfit-inspiration" aria-label="查看今日旺运穿衣：${esc(DAILY_INSPIRATION.outfitColor)}"><span class="cue-palette" aria-hidden="true"><i style="--offset:0px;--swatch:#d6b84c"></i><i style="--offset:8px;--swatch:#8a6548"></i><i style="--offset:16px;--swatch:#5f4638"></i><i style="--offset:24px;--swatch:#b69b72"></i></span><span class="daily-cue-copy"><small>旺运穿衣</small><strong>${esc(DAILY_INSPIRATION.outfitColor)}</strong></span><span class="cue-chevron" aria-hidden="true">›</span></button></div><div class="inspiration-action"><small>轻行动</small><strong>${esc(DAILY_INSPIRATION.action)}</strong></div><button class="inspiration-link" data-action="open-inspiration">和 Halo 聊聊 <span>›</span></button><small class="inspiration-disclaimer">五行穿衣与文化灵感仅供参考，不预测结果、不读取健康数据</small></section>`;
+    return `<section class="daily-inspiration today-inspiration"><div class="inspiration-heading"><div><h3>今日灵感 <span class="today-keyword">${esc(DAILY_INSPIRATION.keyword)}</span></h3><small>生活灵感 · 仅供参考</small></div><button class="inspiration-info" data-action="info:inspiration" aria-label="了解今日灵感">i</button></div><div class="daily-cues"><div class="daily-cue"><span class="cue-swatch" aria-hidden="true"></span><span class="daily-cue-copy"><small>幸运色</small><strong>${esc(DAILY_INSPIRATION.color)}</strong></span></div><div class="daily-cue"><span class="cue-number">${esc(DAILY_INSPIRATION.number)}</span><span class="daily-cue-copy"><small>今日数字</small><strong>保持简单</strong></span></div><button class="daily-cue daily-cue-button outfit-cue" data-action="open-outfit-inspiration" aria-label="查看今日旺运穿衣：${esc(DAILY_INSPIRATION.outfitColor)}"><span class="cue-palette" aria-hidden="true"><i style="--offset:0px;--swatch:#d6b84c"></i><i style="--offset:8px;--swatch:#8a6548"></i><i style="--offset:16px;--swatch:#5f4638"></i><i style="--offset:24px;--swatch:#b69b72"></i></span><span class="daily-cue-copy"><small>旺运穿衣</small><strong>${esc(DAILY_INSPIRATION.outfitColor)}</strong></span><span class="cue-chevron" aria-hidden="true">›</span></button></div><details class="today-inspiration-more"><summary><span>展开今日灵感</span><span>收起今日灵感</span><i aria-hidden="true">＋</i></summary><div><p>${esc(DAILY_INSPIRATION.message)}</p><div class="inspiration-action"><small>试试这件小事</small><strong>${esc(DAILY_INSPIRATION.action)}</strong></div><button class="inspiration-link" data-action="open-inspiration">和 Halo 聊聊这份灵感 <span>›</span></button><small class="inspiration-disclaimer">不预测结果，不读取或解释健康数据。</small></div></details></section>`;
   }
   function haloContextPanel() {
     const compact = state.chat.length > 0;
+    const correction = activeWeatherCorrection();
+    const source = currentHaloSource();
     const reveal = (pill, content) => compact ? pill : `${pill}${content}`;
     if (state.haloContext === "inspiration") {
       const pill = `<button class="context-pill inspiration-context" data-action="switch-halo-context:body">正在聊：今日灵感　×</button>`;
@@ -1311,11 +2602,11 @@
       const pill = `<button class="context-pill" data-action="remove-halo-context">参考你的记录：${esc(state.haloFeeling)}　×</button>`;
       return reveal(pill, notice("这次感受已带入", "它会和设备数据分开显示，只表示你此刻的记录。", "sage"));
     }
-    if (state.haloContext === "correction" && state.aiCorrection.status === "saved") {
+    if (source?.kind === "correction" && correction) {
       const pill = `<button class="context-pill" data-action="switch-halo-context:body">参考：你对今天解释的纠正　×</button>`;
-      return reveal(pill, `${notice("先按你说的来", `你说“${state.aiCorrection.reasonLabel}”。我不会继续把原解释当成你的实际感受，戒指数据仍会单独保留。`, "sage")}<div class="suggestions"><button data-action="ask:按我的真实感受重新安排今天">按我的真实感受重新安排今天</button><button data-action="ask:这次纠正会怎么保存？">这次纠正会怎么保存？</button><button data-action="go:HAL-03">检查 Halo 记忆</button></div>`);
+      return reveal(pill, `${notice("先听听你的感受", `你反馈“${correction.reasonLabel}”。这是你主动补充的感受，不是戒指测得的结果。`, "sage")}<div class="suggestions"><button data-action="ask:按我的真实感受重新安排今天">按我的真实感受重新安排今天</button><button data-action="ask:这次纠正会怎么保存？">这次纠正会怎么保存？</button><button data-action="go:HAL-03">查看 Halo 记忆</button></div>`);
     }
-    if (!hasBodyContext() || state.haloContext === "none") {
+    if (!hasBodyContext() || state.haloContext === "none" || (state.haloContext === "correction" && !source)) {
       const reason = state.dataLifecycle === "none" ? "目前还没有可用身体数据，所以 Halo 不会猜测你的状态。" : state.dataLifecycle !== "interpretable" ? "身体数据还不能稳定解释，所以这次不会带入健康数值或趋势。" : "你已关闭本次身体状态参考。";
       if (compact) return `<button class="context-pill" data-action="go:HAL-07">本次不参考身体状态　设置 ›</button>`;
       return `${notice("这次对话不参考身体状态", `${reason} 你仍可以聊感受、安排和通用的放松方法。`, "sage")}<div class="suggestions"><button data-action="ask:陪我梳理今天的安排">陪我梳理今天的安排</button><button data-action="ask:给我一个通用的放松练习">给我一个通用的放松练习</button><button data-action="ask:先听我说一会儿">先听我说一会儿</button></div>`;
@@ -1340,6 +2631,8 @@
     state.deviceOperationHistory = Array.isArray(state.deviceOperationHistory) ? state.deviceOperationHistory : [];
     state.measurementType = ACCOUNT_MEASUREMENT_TYPES[state.measurementType] ? state.measurementType : "heart";
     state.measurementStatus = ["ready", "running", "failed", "complete"].includes(state.measurementStatus) ? state.measurementStatus : "ready";
+    // Legacy simulated sessions have no restorable device request; retain their saved results only.
+    if (state.measurementType !== "oxygen" && state.measurementStatus === "running") state.measurementStatus = "failed";
     state.feedbackDraft = { type: "设备连接", text: "", ...(state.feedbackDraft || {}) };
     state.feedbackTickets = Array.isArray(state.feedbackTickets) ? state.feedbackTickets : [];
   }
@@ -1349,19 +2642,21 @@
     temperature: { label: "皮肤温度", metrics: [["皮肤温度相对变化", "+0.2", "℃"]], summary: "皮肤温度相对变化 +0.2℃" },
   };
   function accountRouteGuard(id) {
-    if (["DEV-11", "DEV-12"].includes(id) && !isHardwareActive() && !(id === "DEV-12" && state.deviceResetStatus === "complete")) return "DEV-10";
-    if (["DEV-04", "DEV-05"].includes(id) && !state.devicePaired && !isHardwareActive()) return "DEV-03";
-    if (id === "HLT-04" && state.measurementStatus === "ready") return "HLT-03";
+    if (id === "DEV-05" && deviceBinding.unresolved()) return "DEV-03";
+    if (["DEV-11", "DEV-12"].includes(id) && !isHardwareActive() && !(id === "DEV-12" && deviceMaintenance?.canView())) return "DEV-10";
+    if (id === "DEV-05" && !state.devicePaired && !isHardwareActive()) return "DEV-03";
+    if (id === "HLT-04" && (state.measurementType !== "oxygen" || !oxygenMeasurement?.request() || measurementPrivacyBlocked())) return "HLT-03";
     return id;
   }
   function handleAccountInput(target) {
-    if (target.id === "feedback-text") { state.feedbackDraft.text = target.value; persistAppProgress(); return true; }
-    if (target.id === "feedback-type") { state.feedbackDraft.type = target.value; persistAppProgress(); return true; }
+    if (feedbackEditor?.input({ target })) return true;
     return false;
   }
   function handleAccountToggle(key) {
+    if (state.current === "PERM-01" && ["bluetooth", "notification", "healthAccess"].includes(key)) return true;
     if (!["bluetooth", "notification"].includes(key)) return false;
     state.toggles[key] = !state.toggles[key];
+    if (key === "bluetooth") state.connectionIntro.permission = state.toggles.bluetooth ? "granted" : "bluetooth-off";
     if (key === "bluetooth" && !state.toggles.bluetooth) {
       state.deviceStatus = "disconnected";
       if (state.measurementStatus === "running") state.measurementStatus = "failed";
@@ -1369,48 +2664,134 @@
     }
     return true;
   }
+  let permissionIntent = null, permissionFeedback = "", permissionCheckFails = false;
+  function bluetoothPermissionLabel() {
+    const value = state.connectionIntro.permission;
+    if (value === "not-requested") return "尚未允许";
+    if (value === "denied") return "未允许";
+    if (value === "bluetooth-off" || value === "granted" && !state.toggles.bluetooth) return "手机蓝牙已关闭";
+    return value === "granted" ? "已允许" : "状态待确认";
+  }
+  function permissionPage() {
+    const row = (kind, title, status, copy, note, path) => `<section class="permission-item"><div class="permission-item-heading"><span class="permission-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="${path}"/></svg></span><div><h2>${title}</h2><span class="permission-state" data-ready="${status === "已允许"}">${status}</span></div><button type="button" class="permission-manage" data-action="perm:open:${kind}" aria-label="${title}：${status === "尚未允许" ? "开启" : "管理"}">${status === "尚未允许" ? "开启" : "管理"}</button></div><p>${copy}</p><small>${note}</small></section>`;
+    return `<section class="permission-page"><header class="permission-header"><button type="button" data-action="permission-skip" aria-label="返回上一页">←</button><h1>系统权限</h1><span></span></header><p class="permission-intro">按需要开启，随时可以调整。</p>${permissionFeedback ? `<p class="permission-feedback" role="status">${esc(permissionFeedback)}</p>` : ""}${row("bluetooth", "蓝牙与附近设备", bluetoothPermissionLabel(), "查找 Halo Ring，并同步戒指里的记录。", bluetoothPermissionLabel() === "已允许" ? "允许访问不代表戒指已连接。" : "暂不开启，也能查看已保存的记录。", "m7 7 10 10-5 4V3l5 4L7 17")}${row("notification", "通知", state.toggles.notification ? "已允许" : "未允许", "接收你选择的睡前、设备和报告提醒。", "关闭通知不会删除已设置的提醒。", "M6 9a6 6 0 0 1 12 0v6l2 3H4l2-3V9m4 12h4")}${systemHealth.card()}<p class="permission-note">位置等可选权限，会在使用对应功能时单独说明。</p><button type="button" class="primary permission-done" data-action="permission-skip">完成，返回上一页</button></section>`;
+  }
+  function openPermissionEditor(kind) {
+    if (!["bluetooth", "notification"].includes(kind) || state.current !== "PERM-01" || !state.signedIn || !state.authVerified) return;
+    if (kind === "bluetooth" && state.connectionIntro.request?.status === "checking") return showInfoModal("蓝牙检查还在进行", "请等这次检查结束后，再调整蓝牙权限。", "返回");
+    permissionIntent = { kind, account: state.authPhone };
+    permissionFeedback = "";
+    const bt = kind === "bluetooth", off = bt && bluetoothPermissionLabel() === "手机蓝牙已关闭";
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal permission-system-modal" role="dialog" aria-modal="true" aria-labelledby="permission-modal-title"><header><span>系统设置 · 原型演示</span><button type="button" class="text-button" data-action="close-modal" aria-label="取消权限设置">取消</button></header><h2 id="permission-modal-title">${bt ? "Halo 的蓝牙访问" : "Halo 的通知权限"}</h2><p>${bt ? "允许后，可以查找附近的戒指并同步记录。" : "允许后，可以接收你选择的提醒。提醒内容仍在 App 内设置。"}${off ? " 手机蓝牙目前已关闭，需要同时开启。" : ""}</p><p class="permission-demo-note">这里只演示系统返回结果，不会更改手机设置。</p><p class="permission-dialog-error" role="alert"></p><div class="permission-dialog-actions"><button type="button" class="primary" data-action="perm:result:granted">${off ? "允许并开启蓝牙" : "允许"}</button><button type="button" class="secondary" data-action="perm:result:denied">不允许</button></div></section></div>`;
+  }
+  function handlePermissionAction(action) {
+    if (!action?.startsWith("perm:")) return false;
+    if (state.current !== "PERM-01" || !state.signedIn || !state.authVerified || state.accountDeletionStatus === "submitted") return true;
+    if (action.startsWith("perm:open:")) { openPermissionEditor(action.slice(10)); return true; }
+    if (action.startsWith("perm:review:")) { permissionCheckFails = action.endsWith(":failed"); render(); return true; }
+    if (!action.startsWith("perm:result:")) return true;
+    const intent = permissionIntent, modal = modalRoot.querySelector(".permission-system-modal");
+    if (!intent || !modal || intent.account !== state.authPhone || !["granted", "denied"].includes(action.slice(12))) return true;
+    const fail = message => { modal.querySelector(".permission-dialog-error").textContent = message; };
+    if (permissionCheckFails) { fail("暂时无法确认设置结果，原状态未更新。请稍后重试。"); return true; }
+    if (intent.kind === "bluetooth" && state.connectionIntro.request?.status === "checking") { fail("蓝牙检查仍在进行，请结束后再试。"); return true; }
+    const granted = action.endsWith(":granted"), changes = { toggles: { ...state.toggles, [intent.kind]: granted } };
+    if (intent.kind === "bluetooth") {
+      changes.connectionIntro = { ...state.connectionIntro, permission: granted ? "granted" : "denied" };
+      if (!granted) {
+        changes.deviceStatus = "disconnected";
+        if (state.measurementStatus === "running") changes.measurementStatus = "failed";
+        if (["downloading", "verifying"].includes(state.firmwareStatus)) changes.firmwareStatus = "failed";
+      }
+    }
+    if (!writeNotificationProgress(changes)) { fail("这次设置未能保存，原状态未更新。请重试。"); return true; }
+    permissionFeedback = `${intent.kind === "bluetooth" ? "蓝牙访问" : "通知"}${granted ? "已允许" : "未允许"}${intent.kind === "bluetooth" && granted ? "，可返回继续连接。" : "。"}`;
+    render(); closeModal(); return true;
+  }
   function deviceOperationUnavailable(operation) {
+    if (deviceMaintenance?.blocks()) return "请先确认这次设备操作的结果";
+    if (initialSync?.isBusy()) return "首次设置正在进行，请稍后再试";
+    if (deviceInfo?.isBusy() || operation !== "firmware" && deviceInfo?.unresolved()) return "请先确认固件更新结果，再进行设备操作";
+    if (deviceHome?.isBusy()) return "戒指正在连接或同步，请等待本次操作完成";
+    if (state.activitySync.request?.status === "pending") return "活动记录正在同步，请等待本次操作完成";
+    if (deviceBinding.unresolved()) return "请先确认这次戒指连接的结果";
     if (!isHardwareActive()) return "请先绑定并激活戒指";
     if (!state.toggles.bluetooth) return "请先开启蓝牙权限";
     if (!["connected", "low"].includes(state.deviceStatus)) return state.deviceStatus === "syncing" ? "同步完成后再试" : "请先连接戒指";
     if (state.deviceResetStatus === "pending") return "设备重置尚未完成";
-    if (state.measurementStatus === "running") return "请先结束当前测量";
+    if (state.measurementStatus === "running" && !(operation === "oxygen-continuation" && state.measurementType === "oxygen" && oxygenMeasurement?.request())) return "请先结束当前测量";
     if (operation !== "firmware" && ["downloading", "verifying"].includes(state.firmwareStatus)) return "固件更新完成后再试";
     if (operation === "firmware" && state.deviceStatus === "low") return "请先充电，再更新固件";
     return "";
   }
-  function measurementUnavailable() { return deviceOperationUnavailable("measurement"); }
-  function renderMeasurementStart(item) {
-    const unavailable = measurementUnavailable();
-    const recent = state.lastMeasurement;
-    return `${head(item, "MEASURE")}<div class="stack">${haloStatus(state.deviceStatus, "compact", "status-detail")}${unavailable ? notice("暂时不能测量", unavailable, "warm") : notice("保持手部安静", "戒指贴合指腹，测量期间减少移动。", "sage")}${Object.entries(ACCOUNT_MEASUREMENT_TYPES).map(([type, measurement]) => `<button class="setting-row" data-action="measurement-start:${type}" ${unavailable ? "disabled" : ""}><div><strong>${measurement.label}</strong><small>${type === "temperature" ? "读取当前相对变化" : "约 60 秒"} · 原型演示</small></div><span>›</span></button>`).join("")}${state.measurementStatus === "running" ? buttons([["继续本次测量", "go:HLT-04", "primary"], ["取消测量", "measurement-cancel", "secondary"]]) : ""}${unavailable ? buttons([["查看设备状态", "go:DEV-10", "secondary"], ["权限设置", "go:PERM-01", "text-button"]]) : ""}${card("最近一次", recent ? `${ACCOUNT_MEASUREMENT_TYPES[recent.type]?.summary || "测量记录"} · ${new Date(recent.completedAt).toLocaleString("zh-CN")} · 演示记录` : "还没有主动测量记录", "HISTORY")}${education("主动测量何时更稳定", "静坐片刻、手部保持安静并让传感器贴近指腹，更容易获得可用记录。")}</div>`;
+  function oxygenMeasurementUnavailable(continuing = false) {
+    if (measurementPrivacyBlocked()) return "测量记录正在处理，请到数据与隐私查看状态";
+    if (!state.signedIn || !state.authVerified || state.accountDeletionStatus === "submitted") return "请先登录当前账号";
+    if (state.oxygenReviewScenario === "unknown") return "暂时无法确认这款戒指是否支持主动测血氧";
+    if (!["supported", "off", "quality"].includes(state.oxygenReviewScenario)) return "当前戒指不支持主动测血氧";
+    if (Object.values(state.dataPrivacy?.accounts || {}).some(account => account.request?.status === "pending" && account.request.scope?.includes("measurement"))) return "正在处理测量记录，请稍后再试";
+    return deviceOperationUnavailable(continuing ? "oxygen-continuation" : "measurement");
   }
+  function oxygenSaveUnavailable() {
+    if (measurementPrivacyBlocked()) return "测量记录正在处理，请到数据与隐私查看状态";
+    if (!state.signedIn || !state.authVerified || state.accountDeletionStatus === "submitted") return "请先登录取得这次结果的账号";
+    if (Object.values(state.dataPrivacy?.accounts || {}).some(account => account.request?.status === "pending" && account.request.scope?.includes("measurement"))) return "正在处理测量记录，请稍后保存";
+    return "";
+  }
+  function measurementPrivacyBlocked() {
+    const account = String(state.authPhone || state.authForm?.phone || "prototype-session");
+    const request = state.dataPrivacy?.accounts?.[account]?.request;
+    return !state.signedIn || !state.authVerified || state.healthDeletionStatus !== "ready" || state.accountDeletionStatus !== "ready" || Boolean(request?.status === "pending" && request.scope?.includes("measurement"));
+  }
+  function measurementUnavailable(type = state.measurementType) { return type === "oxygen" ? oxygenMeasurementUnavailable() : "这项主动测量能力待确认，暂不能开始。"; }
+  function allMeasurementRecords() {
+    if (!state.signedIn || !state.authVerified) return [];
+    const account = String(state.authPhone || state.authForm?.phone || "prototype-session");
+    const valid = record => {
+      const time = Date.parse(record?.occurredAt || record?.completedAt);
+      return record && Number.isFinite(time) && time <= Date.now() &&
+        String(record.ownerAccount || record.accountRef || "") === account &&
+        (!record.ownerAccount || record.ownerAccount === account) && (!record.accountRef || record.accountRef === account) &&
+        record.quality !== "invalid" && record.status !== "failed";
+    };
+    const records = (oxygenMeasurement?.records() || []).filter(valid);
+    const old = state.lastMeasurement;
+    const imported = records.some(record => record.requestId === old?.requestId || old?.id && record.id === old.id || old?.type === "oxygen" && Date.parse(record.occurredAt) === Date.parse(old.occurredAt || old.completedAt));
+    if (valid(old) && Object.hasOwn(ACCOUNT_MEASUREMENT_TYPES, old.type) && !imported && Array.isArray(old.metrics) && old.metrics.length) {
+      records.push({ ...old, id: String(old.id || `legacy-${old.type}-${Date.parse(old.occurredAt || old.completedAt)}`), legacy: true });
+    }
+    return records.sort((a, b) => Date.parse(a.occurredAt || a.completedAt) - Date.parse(b.occurredAt || b.completedAt));
+  }
+  function renderMeasurementStart(item) { return measurementCenter.page(); }
   function renderMeasurementResult(item) {
+    if (state.measurementType === "oxygen") return oxygenMeasurement.page(item);
     const measurement = ACCOUNT_MEASUREMENT_TYPES[state.measurementType] || ACCOUNT_MEASUREMENT_TYPES.heart;
     if (state.measurementStatus === "failed") return `${head(item, "MEASUREMENT")}<div class="stack">${notice("本次没有获得可用数据", "连接中断或佩戴不稳，本次不会保存。请确认蓝牙和佩戴后重新测量。", "warm")}${buttons([["重新测量", "measurement-reset", "primary"], ["返回主动测量", "go:HLT-03", "secondary"]])}</div>`;
     if (state.measurementStatus === "complete") return `${head(item, "MEASUREMENT")}<div class="stack">${notice(`${measurement.label}测量完成`, "以下为原型演示结果，已保存在当前浏览器，不是实际设备采集。", "sage")}${metrics(measurement.metrics)}${quality(`本次${measurement.label}主动测量`, "演示记录", state.lastMeasurement ? new Date(state.lastMeasurement.completedAt).toLocaleString("zh-CN") : "未保存")}${notice("怎样看这次结果", "单次主动测量只反映当下，不用于诊断，也不会单独改变今天的 Body Weather。")}${buttons([["完成", "go:HLT-03", "primary"], ["重新测量", "measurement-reset", "secondary"]])}</div>`;
     return `${head(item, "MEASURING")}<div class="gated measuring-state"><span class="data-symbol accumulating" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><h2>正在测量${measurement.label}</h2><p class="caption">原型演示 · 离开后可返回继续</p></div>${buttons([["完成演示测量", "measure-complete", "primary"], ["取消测量", "measurement-cancel", "text-button"]])}`;
   }
-  function showLegalReading(kind) {
+  function legalReadingView() {
+    const view = history.state?.legalReading;
+    return view && view.route === state.current && pages.some(item => item.id === view.route) && ["agreement", "privacy", "ai"].includes(view.kind) ? view : null;
+  }
+  function showLegalReading(kind, restoring = false) {
     const content = {
       agreement: ["用户协议 · 原型摘要", [["账号与会员", "注册并确认必需说明后成为 Halo Member。未绑定也可使用公开内容、用户记录及会员服务；绑定激活后才开始未来成长。"], ["服务边界", "健康功能不按会员等级锁定。Halo 不提供医疗诊断，不处理急症；具体能力取决于设备支持和有效数据。"], ["资产与退出", "合法获得的会员资产不会因正常不活跃或解绑被收回。账号注销前可查看将失效资产，订单与售后仍可继续处理。"], ["规则与联系", "核心规则变化提前公示，只影响生效后的行为。对记录有疑问可从帮助中心联系企业微信客服。"]]],
-      privacy: ["隐私政策 · 原型摘要", [["收集与用途", "设备记录、手动记录与 Halo 解释分别标记来源。只有相关功能所需的信息才用于该功能；健康数据不用于推导商城订单来源。"], ["权限选择", "蓝牙用于连接与同步；通知用于提醒。位置、系统健康数据和 Studio 分享分别控制，拒绝可选权限不影响其他服务。"], ["管理与删除", "在“我的—数据与隐私”查看权限、导出和删除入口。Halo 记忆与节律数据可单独管理。法定留存记录停止用于运营与个性化。"], ["当前原型", "本地输入保存在当前浏览器。本地导出未加密；安全链接、云端删除和身份验证尚未接入真实服务。"]]],
+      privacy: ["隐私政策 · 原型摘要", [["收集与用途", "设备记录、手动记录与 Halo 解释分别标记来源。只有相关功能所需的信息才用于该功能。"], ["权限选择", "蓝牙用于连接与同步；通知用于提醒。位置、系统健康数据和 Studio 分享分别控制，拒绝可选权限不影响其他服务。"], ["管理与删除", "在“我的—数据与隐私”查看权限、导出和删除入口。Halo 记忆与节律数据可单独管理。法定留存记录停止用于运营与个性化。"], ["当前原型", "本地输入保存在当前浏览器。本地导出未加密；安全链接、云端删除和身份验证尚未接入真实服务。"]]],
       ai: ["AI 服务说明 · 原型摘要", [["建议不是诊断", "Halo 提供日常健康管理参考，不开处方，也不能代替医生。若感到明显不适，请及时寻求现实中的专业帮助。"], ["以你的感受为准", "设备数值、用户记录和 AI 推断不同。可以指出不准确的解释；一次反馈不会自动成为长期事实。"], ["对话与记忆", "可以停止身体数据带入、暂停主动消息，并管理已确认记忆。关闭某项能力不等于删除历史记录。"], ["演示边界", "当前原型对话用于演示交互，不代表真实模型能力或医疗判断。"]]],
     }[kind];
     if (!content) return;
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal" role="dialog" aria-modal="true" aria-label="${esc(content[0])}"><div class="modal-title-row"><h2>${content[0]}</h2><button class="text-button" data-action="close-modal">关闭</button></div><p class="caption">用于原型审阅，不是正式法律文本；正式上线前需接入经审定的完整版本。</p>${content[1].map(([title, body]) => `<section><h3>${title}</h3><p>${body}</p></section>`).join("")}${buttons([["返回确认", "close-modal", "primary"]])}</section></div>`;
-  }
-  function firmwarePanel() {
-    const unavailable = deviceOperationUnavailable("firmware");
-    if (unavailable) return notice("暂时不能更新", unavailable, "warm") + buttons([["查看连接与权限", "go:PERM-01", "secondary"]]);
-    const status = {
-      available: ["发现新版本 1.1.0", "当前 1.0.8 · 更新约 4 分钟", "开始更新", "firmware:downloading"],
-      downloading: ["正在下载固件", "46% · 请保持戒指与手机在 1 米内", "继续到校验", "firmware:verifying"],
-      verifying: ["正在校验并安装", "请勿关闭 App 或移开戒指", "完成安装", "firmware:current"],
-      current: ["固件已是最新", "1.1.0 · 刚刚完成校验", "再次检查", "firmware:available"],
-      failed: ["更新未完成", "连接中断，戒指仍可使用当前版本", "重新尝试", "firmware:downloading"],
-    }[state.firmwareStatus] || ["固件状态未知", "稍后再试", "重新检查", "firmware:available"];
-    return `<section class="firmware-panel ${esc(state.firmwareStatus)}"><span>FIRMWARE · 原型演示</span><h2>${esc(status[0])}</h2><p>${esc(status[1])}</p>${state.firmwareStatus === "downloading" ? '<div class="progress"><i style="width:46%"></i></div>' : ""}<button class="secondary" data-action="${esc(status[3])}">${esc(status[2])}</button>${state.firmwareStatus !== "failed" ? '<button class="text-button" data-action="firmware:failed">更新没完成？</button>' : ""}</section>`;
+    if (!pages.some(item => item.id === state.current)) return;
+    const view = restoring ? legalReadingView() : { kind, route: state.current, top: 0 };
+    if (!view) return;
+    if (!restoring) history.pushState({ ...history.state, legalReading: view }, "", location.href);
+    modalReturnFocus = screen.querySelector(`[data-action="legal-read:${kind}"]`);
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal legal-reading-modal" role="dialog" aria-modal="true" aria-labelledby="legal-reading-title"><header class="legal-reading-header"><div><h2 id="legal-reading-title">${esc(content[0].split(" · ")[0])}</h2><p>原型摘要 · 非正式法律文本</p></div><button type="button" class="text-button" data-action="close-modal" aria-label="关闭${esc(content[0].split(" · ")[0])}">关闭</button></header><div class="legal-reading-body" tabindex="0" aria-label="说明正文">${content[1].map(([title, body]) => `<section><h3>${esc(title)}</h3><p>${esc(body)}</p></section>`).join("")}</div><footer class="legal-reading-footer"><button type="button" class="primary" data-action="close-modal">${state.current === "AUTH-01" ? "返回登录" : "返回说明列表"}</button></footer></section></div>`;
+    const body = modalRoot.querySelector(".legal-reading-body");
+    body.scrollTop = Math.max(0, Number(view.top) || 0);
+    body.addEventListener("scroll", () => {
+      if (legalReadingView()?.kind === kind) history.replaceState({ ...history.state, legalReading: { ...view, top: body.scrollTop } }, "", location.href);
+    }, { passive: true });
   }
   function deviceQualityLabel(status) {
     return {
@@ -1421,13 +2802,6 @@
       low: "电量较低",
       action: "连续同步失败",
     }[status] || "连接稳定";
-  }
-  function shareCard(extraClass = "") {
-    const content = shareContent();
-    return `<section class="share-card canvas-share-card ${esc(extraClass)}"><canvas data-share-canvas role="img" aria-label="${esc(content.title + "：" + content.description)}"></canvas><p class="sr-only">${esc(content.title)} · ${esc(content.description)}</p></section>`;
-  }
-  function showSharePreview() {
-    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal share-preview-modal"><div class="modal-title-row"><h2>分享预览</h2><button class="text-button" data-action="close-modal">关闭</button></div>${shareCard("preview")}${notice("隐私已保护", "分享卡不会显示心率、HRV、血氧、温度或其他敏感健康数值。", "sage")}<div class="button-row"><button class="primary" data-action="share-system">分享</button><button class="secondary" data-action="share-save">保存图片</button></div></section></div>`;
   }
   function lineChart(visualKind = "status", title = "个人趋势", summary = "", tone = "sage") {
     const valuesByKind = {
@@ -1452,238 +2826,1220 @@
   function generic(item) {
     return head(item, item.group) + `<div class="stack">${notice("本页任务", item.function || item.note, "sage")}${card("页面内容", item.layout || item.note, item.id)}${rows([["主要交互", item.interaction], ["数据与状态", item.data], ["异常处理", item.exception]])}${buttons([["完成并继续", nextId(item.id), "primary"], ["返回上一页", "previous", "secondary"]])}</div>`;
   }
-  function nextId(id) { const index = pages.findIndex((item) => item.id === id); return `go:${pages[Math.min(index + 1, pages.length - 1)]?.id || id}`; }
-  function previousId(id) { const index = pages.findIndex((item) => item.id === id); return pages[Math.max(0, index - 1)]?.id || id; }
+  function nextId(id) { const visible = pages.filter(item => item.id !== "TOD-04"), index = visible.findIndex(item => item.id === id); return `go:${visible[Math.min(index + 1, visible.length - 1)]?.id || id}`; }
+  function previousId(id) { const visible = pages.filter(item => item.id !== "TOD-04"), index = visible.findIndex(item => item.id === id); return visible[Math.max(0, index - 1)]?.id || id; }
 
+  function normalizedAuthPhone(value = state.authForm.phone) {
+    const digits = String(value).replace(/\D/g, "");
+    return digits.length === 13 && digits.startsWith("86") ? digits.slice(2) : digits;
+  }
+  function authUiState() {
+    const phone = normalizedAuthPhone();
+    const valid = /^1\d{10}$/.test(phone);
+    const request = state.authForm.request;
+    const sending = request?.status === "sending";
+    const verifying = state.authForm.login?.status === "verifying";
+    const busy = sending || verifying;
+    const sent = request?.status === "sent" && request.phone === phone && state.authCodeRequested;
+    const expired = sent && Date.now() >= request.expiresAt;
+    const locked = sent && request.attempts >= 5;
+    const seconds = Math.max(0, Math.ceil(((Number(state.authForm.cooldownUntil) || 0) - Date.now()) / 1000));
+    const phoneError = state.authForm.touched && !valid ? "请输入正确的 11 位中国大陆手机号" : "";
+    const codeError = expired ? "验证码已过期，请重新获取。" : locked ? "尝试次数较多，请重新获取验证码。" : state.authForm.codeError;
+    const codeHint = codeError || state.authForm.error || (sending ? "正在发送验证码…" : sent ? `验证码已发送至 ${phone.replace(/^(\d{3})\d{4}(\d{4})$/, "$1 **** $2")}` : "");
+    const hint = busy ? "" : !valid ? "填写手机号、验证码并勾选协议后可登录" : !state.authForm.termsAccepted ? "请先阅读并勾选协议" : expired || locked || codeError || state.authForm.error ? "" : !sent ? "" : !/^\d{6}$/.test(state.authForm.code) ? "填写 6 位验证码后可登录" : "";
+    const sendLabel = sending ? "发送中…" : seconds ? `${seconds}s 后重发` : request ? "重新获取" : "获取验证码";
+    return { phone, valid, sending, verifying, busy, sent, expired, locked, seconds, phoneError, codeError, codeHint, hint, sendLabel,
+      sendDisabled: busy || !valid || !state.authForm.termsAccepted || seconds > 0,
+      disabled: busy || !valid || !state.authForm.termsAccepted || !sent || expired || locked || !/^\d{6}$/.test(state.authForm.code) };
+  }
+  function authLoginPage() {
+    const ui = authUiState();
+    return `<section class="auth-page" aria-labelledby="auth-title">
+      <header class="auth-header"><button class="auth-back" data-action="previous" aria-label="返回"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button><h1 id="auth-title">手机号登录</h1></header>
+      <form id="auth-login-form" class="auth-login-form" novalidate aria-busy="${ui.busy}">
+        <div class="auth-fields">
+          <div class="auth-phone-section"><label for="auth-phone" class="sr-only">手机号</label><div class="auth-phone-control ${ui.phoneError ? "invalid" : ""}"><span class="auth-phone-prefix" aria-label="中国大陆，区号加八六">+86</span><input id="auth-phone" class="auth-phone-input" type="tel" inputmode="numeric" autocomplete="tel-national" enterkeyhint="next" maxlength="24" placeholder="请输入手机号" value="${esc(state.authForm.phone)}" aria-describedby="auth-phone-error" aria-invalid="${Boolean(ui.phoneError)}" ${ui.busy ? "disabled" : ""}></div><p id="auth-phone-error" class="auth-phone-error" aria-live="polite">${esc(ui.phoneError)}</p></div>
+          <div class="auth-code-section"><label for="auth-code" class="sr-only">验证码</label><div class="auth-code-control ${ui.codeError ? "invalid" : ""}"><input id="auth-code" class="auth-code-input" type="text" inputmode="numeric" autocomplete="one-time-code" enterkeyhint="go" maxlength="6" placeholder="请输入验证码" value="${esc(state.authForm.code)}" aria-describedby="auth-code-hint" aria-invalid="${Boolean(ui.codeError)}" ${ui.busy ? "disabled" : ""}><button id="auth-send" class="auth-send" type="button" data-action="auth-code-requested" aria-describedby="auth-action-hint auth-code-hint" ${ui.sendDisabled ? "disabled" : ""}>${ui.sendLabel}</button></div><p id="auth-code-hint" class="auth-code-hint ${ui.codeError || state.authForm.error ? "error" : ""}" aria-live="polite">${esc(ui.codeHint)}</p></div>
+        </div>
+        <div class="auth-actions">
+          <div class="auth-consent"><label class="auth-consent-toggle"><input id="auth-terms" type="checkbox" ${state.authForm.termsAccepted ? "checked" : ""} ${ui.busy ? "disabled" : ""}><span class="sr-only">我已阅读并同意用户协议、隐私政策和 AI 服务说明</span></label><div class="auth-consent-copy"><span>我已阅读并同意</span><div><button type="button" data-action="legal-read:agreement" ${ui.busy ? "disabled" : ""}>《用户协议》</button><button type="button" data-action="legal-read:privacy" ${ui.busy ? "disabled" : ""}>《隐私政策》</button><button type="button" data-action="legal-read:ai" ${ui.busy ? "disabled" : ""}>《AI 服务说明》</button></div></div></div>
+          <button id="auth-submit" class="primary auth-submit" type="submit" aria-describedby="auth-action-hint auth-code-hint" ${ui.disabled ? "disabled" : ""}>${ui.verifying ? "登录中…" : "登录"}</button>
+          <p id="auth-action-hint" class="auth-action-hint" aria-live="polite">${esc(ui.hint)}</p>
+          <p class="auth-registration-note">${state.authReturnRoute === "SEL-03" ? "登录后回到商品；首次登录自动创建账号。" : "首次登录将自动创建账号。"}</p>
+        </div>
+      </form>
+    </section>`;
+  }
+  function updateAuthControls() {
+    if (state.current !== "AUTH-01") return;
+    const ui = authUiState();
+    const input = document.getElementById("auth-phone");
+    const button = document.getElementById("auth-submit");
+    if (!input || !button) return;
+    input.setAttribute("aria-invalid", String(Boolean(ui.phoneError)));
+    input.closest(".auth-phone-control").classList.toggle("invalid", Boolean(ui.phoneError));
+    document.getElementById("auth-phone-error").textContent = ui.phoneError;
+    const code = document.getElementById("auth-code");
+    if (code.value !== state.authForm.code) code.value = state.authForm.code;
+    code.setAttribute("aria-invalid", String(Boolean(ui.codeError)));
+    code.closest(".auth-code-control").classList.toggle("invalid", Boolean(ui.codeError));
+    const codeHint = document.getElementById("auth-code-hint");
+    if (codeHint.textContent !== ui.codeHint) codeHint.textContent = ui.codeHint;
+    codeHint.classList.toggle("error", Boolean(ui.codeError || state.authForm.error));
+    const send = document.getElementById("auth-send");
+    send.disabled = ui.sendDisabled;
+    send.textContent = ui.sendLabel;
+    button.disabled = ui.disabled;
+    button.textContent = ui.verifying ? "登录中…" : "登录";
+    for (const field of [input, code, document.getElementById("auth-terms")]) field.disabled = ui.busy;
+    document.getElementById("auth-login-form").setAttribute("aria-busy", String(ui.busy));
+    const hint = document.getElementById("auth-action-hint");
+    if (hint.textContent !== ui.hint) hint.textContent = ui.hint;
+  }
+  function invalidateAuthRequest() {
+    if (authRequestTimer) clearTimeout(authRequestTimer);
+    authRequestTimer = null;
+    state.authForm.request = null;
+    state.authForm.login = null;
+    state.authForm.code = "";
+    state.authForm.error = "";
+    state.authForm.codeError = "";
+    state.authCodeRequested = false;
+    state.authVerified = false;
+  }
+  function finishAuthLogin(login, request) {
+    if (state.authForm.login !== login || state.authForm.request !== request || login?.status !== "verifying" || request?.status !== "sent" || login.requestId !== request.id) return;
+    const reason = !state.authForm.termsAccepted || normalizedAuthPhone() !== request.phone ? "changed" : Date.now() >= request.expiresAt ? "expired" : login.outcome === "offline" ? "offline" : state.authForm.code !== request.demoCode ? "wrong" : "";
+    if (reason) {
+      login.status = "failed";
+      if (reason === "wrong") request.attempts += 1;
+      request.demoCode = AUTH_DEMO_CODE;
+      state.authForm.codeError = { changed: "手机号或协议状态已变更，请重新获取验证码。", expired: "验证码已过期，请重新获取。", offline: "暂时无法登录，请检查网络后再点登录。", wrong: "验证码不正确，请核对后重试。" }[reason];
+      trackPrototypeEvent("auth_login_failed", { attempt_id: login.id, reason, simulated: true });
+    } else {
+      const knownAccount = Object.prototype.hasOwnProperty.call(state.todayRhythmScope?.registrations || {}, request.phone);
+      const firstLogin = !knownAccount && !state.signedIn && state.membershipHardwareState === "never-bound" && !state.memberCreatedAt;
+      const beforeLogin = JSON.parse(JSON.stringify(state));
+      window.HaloAccountScope.select(state, request.phone);
+      if (firstLogin) { state.newMember = true; state.memberCreatedAt = new Date().toISOString(); state.dataLifecycle = "none"; }
+      todayRhythmStorage?.select(request.phone, firstLogin ? state.memberCreatedAt : "");
+      state.memberCreatedAt = state.todayRhythmScope.registrations[request.phone] || "";
+      state.todayRhythmScope.memberCreatedAtSnapshot = state.memberCreatedAt;
+      personalScope?.select(request.phone, state.todayRhythmScope.activeKey);
+      login.status = "complete";
+      login.destination = state.authReturnRoute === "SEL-03" ? "SEL-03" : state.connectionIntro.completed ? "TOD-01" : "ONB-03";
+      state.authReturnRoute = "";
+      request.status = "used";
+      request.demoCode = "";
+      state.authForm.code = "";
+      state.authForm.codeError = "";
+      state.authCodeRequested = false;
+      state.authVerified = true;
+      state.authPhone = request.phone;
+      state.toggles.legal = true;
+      state.toggles.aiLegal = true;
+      state.agreementAcceptance = { source: "AUTH-01", scope: AUTH_CONSENT_SCOPE, acceptedAt: new Date().toISOString(), documents: ["user_agreement", "privacy_policy", "ai_service_notice"], simulated: true };
+      state.signedIn = true;
+      if (!writeNotificationProgress({})) {
+        Object.assign(state, beforeLogin);
+        todayRhythmStorage?.cancelSwitch();
+        personalScope?.cancelSwitch();
+        state.authForm.login.status = "failed";
+        state.authForm.codeError = "登录状态没能保存，请重试。原账号的记录没有改变。";
+        if (state.current === "AUTH-01") render();
+        return;
+      }
+      todayRhythmStorage?.refreshRecords();
+      trackPrototypeEvent("required_agreements_accepted", { source_page: "AUTH-01", consent_scope: AUTH_CONSENT_SCOPE, user_agreement: true, privacy_policy: true, ai_service_notice: true, accepted_at: state.agreementAcceptance.acceptedAt, simulated: true });
+      trackPrototypeEvent("auth_login_completed", { attempt_id: login.id, new_account: firstLogin, user_agreement: true, privacy_policy: true, ai_service_notice: true, simulated: true });
+    }
+    persistAppProgress();
+    if (state.current === "AUTH-01") {
+      if (login.status === "complete") { go(login.destination); flash("登录成功"); }
+      else render();
+    }
+  }
+  function resumeAuthRequest() {
+    if (authRequestTimer) clearTimeout(authRequestTimer);
+    authRequestTimer = null;
+    const request = state.authForm.request;
+    const login = state.authForm.login;
+    if (login?.status === "verifying" && request?.status === "sent") {
+      authRequestTimer = setTimeout(() => { authRequestTimer = null; if (state.authForm.login?.id === login.id && state.authForm.request?.id === login.requestId) finishAuthLogin(login, request); }, Math.max(0, login.readyAt - Date.now()));
+      return;
+    }
+    if (request?.status !== "sending") {
+      if (state.current === "AUTH-01" && (state.authForm.cooldownUntil > Date.now() || request?.status === "sent" && request.expiresAt > Date.now())) {
+        authRequestTimer = setTimeout(() => { authRequestTimer = null; updateAuthControls(); resumeAuthRequest(); }, 1000);
+      }
+      return;
+    }
+    authRequestTimer = setTimeout(() => {
+      authRequestTimer = null;
+      if (state.authForm.request?.id !== request.id || state.authForm.request.status !== "sending") return;
+      if (!state.authForm.termsAccepted || request.phone !== normalizedAuthPhone()) {
+        invalidateAuthRequest();
+        persistAppProgress();
+        if (state.current === "AUTH-01") render();
+        return;
+      }
+      if (request.outcome !== "success") {
+        request.status = "failed";
+        state.authForm.error = request.outcome === "limited" ? "获取次数较多，请稍后再试。" : "连接失败，请检查网络后重试。";
+        if (request.outcome === "limited") state.authForm.cooldownUntil = request.readyAt + 60000;
+        trackPrototypeEvent("auth_code_request_failed", { request_id: request.id, reason: request.outcome, simulated: true });
+      } else {
+        request.status = "sent";
+        state.authForm.error = "";
+        // Requesting a code does not switch the authenticated account or its data.
+        state.authCodeRequested = true;
+        state.authVerified = false;
+        state.authForm.cooldownUntil = request.readyAt + 60000;
+        trackPrototypeEvent("auth_code_request_completed", { request_id: request.id, simulated: true });
+      }
+      persistAppProgress();
+      if (state.current === "AUTH-01") {
+        render();
+        if (request.status === "sent" && !modalRoot.textContent.trim()) document.getElementById("auth-code")?.focus();
+      }
+    }, Math.max(0, request.readyAt - Date.now()));
+  }
+  function authReviewControls(item) {
+    if (item.id !== "AUTH-01") return "";
+    const ui = authUiState();
+    return `<section class="review-controls"><p>AUTH REVIEW</p><h3>登录测试状态</h3><small>本地模拟，不发送短信、不验证真实身份。模拟码固定为 ${AUTH_DEMO_CODE}，重发不变。仅此面板显示模拟规则。</small><div class="review-control-group"><strong>本轮模拟码：${ui.sent ? esc(state.authForm.request.demoCode) : "获取后显示"}</strong></div><div class="review-control-group"><strong>下一次验证码请求</strong><div>${[["success", "正常"], ["offline", "网络失败"], ["limited", "请求过多"]].map(([value, label]) => `<button data-action="auth-review:${value}" class="${authReviewOutcome === value ? "active" : ""}" ${ui.busy ? "disabled" : ""}>${label}</button>`).join("")}</div></div><div class="review-control-group"><strong>下一次登录请求</strong><div>${[["success", "正常登录"], ["offline", "登录网络失败"]].map(([value, label]) => `<button data-action="auth-login-review:${value}" class="${authLoginReviewOutcome === value ? "active" : ""}" ${ui.busy ? "disabled" : ""}>${label}</button>`).join("")}</div></div><div class="review-control-group"><strong>时间状态</strong><div><button data-action="auth-review:cooldown-end" ${ui.busy ? "disabled" : ""}>结束等待</button><button data-action="auth-review:expire" ${ui.busy || !ui.sent ? "disabled" : ""}>验证码过期</button></div></div></section>`;
+  }
+
+  function connectionIntroPage() {
+    return `<section class="connect-intro-page" aria-labelledby="connect-intro-title">
+      <div class="connect-intro-content"><figure class="connect-intro-photo"><img src="assets/ring-porcelain-onboarding.jpg" alt="Halo Ring 瓷白色戒指，内侧为传感器" width="1267" height="1241"></figure><h1 id="connect-intro-title">连接你的 Halo Ring</h1><p class="connect-intro-description" id="connect-intro-description">连接后，开始记录你的睡眠<br>和日常身体状态。</p></div>
+      <div class="connect-intro-actions"><button type="button" class="primary connect-intro-primary" data-action="connect-intro-start" aria-describedby="connect-intro-description">连接 Halo Ring</button><button type="button" class="secondary connect-intro-later" data-action="connect-intro-skip" aria-describedby="connect-intro-note">暂不连接，先看看</button><p class="connect-intro-note" id="connect-intro-note">之后可在「我的」中连接。</p></div>
+    </section>`;
+  }
+  function deviceGuideBlocker(ignoreBinding = false) {
+    if (deviceMaintenance?.blocks()) return ["设备操作尚未确认", "请到高级设备操作查看这次结果。", "先确认设备操作"];
+    if (initialSync?.isBusy()) return ["首次设置正在进行", "设置完成后，再查找戒指。", "等待设置完成"];
+    if (deviceInfo?.isBusy() || deviceInfo?.unresolved()) return ["戒指更新尚未确认", "请先到设备信息页确认更新结果。", "先确认更新结果"];
+    if (deviceHome?.isBusy()) return ["戒指正在处理", "本次连接或同步完成后，再查找戒指。", "等待本次操作完成"];
+    if (state.activitySync.request?.status === "pending") return ["活动记录正在同步", "同步完成后，再查找戒指。", "等待同步完成"];
+    if (!ignoreBinding && deviceBinding.unresolved()) return ["戒指连接尚未确认", "请从“我的”查看这次连接的结果。", "等待结果确认"];
+    if (["downloading", "verifying"].includes(state.firmwareStatus)) return ["戒指正在更新", "更新完成后，再查找戒指。", "等待更新完成"];
+    if (state.deviceStatus === "syncing") return ["戒指正在同步", "同步完成后，再查找戒指。", "等待同步完成"];
+    if (state.measurementStatus === "running") return ["测量还未结束", "完成当前测量后，再查找戒指。", "等待测量结束"];
+    if (state.deviceResetStatus === "pending") return ["戒指正在重置", "重置完成后，再查找戒指。", "等待重置完成"];
+    return null;
+  }
+  function deviceGuideState() {
+    if (state.connectionIntro.request?.status === "checking") return "checking";
+    if (state.connectionIntro.request?.status === "failed") return "failed";
+    if (state.connectionIntro.permission === "denied") return "denied";
+    if (state.connectionIntro.permission === "bluetooth-off" || state.connectionIntro.permission === "granted" && !state.toggles.bluetooth) return "bluetooth-off";
+    return state.connectionIntro.permission === "granted" ? "ready" : "not-requested";
+  }
+  function deviceGuidePage() {
+    const status = deviceGuideState(), blocker = deviceGuideBlocker();
+    const busy = status === "checking", disabled = busy || Boolean(blocker);
+    const feedback = blocker || ({
+      denied: ["还未允许使用蓝牙", "允许 Halo 使用蓝牙或访问附近设备后，才能查找戒指。", "查看开启方法"],
+      "bluetooth-off": ["手机蓝牙尚未开启", "在手机设置中开启蓝牙，再回来继续。", "查看开启方法"],
+      failed: ["暂时无法检查蓝牙", "请再试一次，已有记录不会受影响。", "重新检查"]
+    })[status];
+    const icons = [
+      '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/>',
+      '<rect x="2" y="6" width="17" height="12" rx="3"/><path d="M22 10v4M6 10v4m4-4v4"/>',
+      '<path d="m7 7 10 10-5 4V3l5 4L7 17"/>'
+    ];
+    return `<section class="device-guide-page ${feedback ? "has-feedback" : ""}" aria-labelledby="device-guide-title" data-guide-state="${status}" aria-busy="${busy}"><button type="button" class="device-guide-back" data-action="previous" aria-label="返回"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button><header class="device-guide-heading"><h1 id="device-guide-title">准备连接</h1><p>准备好后，查找附近的 Halo Ring。</p></header><figure class="device-guide-photo"><img src="assets/ring-porcelain-onboarding.jpg" width="1267" height="1241" alt="Halo Ring 戒指"></figure><ul class="device-guide-steps">${["把戒指放在手机旁", "确保戒指有电", "开启手机蓝牙"].map((text, index) => `<li><svg viewBox="0 0 24 24" aria-hidden="true">${icons[index]}</svg><span>${text}</span></li>`).join("")}</ul>${feedback && !busy ? `<div class="device-guide-feedback" role="status"><strong>${feedback[0]}</strong><p>${feedback[1]}</p></div>` : ""}<footer class="device-guide-actions"><button type="button" class="primary" data-action="device-status:connecting" ${disabled ? "disabled" : ""}>${busy ? "正在检查蓝牙…" : feedback?.[2] || "开始查找"}</button><button type="button" class="text-button" data-action="device-guide-help" ${busy ? "disabled" : ""}>连接帮助</button></footer></section>`;
+  }
+  function showDeviceGuideHelp() {
+    if (state.current !== "DEV-01" || deviceGuideState() === "checking") return;
+    trackPrototypeEvent("device_guide_help_opened", { source_page: "DEV-01", simulated: true });
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal connection-permission-modal" role="dialog" aria-modal="true" aria-labelledby="device-guide-help-title"><h2 id="device-guide-help-title">连接前可以这样检查</h2><ul class="device-guide-help-list"><li><strong>戒指放近一点</strong><p>把戒指和手机放在一起，再开始查找。</p></li><li><strong>确认戒指有电</strong><p>如果不确定，可以先给戒指充电。</p></li><li><strong>检查蓝牙设置</strong><p>打开手机蓝牙，并允许 Halo 使用蓝牙或访问附近设备。</p></li></ul><div class="connection-permission-actions"><button class="primary" data-action="close-modal">返回继续</button><button class="text-button" data-action="go:HELP-03">联系客服</button></div></section></div>`;
+  }
+  function showConnectionPermission(help = false) {
+    const off = state.connectionIntro.permission === "bluetooth-off" || state.connectionIntro.permission === "granted" && !state.toggles.bluetooth;
+    const title = help ? off ? "开启手机蓝牙" : "允许 Halo 使用蓝牙" : "连接前，需要使用蓝牙";
+    const body = help ? off ? "在手机系统设置中开启蓝牙，再回到这里继续。" : "在手机系统设置中，找到 Halo 的应用权限，允许使用蓝牙或访问附近设备，再回到这里继续。" : "蓝牙用于查找附近的 Halo Ring，并同步戒指里的记录。暂不开启，也可以先使用 App。";
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal info-modal connection-permission-modal" role="dialog" aria-modal="true" aria-labelledby="connection-permission-title"><svg class="connection-bluetooth-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></svg><h2 id="connection-permission-title">${title}</h2><p>${body}</p><div class="connection-permission-actions"><button class="primary" data-action="connect-intro-request">${help ? "我已开启，重新检查" : "继续"}</button><button class="text-button" data-action="close-modal">暂不开启</button></div></section></div>`;
+  }
+  function resumeConnectionIntro() {
+    if (connectionIntroTimer) clearTimeout(connectionIntroTimer);
+    connectionIntroTimer = null;
+    const request = state.connectionIntro.request;
+    if (request?.status !== "checking") return;
+    connectionIntroTimer = setTimeout(() => {
+      connectionIntroTimer = null;
+      if (state.connectionIntro.request?.id !== request.id || request.status !== "checking") return;
+      if (!["granted", "denied", "bluetooth-off"].includes(request.outcome)) {
+        request.status = "failed";
+        trackPrototypeEvent("onboarding_bluetooth_result", { request_id: request.id, source_page: "DEV-01", result: "failed", simulated: true });
+        persistAppProgress();
+        if (state.current === "DEV-01") render();
+        return;
+      }
+      request.status = "complete";
+      state.connectionIntro.permission = ["granted", "denied", "bluetooth-off"].includes(request.outcome) ? request.outcome : "denied";
+      if (state.connectionIntro.permission === "granted" && state.connectionIntro.choice === "connect") state.connectionIntro.completed = true;
+      state.toggles.bluetooth = state.connectionIntro.permission === "granted";
+      trackPrototypeEvent("onboarding_bluetooth_result", { request_id: request.id, source_page: "DEV-01", result: state.connectionIntro.permission, simulated: true });
+      persistAppProgress();
+      if (state.current === "DEV-01") {
+        if (state.connectionIntro.permission === "granted") return handleAction("device-status:connecting");
+        render();
+      }
+    }, Math.max(0, request.readyAt - Date.now()));
+  }
+  function connectionIntroReviewControls(item) {
+    if (item.id === "DEV-10") return `<section class="review-controls"><p>DEVICE REVIEW</p><h3>设备状态审阅</h3><small>仅审阅面板模拟设备回调；App 内只显示当前状态，不让用户选择连接状态。</small><div class="review-control-group"><strong>模拟当前状态</strong><div>${Object.entries(DEVICE_STATUS).map(([value, meta]) => `<button data-action="device-status:${value}" class="${state.deviceStatus === value ? "active" : ""}">${esc(meta.label)}</button>`).join("")}</div></div></section>`;
+    if (item.id !== "DEV-01") return "";
+    const busy = state.connectionIntro.request?.status === "checking";
+    return `<section class="review-controls"><p>CONNECTION REVIEW</p><h3>连接权限审阅</h3><small>点击“开始查找”后才模拟检查；不操作真实蓝牙、系统设置或绑定资产。未检查不能推断手机蓝牙已关闭。</small><div class="review-control-group"><strong>下一次权限检查结果</strong><div>${[["granted", "允许使用"], ["denied", "未允许"], ["bluetooth-off", "手机蓝牙关闭"], ["failed", "检查失败"]].map(([value, label]) => `<button data-action="connect-review:${value}" class="${connectionReviewOutcome === value ? "active" : ""}" ${busy ? "disabled" : ""}>${label}</button>`).join("")}</div></div></section>`;
+  }
+  function normalizeProfileEditorSnapshot(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    return Object.fromEntries(PROFILE_EDITOR_FIELDS.map(key => [key, key === "birthdayBenefit" ? value[key] === true : String(value[key] ?? "")]));
+  }
+  function savedProfileEditorSnapshot() {
+    return normalizeProfileEditorSnapshot({ ...state.profile, birthdayBenefit: state.toggles.birthdayBenefit === true });
+  }
+  function profileEditorDraft() {
+    const editor = state.profileEditor;
+    const saved = savedProfileEditorSnapshot();
+    if (!editor.draft) { editor.draft = { ...saved }; editor.base = { ...saved }; }
+    if (!editor.base) editor.base = { ...saved };
+    for (const key of PROFILE_EDITOR_FIELDS) {
+      // Follow independently saved values only where this editor has no local change.
+      if (editor.draft[key] === editor.base[key] || editor.draft[key] === saved[key]) {
+        editor.draft[key] = saved[key]; editor.base[key] = saved[key];
+      }
+    }
+    return editor.draft;
+  }
+  function profileEditorDirty() {
+    const draft = profileEditorDraft();
+    const saved = savedProfileEditorSnapshot();
+    return PROFILE_EDITOR_FIELDS.some(key => draft[key] !== saved[key]);
+  }
+  function profileEditorHasSaved() {
+    return state.profileSaved === true || Boolean(state.profileEditor.savedAt);
+  }
+  function profileEditorErrors() {
+    const draft = profileEditorDraft();
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(draft.birthday) ? new Date(`${draft.birthday}T12:00:00Z`) : null;
+    const validBirthday = date && Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === draft.birthday && draft.birthday <= beijingDateKey();
+    const inRange = (value, minimum, maximum) => !value.trim() || /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()) && Number.isFinite(Number(value)) && Number(value) >= minimum && Number(value) <= maximum;
+    return {
+      nickname: !draft.nickname.trim() ? "请填写昵称" : "",
+      birthday: draft.birthday && !validBirthday ? "请核对出生日期，不能晚于今天" : "",
+      height: inRange(draft.height, 100, 230) ? "" : "请填写 100–230 cm 范围内的身高",
+      weight: inRange(draft.weight, 25, 250) ? "" : "请填写 25–250 kg 范围内的体重",
+      birthdayBenefit: "",
+    };
+  }
+  function profileEditorConflicts() {
+    const draft = profileEditorDraft();
+    const saved = savedProfileEditorSnapshot();
+    return PROFILE_EDITOR_FIELDS.filter(key => draft[key] !== state.profileEditor.base[key] && saved[key] !== state.profileEditor.base[key] && draft[key] !== saved[key]);
+  }
+  function saveProfileEditor(confirmConflicts = false) {
+    if (!state.signedIn || state.current !== "ACC-01" || state.accountDeletionStatus === "submitted") return;
+    if (confirmConflicts && !profileConflictReview) return;
+    const errors = profileEditorErrors();
+    if (Object.values(errors).some(Boolean)) {
+      state.profileEditor.touched = Object.fromEntries(PROFILE_EDITOR_FIELDS.map(key => [key, true]));
+      if (typeof updateProfileEditorControls === "function") updateProfileEditorControls();
+      document.getElementById(`profile-${PROFILE_EDITOR_FIELDS.find(key => errors[key])}`)?.focus();
+      persistAppProgress();
+      return flash("请检查标出的信息");
+    }
+    if (!profileEditorDirty() && profileEditorHasSaved()) return flash("没有需要保存的修改");
+    const draft = { ...profileEditorDraft() };
+    const saved = savedProfileEditorSnapshot();
+    const reviewSignature = JSON.stringify([draft, saved]);
+    if (confirmConflicts && profileConflictReview !== reviewSignature) {
+      profileConflictReview = null; closeModal(); render();
+      return flash("资料有更新，请重新检查并保存");
+    }
+    const conflicts = profileEditorConflicts();
+    if (conflicts.length && !confirmConflicts) {
+      const labels = { nickname: "昵称", birthday: "出生日期", height: "身高", weight: "体重", birthdayBenefit: "生日权益提醒" };
+      profileConflictReview = reviewSignature;
+      showInfoModal("资料已在其他页面更新", `${conflicts.map(key => labels[key]).join("、")}已有新保存的内容。这次草稿仍然保留；继续保存会用这次修改替换这些字段，其他资料不变。`, "保留这次修改并保存", "profile-save-confirm-conflicts");
+      modalRoot.querySelector('[data-action="close-modal"]').textContent = "继续编辑";
+      return;
+    }
+    const changedFields = PROFILE_EDITOR_FIELDS.filter(key => draft[key] !== saved[key]);
+    const hasOnboardingDraft = Boolean(state.basicProfile.draft) && ["pending", "skipped"].includes(state.basicProfile.status) && BASIC_PROFILE_FIELDS.some(key => String(state.basicProfile.draft[key] ?? "") !== saved[key]);
+    const updates = Object.fromEntries(changedFields.filter(key => key !== "birthdayBenefit").map(key => [key, draft[key].trim()]));
+    const nextProfile = { ...state.profile, ...updates };
+    const nextToggles = { ...state.toggles, ...(changedFields.includes("birthdayBenefit") ? { birthdayBenefit: draft.birthdayBenefit } : {}) };
+    let nextBasicProfile = state.basicProfile;
+    const bodyComplete = BASIC_PROFILE_FIELDS.every(key => String(nextProfile[key] ?? "").trim() && !errors[key]);
+    if (changedFields.some(key => BASIC_PROFILE_FIELDS.includes(key)) && bodyComplete && !hasOnboardingDraft) {
+      nextBasicProfile = { ...state.basicProfile, status: "completed", draft: Object.fromEntries(BASIC_PROFILE_FIELDS.map(key => [key, String(nextProfile[key])])), touched: {} };
+    }
+    const latest = normalizeProfileEditorSnapshot({ ...nextProfile, birthdayBenefit: nextToggles.birthdayBenefit === true });
+    const nextEditor = { draft: { ...latest }, base: { ...latest }, touched: {}, savedAt: new Date().toISOString() };
+    if (!writeNotificationProgress({ profile: nextProfile, profileSaved: true, toggles: nextToggles, basicProfile: nextBasicProfile, profileEditor: nextEditor })) {
+      return flash("个人资料未能保存，输入仍保留。请重试；若其他页面已有更新，请重新打开并核对。");
+    }
+    profileDraftRestored = false;
+    profileConflictReview = null;
+    trackPrototypeEvent("profile_saved", { source_page: "ACC-01", fields: changedFields });
+    closeModal(); render(); return flash("个人资料已保存");
+  }
+  function basicProfileDraft() { return basicProfileEditor.draft(); }
+  function basicProfilePage() { return basicProfileEditor.page(); }
+  function updateBasicProfileControls() { basicProfileEditor.update(); }
   function firstUse(item) {
-    if (item.id === "SYS-01") return `<div class="gated system-loading">${haloStatus("syncing", "hero", "status-detail")}<h1>HALO RING</h1><p class="caption">正在载入你的记录</p><div class="progress" style="margin-top:26px"><i style="width:68%"></i></div></div>${buttons([["查看首次使用流程", "go:ONB-01", "secondary"], ["进入今日", "go:TOD-01", "primary"]])}`;
-    if (item.id === "ONB-01") return `<div class="studio-cover" style="min-height:310px"><span>HALO RING</span><h2>看懂昨晚，安排今天</h2><p>从睡眠、活动和夜间身体信号里，找到更适合自己的日常节奏。</p></div><div class="stack" style="margin-top:12px">${notice("使用前先知道", "Halo 用于日常健康管理，不会诊断疾病，也不能替代医生。")}${buttons([["开始使用", "go:AUTH-01", "primary"], ["已有账号", "go:AUTH-01", "text-button"]])}</div>`;
-    if (item.id === "AUTH-01") return head(item, "WELCOME") + `<div class="stack"><label class="field-label">手机号<input id="auth-phone" class="field" type="tel" inputmode="tel" value="${esc(state.authPhone || "138 0000 0000")}"></label>${buttons([["获取演示验证码", "auth-code-requested", "primary"]])}<p class="caption">原型不发送短信。获取验证码不代表同意协议，之后会单独请你确认。</p></div>`;
-    if (item.id === "AUTH-02") return head(item, "VERIFY") + `<div class="stack"><p class="caption">演示手机号 ${esc((state.authPhone || "13800000000").replace(/^(\d{3})\d{4}(\d{4})$/, "$1 **** $2"))} · 未发送真实短信</p><label class="field-label">演示验证码<input id="auth-code" class="field" inputmode="numeric" value="682106" aria-label="验证码"></label><p class="caption">此原型固定使用 682106，不进行真实身份验证。</p>${buttons([["确认演示登录", "auth-verified", "primary"], ["返回修改手机号", "go:AUTH-01", "text-button"]])}</div>`;
-    if (item.id === "LEGAL-01") { const accepted = state.toggles.legal && state.toggles.aiLegal; return head(item, "CONSENT") + `<div class="stack">${notice("先了解，再决定", "Halo 提供日常健康管理参考，不进行疾病诊断或紧急医疗判断。", "sage")}${setting("阅读用户协议", "原型摘要 · 正式版本待审定", "legal-read:agreement")}${setting("阅读隐私政策", "数据用途、权限与管理方式", "legal-read:privacy")}${toggle("legal", "我同意用户协议与隐私政策", "必需；阅读与勾选是独立操作")}${setting("阅读 AI 服务说明", "了解建议与记忆的适用边界", "legal-read:ai")}${toggle("aiLegal", "我同意 AI 服务说明", "必需；身体数据可在之后随时停止带入")}${!accepted ? notice("请先确认两项必需说明", "确认后才能继续设置权限。", "warm") : ""}${buttons([[accepted ? "同意并继续" : "确认后继续", accepted ? "legal-continue" : "", "primary", !accepted]])}</div>`; }
-    if (item.id === "PERM-01") return head(item, "PERMISSIONS") + `<div class="stack">${toggle("bluetooth", "蓝牙", "连接戒指与同步数据")}${toggle("notification", "通知", "睡前、唤醒与报告提醒")}${toggle("healthAccess", "健康数据", "仅在你授权后读取或写入")}${!state.toggles.bluetooth ? notice("蓝牙已关闭", "不会扫描、同步或主动测量；已保存的数据和绑定关系仍保留。", "warm") : ""}${!state.toggles.notification ? notice("通知已关闭", "睡前、报告和唤醒提醒不会发出。你仍可在 App 内查看内容。", "warm") : ""}${notice(isHardwareActive() ? "权限不会改变绑定关系" : "可以稍后连接戒指", isHardwareActive() ? "修改权限或返回 App 不会解绑戒指。" : "你已经是 Halo Member，可以先进入 App。激活 Halo Ring 后，再开始记录身体数据和会员成长。", "sage")}${buttons([[isHardwareActive() ? "查看我的戒指" : "连接 Halo Ring", "permission-connect", "primary"], [isHardwareActive() ? "完成，返回 App" : "暂不连接，进入 App", "permission-skip", "secondary"]])}</div>`;
+    if (item.id === "ONB-04") return basicProfilePage();
+    if (item.id === "ONB-03") return connectionIntroPage();
+    if (item.id === "SYS-01") return startup.page();
+    if (item.id === "ONB-01") return `<section class="welcome-page" aria-label="欢迎使用 Halo">
+      <header class="welcome-brand">
+        <img class="welcome-symbol" src="${HALO_SYMBOL}" alt="" width="96" height="114">
+        <img class="welcome-wordmark" src="assets/HALORING_wordmark_with_slogan_ink.png" alt="HALORING · IN TUNE WITH YOU" width="184" height="39">
+      </header>
+      <footer class="welcome-actions">
+        <button class="primary welcome-continue" data-action="go:AUTH-01">登录</button>
+        <button class="secondary welcome-shop" data-action="commercial:product-open:ring">还没有 Halo Ring？立即购买</button>
+      </footer>
+    </section>`;
+    if (item.id === "AUTH-01") return authLoginPage();
+    if (item.id === "AUTH-02") return authLoginPage(); // Compatibility ID; guardedRoute resolves it to AUTH-01.
+    if (item.id === "LEGAL-01") return `<section class="legal-overview"><header class="legal-overview-header"><button type="button" class="back" data-action="previous" aria-label="返回上一页">← 返回</button><h1>协议与说明</h1><p>了解服务约定，以及你的信息如何使用。</p></header><div class="legal-document-list">${[["agreement", "用户协议", "账号使用与服务约定"], ["privacy", "隐私政策", "信息的使用、保存与管理"], ["ai", "AI 服务说明", "建议的适用范围与对话记忆"]].map(([kind, title, detail]) => `<button type="button" class="legal-document-row" data-action="legal-read:${kind}"><span><strong>${title}</strong><small>${detail}</small></span><span aria-hidden="true">›</span></button>`).join("")}</div><p class="legal-health-note">Halo 的健康建议仅供日常参考，不能代替医生诊断或急救。</p><p class="legal-preview-note">当前为原型摘要，非正式法律文本。</p></section>`;
+    if (item.id === "PERM-01") return permissionPage();
     if (item.id === "ONB-02") {
-      const data = currentDataLifecycle("accumulating");
-      return `${head(item, "BODY WEATHER")}<div class="stack"><section class="body-weather" style="min-height:210px" data-copy-variant="${esc(data.copyVariant)}"><span class="label">BODY WEATHER · ${esc(data.label)}</span><h2>${esc(data.headline)}</h2><p>${esc(data.summary)}</p></section>${lifecycle("accumulating", "Body Weather 数据状态")}${notice("照常生活就好", "不用为了记录改变作息；每次同步后，进度会自动更新。", "sage")}${buttons([["看看怎样戴得更稳", "go:DEV-10", "primary"], ["先去今日", "go:TOD-01", "secondary"]])}</div>`;
+      return window.renderHaloBodyWeatherIntro({ state, active: isHardwareActive(), ready: bodyWeatherPageState().ready, symbol: HALO_SYMBOL, esc, icon: domainIcon });
     }
     return generic(item);
   }
 
   function device(item) {
+    if (item.id === "DEV-12" && deviceMaintenance) return deviceMaintenance.page();
+    if (item.id === "DEV-10") return deviceHome ? deviceHome.body() : head(item) + notice("设备页面暂未加载", "请刷新页面后再试，已有记录仍会保留。");
     if (["DEV-10", "DEV-11", "DEV-12"].includes(item.id) && !isHardwareActive() && !(item.id === "DEV-12" && state.deviceResetStatus === "complete")) {
       const copy = membershipCopy();
     return `${head(item, "MY RING")}<div class="stack"><section class="device-empty-state">${haloStatus("disconnected", "hero", "status-detail")}<h2>${esc(copy.device)}</h2><p>${state.membershipHardwareState === "unbound-retained" ? "设备历史和会员资产仍保留；重新绑定并激活后只恢复未来成长。" : "绑定并激活 Halo Ring 后，才会显示设备数据和健康功能。"}</p></section>${buttons([[copy.action, "go:DEV-01", "primary"]])}${notice("设备数据尚未开始", "绑定前不会显示电量、最后连接、固件或健康数据。")}</div>`;
     }
     const map = {
-      "DEV-01": () => `${head(item, "YOUR RING")}<div class="gated device-hero">${haloStatus("disconnected", "hero", "status-detail")}<h2>连接你的 Halo Ring</h2><p class="caption">打开蓝牙，并将戒指放在手机附近。暂时断连不会影响已经保存的数据。</p></div>${buttons([["开始查找", "device-status:connecting", "primary"], ["连接帮助", "go:HELP-01", "secondary"]])}`,
-      "DEV-02": () => `${head(item, "SEARCHING")}<div class="stack">${state.toggles.bluetooth ? `${haloStatus("connecting", "hero", "status-detail")}${notice("附近戒指 · 原型演示", "实际产品需通过系统蓝牙扫描，请按设备尾号确认。", "sage")}${setting("HALO RING · 7A21", "演示设备", "go:DEV-03", "选择")}${buttons([["重新扫描", "device-status:connecting", "secondary"]])}` : `${notice("请先开启蓝牙", "蓝牙关闭时无法发现戒指，不会显示扫描结果。", "warm")}${buttons([["设置蓝牙权限", "go:PERM-01", "primary"]])}`}</div>`,
-      "DEV-03": () => `${head(item, "BIND")}<div class="stack">${haloStatus("connecting", "hero", "status-detail")}${rows([["设备", "HALO RING · 7A21"], ["账号", (state.authPhone || "13800000000").replace(/^(\d{3})\d{4}(\d{4})$/, "$1 **** $2")], ["系统配对", state.devicePaired ? "演示配对已确认" : "等待确认"]])}${notice("完成系统配对", "确认配对后才能继续。本原型仅演示流程，不会操作真实蓝牙设备。", "sage")}${buttons([["确认演示配对", "device-pair-confirm", "primary"], ["返回选择", "go:DEV-02", "secondary"]])}</div>`,
-      "DEV-04": () => `${head(item, "HOW TO WEAR")}<div class="stack"><section class="wearing-guide"><div class="wearing-orbit">${haloStatus("connected", "compact", "status-detail")}</div><ol><li><strong>贴近指腹</strong><span>内侧传感器稳定接触指腹中间，不需要额外勒紧。</span></li><li><strong>方向稳定</strong><span>让内侧标记朝向掌心，夜间与日常都保持同一方向。</span></li><li><strong>清洁干燥</strong><span>洗手或运动后擦干戒指内侧，再继续佩戴即可。</span></li></ol></section>${buttons([["我已佩戴好", "go:DEV-05", "primary"]])}</div>`,
-      "DEV-05": () => `${head(item, "FIRST SYNC")}<div class="stack">${haloStatus("syncing", "hero", "status-detail")}${metrics([["同步进度", "72%", "预计还需 1 分钟"]])}<div class="progress"><i style="width:72%"></i></div>${rows([["设备信息", "已完成"], ["最近记录", "同步中"], ["能力确认", "等待中"]])}${buttons([["完成同步并激活", "activate-hardware", "primary"], ["稍后继续", "go:TOD-01", "secondary"]])}</div>`,
-      "DEV-10": () => `${head(item, "MY HALO HARDWARE")}<div class="stack">${haloStatus(state.deviceStatus, "hero", "status-detail")}${segmented([["connected","已连接"],["connecting","连接中"],["syncing","同步中"],["disconnected","未连接"],["low","低电量"],["action","需处理"]], state.deviceStatus, "device-status")}${rows([["当前设备", "HALO RING · 7A21"], ["同账号设备", "1 款 · 当前演示设备"], ["电量", state.deviceStatus === "low" ? "18%" : "76%"], ["最后连接", state.deviceStatus === "connecting" ? "正在尝试" : "今天 08:42"], ["连接手机", "本机 iPhone"], ["最后同步", state.deviceStatus === "syncing" ? "正在更新" : "08:43"]])}${notice("多款设备不会重复奖励", "同一账号完成同一项通用任务，只记录一次 HALO成长值、Halo Points 和徽章进度。设备专属任务会在活动页单独说明。", "sage")}${quality("HALO RING · 7A21", deviceQualityLabel(state.deviceStatus), state.deviceStatus === "syncing" ? "正在更新" : "08:43 更新")}${toggle("location", "最后位置线索", "关闭时不申请位置；开启后仅在戒指与 App 连接时记录手机位置")}${state.toggles.location ? notice("位置已单独授权", "最后线索：今天 08:42 · 静安区附近。它不是实时定位，也不能让戒指响铃或亮灯。", "sage") : buttons([["单独授权位置", "request-location", "secondary"]])}${setting("设备信息与固件", "版本、可用数据与更新状态", "go:DEV-11")}${setting("佩戴引导", "方向与日常护理", "go:DEV-04")}${setting("高级设备操作", "清缓存、重置步数、恢复出厂", "go:DEV-12")}</div>`,
-      "DEV-11": () => `${head(item, "DEVICE INFO")}<div class="stack">${rows([["设备名称", "HALO RING · 7A21"], ["电量", "76%"], ["固件版本", state.firmwareStatus === "current" ? "1.1.0" : "1.0.8"], ["硬件版本", "R01"], ["绑定状态", "当前账号"]])}${firmwarePanel()}${card("当前可用数据", "睡眠、心率、HRV、呼吸率与活动；血氧和皮肤温度仅在设备支持且数据可用时显示。", "CAPABILITY")}</div>`,
-      "DEV-12": () => `${head(item, "ADVANCED")}<div class="stack">${state.deviceResetStatus === "pending" ? `${notice("正在等待设备确认", "本原型不会实际清除戒指，可继续演示设备确认，或取消此次操作。", "warm")}${buttons([["演示设备确认完成", "device-reset-complete", "primary"], ["取消重置", "device-reset-cancel", "secondary"]])}` : state.deviceResetStatus === "complete" ? `${notice("演示重置已完成", "戒指已从当前原型解绑；历史记录和合法会员资产仍保留。真实设备操作需连接设备确认。", "sage")}${buttons([["重新连接戒指", "permission-connect", "primary"]])}` : `${notice("操作前请确认", "以下操作影响戒指内记录或设置。本原型只演示确认流程，不操作真实设备。", "danger")}${setting("清空戒指缓存", "已同步至手机的数据不会删除", "danger:清空戒指缓存:将删除戒指内尚未同步的原始记录，手机本地历史不受影响。:确认清空")}${setting("重置今日步数", "只重置戒指端今日累计", "danger:重置今日步数:此操作会清零戒指端今天的步数，历史天数据不变。:确认重置")}${setting("恢复出厂设置", "解除绑定并清除戒指端设置", "danger:恢复出厂设置:戒指将解除绑定并清除本机设置。手机本地记录和 Halo 账号不会自动删除。:恢复出厂")}`}${state.deviceOperationHistory.length ? card("最近设备操作", state.deviceOperationHistory[0].label, new Date(state.deviceOperationHistory[0].at).toLocaleString("zh-CN")) : ""}</div>`,
+      "DEV-01": () => deviceGuidePage(),
+      "DEV-02": () => deviceScan.body(),
+      "DEV-03": () => deviceBinding.page(),
+      "DEV-04": () => deviceWear.page(),
+      "DEV-05": () => initialSync.page(),
+      "DEV-11": () => deviceInfo ? deviceInfo.body() : head(item) + notice("设备信息暂未加载", "请刷新页面后再试，已有记录仍会保留。"),
+      "DEV-12": () => head(item) + notice("设备操作页面暂未加载", "请刷新页面后再试。已有记录仍保留。"),
     };
     return map[item.id]?.() || generic(item);
   }
 
+  function todaySyncLabel() {
+    if (!isHardwareActive()) return state.membershipHardwareState === "unbound-retained" ? "戒指已解绑" : "尚未连接戒指";
+    if (state.dataLifecycle === "none" && state.toggles.bluetooth === false) return "手机蓝牙未开启";
+    const labels = { syncing: "正在同步…", connecting: "正在连接…", disconnected: "暂未连接", low: "戒指电量偏低", action: "同步需要处理" };
+    if (labels[state.deviceStatus]) return labels[state.deviceStatus];
+    const synced = new Date(state.deviceLastSyncedAt);
+    if (!state.deviceLastSyncedAt || !Number.isFinite(synced.getTime()) || synced.getTime() > Date.now()) return state.dataLifecycle === "none" ? "戒指已连接" : "已连接 · 同步时间待确认";
+    const sameDay = beijingDateKey(synced) === beijingDateKey();
+    const time = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", ...(sameDay ? {} : { month: "numeric", day: "numeric" }), hour: "2-digit", minute: "2-digit", hour12: false }).format(synced);
+    return `${state.dataLifecycle === "none" ? "设备" : ""}${sameDay ? "已同步" : "上次同步"} ${time}`;
+  }
+  function todayUserRecords() {
+    return state.subjectiveRecords.filter(record => record.occurredAt && Number.isFinite(Date.parse(record.occurredAt)) && beijingDateKey(new Date(record.occurredAt)) === beijingDateKey()).slice().reverse();
+  }
+  function todayRecordEntry() {
+    const records = todayUserRecords();
+    const editing = state.recordEditorMode === "edit" && state.recordEditDraft;
+    const draft = state.recordDraft.labels.length || state.recordDraft.note.trim();
+    const title = editing ? "继续修改记录" : draft ? "继续未保存的记录" : records.length ? "今天已记录 · 查看" : "记下今天的感受";
+    return `<button class="today-record-entry" data-action="${editing || draft || !records.length ? "go:TOD-02" : "today-records"}"><span class="today-record-icon" aria-hidden="true">${domainIcon("body")}</span><span><strong>${title}</strong><small>用户记录${records.length ? ` · 今天 ${records.length} 条` : ""}</small></span><i aria-hidden="true">›</i></button>`;
+  }
+  function showTodayRecords() {
+    const records = todayUserRecords();
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal today-records-modal" aria-labelledby="today-records-title"><div class="modal-title-row"><h2 id="today-records-title">今天的用户记录</h2><button class="text-button" data-action="close-modal">关闭</button></div>${records.length ? records.map(record => setting(record.label, `用户记录 · ${recordDateTime(record.occurredAt)}`, `record-detail:${record.id}`)).join("") : notice("今天还没有记录", "想记的时候再写，随时可以回来。")}${buttons([["再记一条", "record-new", "primary"]])}</section></div>`;
+  }
+  function todayNightCard() {
+    const session = state.nightSession?.status !== "ended" ? state.nightSession : null;
+    if (session) {
+      const seconds = Math.max(0, nightPosition(session));
+      const total = Math.max(1, session.duration * 60);
+      const position = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+      const completed = seconds >= total;
+      return `<button class="card today-night-card" data-action="today-night"><div class="card-top"><span>${completed ? "本次收听" : session.status === "paused" ? "已暂停" : "正在播放"}</span><span aria-hidden="true">${domainIcon("sleep")}</span></div><h3>${esc(session.title)}</h3><p>${session.skipped ? "播放进度" : "已听"} ${position} / ${session.duration} 分钟</p><progress value="${seconds}" max="${total}" aria-label="本次收听进度"></progress><strong class="today-card-link">${completed ? "查看本次收听" : session.status === "paused" ? "继续收听" : "打开播放器"} <i aria-hidden="true">›</i></strong></button>`;
+    }
+    if (!isHardwareActive()) return card("选一段睡前内容", "呼吸 · 身体扫描 · 安静声音", "睡前可选", "go:NIG-01");
+    const selected = nightPlaylist.plan();
+    return `<button class="card today-night-card" data-action="go:NIG-01"><div class="card-top"><span>睡前可选</span><span aria-hidden="true">${domainIcon("sleep")}</span></div><h3>${esc(selected.title || "选一组睡前内容")}</h3><p>${selected.tracks.length ? `${selected.tracks.length} 段 · 共 ${selected.total} 分钟` : "呼吸 · 身体扫描 · 安静声音"}</p><strong class="today-card-link">查看播放组合 <i aria-hidden="true">›</i></strong></button>`;
+  }
+  function todayServices() {
+    const bag = '<path d="M5 7h14l1 14H4L5 7Z M8 8V6a4 4 0 0 1 8 0v2"/>';
+    const booking = '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-13 5 3 3 5-5"/>';
+    return `<div class="today-services" aria-label="精选与体验">${[["Halo Select", "精选好物", "SEL-01", bag], ["Halo Studio", studioTodayReminder.serviceLabel(), "STU-08", booking]].map(([title, subtitle, route, glyph]) => `<button class="today-service" data-action="go:${route}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg><strong>${title}</strong><span>${subtitle}<i aria-hidden="true">›</i></span></button>`).join("")}</div>`;
+  }
+  function todayFirstUseView() {
+    const active = isHardwareActive();
+    if (active && state.dataLifecycle !== "none") return null;
+    if (!active) {
+      const retained = state.membershipHardwareState === "unbound-retained";
+      return {
+        title: retained ? "连接戒指，继续记录" : state.devicePaired ? "连接还差一步" : "连接戒指，开始记录",
+        body: retained ? "已有记录仍保留。重新连接后，再继续记录你的日常。" : "连接并激活后，开始接收身体记录。感受记录和睡前内容现在就能用。",
+        label: "等待连接", copyVariant: 0,
+        main: [state.devicePaired ? "继续连接戒指" : retained ? "重新连接 Halo Ring" : "连接 Halo Ring", state.devicePaired ? "go:DEV-10" : "go:DEV-01", "primary"],
+      };
+    }
+    const copy = rotatingCopy("today-firstuse:none", { title: "还没有可用的身体记录", body: "今晚照常佩戴，醒来后打开 App 同步。有可用记录后，这里会更新。" }, [
+      { title: "还没收到身体记录", body: "今晚戴着戒指照常睡觉，醒来后同步。不需要为了记录改变作息。" },
+      { title: "从今晚的记录开始", body: "戴着戒指照常睡，醒来后打开 App 同步。有可用记录后再看身体状态。" },
+    ]);
+    const deviceHints = {
+      disconnected: ["戒指暂未连接", "把戒指放在手机附近，检查连接后再同步。", "查看连接与同步"],
+      action: ["这次同步没有完成", "检查戒指连接后可以重试，不用重新设置个人资料。", "查看连接与同步"],
+      low: [copy.title, "戒指电量偏低，先充电，再照常佩戴记录。", "查看戒指电量"],
+      connecting: ["正在连接戒指", "可以先浏览其他内容，连接完成后再查看。", "查看连接进度"],
+      syncing: ["正在同步戒指", "可以先浏览其他内容，有可用的身体记录后这里会更新。", "查看同步进度"],
+    };
+    const hint = state.toggles.bluetooth === false ? ["手机蓝牙未开启", "连接和同步需要手机蓝牙。可以先照常佩戴，需要同步时再开启。", "查看连接与同步"] : deviceHints[state.deviceStatus];
+    const session = state.nightSession?.status !== "ended" ? state.nightSession : null;
+    const sessionComplete = session && nightPosition(session) >= session.duration * 60;
+    return {
+      ...copy, label: "等待身体记录",
+      ...(hint ? { title: hint[0], body: hint[1] } : {}),
+      main: hint ? [hint[2], "go:DEV-10", "primary"] : session ? [sessionComplete ? "查看本次收听" : session.status === "paused" ? "继续收听" : "打开播放器", "today-night", "primary"] : ["选一段睡前内容", "go:NIG-01", "primary"],
+    };
+  }
   function todayWeatherHome(item) {
     const weather = currentBodyWeather();
-    const canInterpret = state.dataLifecycle === "interpretable";
+    const active = isHardwareActive();
+    const canInterpret = active && state.dataLifecycle === "interpretable";
+    const correction = activeWeatherCorrection();
     const dataState = currentDataLifecycle();
-    const title = canInterpret ? weather.homeTitle : dataState.headline;
-    const body = canInterpret ? weather.homeBody : dataState.summary;
-    const signals = canInterpret ? weather.signals : dataState.signals;
-    const mainAction = canInterpret ? "看看今天怎么安排" : "看看还差几天";
-    const tonightTitle = canInterpret ? weather.nightTitle : "今晚先选一段喜欢的内容";
-    const tonightBody = canInterpret ? weather.nightBody : "Body Weather 还没生成，睡前内容仍然可以正常播放。";
-    const copyVariant = canInterpret ? weather.copyVariant : dataState.copyVariant;
-    return `${head(item, new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric", weekday: "short" }).format(new Date()))}<div class="stack"><button class="body-weather visual-weather" data-action="go:TOD-03" data-copy-variant="${esc(copyVariant)}"><img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">BODY WEATHER · ${esc(canInterpret ? weather.label : dataState.label)}</span><h2>${esc(title)}</h2><p>${esc(body)}</p>${canInterpret ? miniSparkline([58,54,67,61,72,65,69], "gold", "最近 7 天 Body Weather 变化") : ""}</button>${visualSignalCards(signals)}${buttons([[mainAction, "go:TOD-03", "primary"]])}${dailyInspirationCard()}${card(tonightTitle, canInterpret ? "12 分钟 · 身体扫描" : "3 项基础内容", canInterpret ? "HALO SUGGESTS" : "TONIGHT", "go:NIG-01")}${setting("健康数据", canInterpret ? "6 项趋势与测量" : "查看数据进度与可用项目", "go:HLT-00")}${setting("Halo Studio", "预约与最近体验", "go:STU-08")}</div>`;
+    const firstUseView = todayFirstUseView();
+    const title = firstUseView ? firstUseView.title : !active ? "还没有今天的身体天气" : correction ? "你的感受已补充" : canInterpret ? weather.homeTitle : dataState.headline;
+    const titleMarkup = title.split(/(?<=，)/).map(part => `<span class="today-title-clause">${esc(part)}</span>`).join("");
+    const body = firstUseView ? firstUseView.body : !active ? "连接戒指后，开始记录睡眠与日常状态。" : correction ? "戒指记录保留，今天怎么安排也听听你的感受。" : canInterpret ? `${weather.homeBody.split("。")[0]}。` : dataState.summary;
+    const signals = !active ? [["睡眠", "等待记录"], ["身体能量", "等待记录"], ["今天怎么动", "按感受"]] : canInterpret ? weather.signals.map(([label, value]) => [label, correction && label === "今天怎么动" ? "按感受" : value]) : dataState.signals;
+    const main = firstUseView ? firstUseView.main : canInterpret ? ["看看今天怎么安排", "today-advice", "primary"] : ["查看记录进度", "go:TOD-11", "primary"];
+    const copyVariant = firstUseView ? firstUseView.copyVariant : canInterpret ? weather.copyVariant : dataState.copyVariant;
+    return `${head(item, new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric", weekday: "short" }).format(new Date()))}<div class="stack today-stack${firstUseView ? " today-first-use" : ""}"><button class="body-weather visual-weather" data-action="${firstUseView ? "go:ONB-02" : "today-weather-details"}" data-copy-variant="${esc(copyVariant)}"><img class="weather-symbol" src="${HALO_SYMBOL}" alt="">${canInterpret ? `<span class="label today-weather-heading"><span>BODY WEATHER</span><strong class="today-weather-state">${esc(weather.label)}</strong></span>` : `<span class="label">BODY WEATHER · ${esc(firstUseView ? firstUseView.label : dataState.label)}</span>`}<h2>${titleMarkup}</h2><p>${esc(body)}</p><span class="today-card-link">${firstUseView ? "怎么开始记录" : canInterpret ? "查看状态与原因" : "了解记录条件"} <i aria-hidden="true">›</i></span></button><section class="today-health-links" aria-label="今天的身体信号">${visualSignalCards(signals, !active || state.dataLifecycle === "none")}<button class="today-all-health" data-action="go:HLT-00">查看全部健康数据 <i aria-hidden="true">›</i></button></section>${buttons([main])}${studioTodayReminder.page()}${todayRecordEntry()}${dailyInspirationCard()}${todayNightCard()}${todayServices()}</div>`;
   }
+
+
+
+
 
   function unreadyHealthPage(item) {
     const data = currentDataLifecycle();
-    const recorded = { none: 0, accumulating: 3, baseline: 5, limited: 0 }[state.dataLifecycle] || 0;
+    const recorded = { none: 0, accumulating: 3, baseline: 5, limited: 9 }[state.dataLifecycle] || 0;
     return `${head(item, item.id === "TOD-09" ? "REPORTS" : "DATA PROGRESS")}<div class="stack">${notice(data.headline, data.summary, "sage")}${item.id === "TOD-09" ? radialProgress(Math.round(recorded / 14 * 100), `${recorded} / 14`, "首份 14 晚报告", "完整记录达到要求后生成") : ""}${lifecycle(state.dataLifecycle, "当前记录进度")}${quality("Halo Ring")}${notice("暂不展示健康趋势", "记录不足或不完整时，不用示例值替代你的数据。用户记录仍可查看和补充。")}${retainedUserRecords()}${buttons([["查看设备与同步", "go:DEV-10", "primary"], ["返回今日", "go:TOD-01", "secondary"]])}</div>`;
   }
 
+  function bodyWeatherPageState() {
+    const active = isHardwareActive();
+    const stage = state.dataLifecycle;
+    const date = state.healthDemoRecordDate;
+    const hasRecords = active && stage !== "none";
+    const fresh = date === beijingDateKey();
+    return { active, stage, date, hasRecords, fresh, ready: active && fresh && stage === "interpretable", limited: active && stage === "limited" };
+  }
+  function bodyWeatherEvidence(data) {
+    const sleep = sleepReviewRecord();
+    const fullNight = data.hasRecords && !data.limited;
+    const rows = [
+      { key: "sleep", title: "睡眠", icon: "sleep", value: fullNight ? sleepDuration(sleep.asleep) : data.limited ? "记录不完整" : "—", note: fullNight ? `清醒 ${sleep.awakenings} 次 · 共 ${sleep.totals.awake} 分钟` : data.limited ? "缺少时段，暂不汇总整晚" : "等待夜间记录" },
+      { key: "energy", title: "身体能量", icon: "energy", value: fullNight ? data.stage === "interpretable" ? "接近平时" : "积累中" : data.limited ? "暂不判断" : "—", note: fullNight ? "查看夜间 HRV 与静息心率" : data.limited ? "夜间记录有缺口" : "有记录后开始了解你的平时水平" },
+      { key: "activity", title: "活动", icon: "activity", value: data.hasRecords ? "4,862 步" : "—", note: data.hasRecords ? "已同步的步数 · 不代表全天" : "等待活动记录" },
+    ];
+    return `<section class="bw-evidence"><h2>${data.ready ? "这次参考的记录" : data.hasRecords ? "已有记录" : "等待记录的项目"}</h2><div class="bw-evidence-list">${rows.map(row => `<button type="button" class="bw-evidence-row" data-action="bw-open:${row.key}"><span class="bw-row-icon" aria-hidden="true">${domainIcon(row.icon)}</span><span class="bw-row-copy"><strong>${row.title}</strong><small>${esc(row.note)}</small></span><span class="bw-row-value">${esc(row.value)}</span>${healthChevron()}</button>`).join("")}</div></section>`;
+  }
+  function bodyWeatherRecordLinks() {
+    const todayCount = todayUserRecords().length;
+    const total = state.subjectiveRecords.length;
+    const hasDraft = state.recordDraft.labels.length || state.recordDraft.note.trim();
+    return `<section class="bw-records"><h2>你的感受</h2><button type="button" class="bw-link-row" data-action="record-new"><span class="bw-row-icon" aria-hidden="true">＋</span><span class="bw-row-copy"><strong>${hasDraft ? "继续未保存的记录" : "记下此刻感受"}</strong><small>用户记录 · ${todayCount ? `今天 ${todayCount} 条` : "今天还没有记录"}</small></span>${healthChevron()}</button>${total ? `<button type="button" class="bw-link-row bw-record-history" data-action="bw-records"><span>查看我的记录</span><span>${total} 条 ${healthChevron()}</span></button>` : ""}${state.recordEditDraft ? `<button type="button" class="text-button" data-action="record-edit:${esc(state.recordEditDraft.id)}">继续上次未保存的修改</button>` : ""}</section>`;
+  }
+  function showBodyWeatherRecords() {
+    const records = state.subjectiveRecords.filter(record => !["HLT-01", "HLT-02", "HLT-05", "HLT-06"].includes(state.current) || record.category !== "rhythm").slice().sort((a, b) => (Date.parse(b.occurredAt) || 0) - (Date.parse(a.occurredAt) || 0));
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal bw-records-modal" aria-labelledby="bw-records-title"><header class="modal-title-row"><h2 id="bw-records-title">我的感受记录</h2><button class="text-button" data-action="close-modal">关闭</button></header><p>共 ${records.length} 条 · 用户记录</p><div class="bw-records-list">${records.map(record => setting(record.label, record.occurredAt ? recordDateTime(record.occurredAt) : "原记录未保存日期", `record-detail:${record.id}`)).join("") || "<p>还没有记录，想记的时候再写。</p>"}</div>${buttons([["记下一条", "record-new", "primary"]])}</section></div>`;
+  }
+  function bodyWeatherTrendModel() {
+    const data = bodyWeatherPageState();
+    if (!data.ready) return null;
+    const view = state.bodyWeatherTrendView || {};
+    const days = [7, 14, 30].includes(Number(view.period)) ? Number(view.period) : 7;
+    // Explicit prototype fixture, not derived health scores. All ranges share the same dated series.
+    const fixture = ["balance", "slow", "restore", "slow", "balance", "active", "balance", "slow", "balance", "active", "balance", "slow", "restore", "slow", "balance", "active", "balance", "slow", "balance", "restore", "slow", "balance", "active", "restore", "slow", "balance", "slow", "active", "balance", "slow"];
+    const end = Date.parse(`${data.date}T12:00:00+08:00`);
+    const daily = fixture.map((status, index) => {
+      const date = beijingDateKey(new Date(end - (fixture.length - 1 - index) * 86400000));
+      const records = state.subjectiveRecords.filter(record => record.occurredAt && Number.isFinite(Date.parse(record.occurredAt)) && beijingDateKey(new Date(record.occurredAt)) === date);
+      return { date, status: index === fixture.length - 1 && BODY_WEATHER_STATES[state.bodyWeather] ? state.bodyWeather : status, records };
+    }).slice(-days);
+    const selected = daily.find(day => day.date === view.date) || daily.at(-1);
+    const distribution = ["restore", "slow", "balance", "active"].map(key => [BODY_WEATHER_STATES[key].label.slice(0, -1), daily.filter(day => day.status === key).length, key]);
+    return { days, daily, recent: daily.slice(-7), selected, distribution };
+  }
+  function bodyWeatherTrendGraph(model) {
+    const { daily, selected } = model;
+    const padding = getComputedStyle(screen);
+    const width = Math.max(240, Math.round(screen.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight)));
+    const left = 38, right = width - 12, top = 20, bottom = 152;
+    const states = ["active", "balance", "slow", "restore"];
+    const color = { restore: "#6c574d", slow: "#a77c3b", balance: "#789575", active: "#284b37" };
+    const step = (right - left) / (daily.length - 1);
+    const points = daily.map((day, i) => ({ ...day, x: left + i * step, y: top + states.indexOf(day.status) * (bottom - top) / 3 }));
+    const selectedPoint = points.find(day => day.date === selected.date);
+    const tickCount = width < 310 ? 3 : 4;
+    const ticks = [...new Set(Array.from({ length: tickCount }, (_, i) => Math.round(i * (daily.length - 1) / (tickCount - 1))))];
+    // Shape-preserving interpolation for equally spaced days: keep every observation,
+    // flatten tangents at reversals, and avoid adding peaks between adjacent states.
+    const slopes = points.slice(1).map((point, i) => (point.y - points[i].y) / (point.x - points[i].x));
+    const tangents = points.map((_, i) => {
+      if (i === 0) return slopes[0];
+      if (i === points.length - 1) return slopes.at(-1);
+      const before = slopes[i - 1], after = slopes[i];
+      return before * after <= 0 ? 0 : 2 * before * after / (before + after);
+    });
+    const path = points.map((point, i) => {
+      if (i === 0) return `M${point.x.toFixed(2)},${point.y.toFixed(2)}`;
+      const previous = points[i - 1], third = (point.x - previous.x) / 3;
+      return `C${(previous.x + third).toFixed(2)},${(previous.y + tangents[i - 1] * third).toFixed(2)} ${(point.x - third).toFixed(2)},${(point.y - tangents[i] * third).toFixed(2)} ${point.x.toFixed(2)},${point.y.toFixed(2)}`;
+    }).join(" ");
+    return `<svg class="bw-trend-chart" width="${width}" height="196" viewBox="0 0 ${width} 196" role="img" aria-labelledby="bw-trend-chart-title bw-trend-chart-desc"><title id="bw-trend-chart-title">最近 ${model.days} 天身体天气趋势 · 示例数据</title><desc id="bw-trend-chart-desc">横轴为日期，纵轴为活力、平衡、缓行、修复四种状态，不是健康分数。已选 ${selected.date}，${BODY_WEATHER_STATES[selected.status].label}。可以点选图表，或用下方日期控件查看每一天。</desc>${states.map((status, i) => { const y = top + i * (bottom - top) / 3; return `<g class="bw-chart-axis"><text x="0" y="${y + 4}">${BODY_WEATHER_STATES[status].label.slice(0, -1)}</text><line x1="${left}" x2="${right}" y1="${y}" y2="${y}"/></g>`; }).join("")}<line class="bw-chart-selection" x1="${selectedPoint.x}" x2="${selectedPoint.x}" y1="${top - 8}" y2="${bottom + 8}"/><path class="bw-chart-line" d="${path}"/>${points.map(point => `<circle class="bw-chart-point" data-date="${point.date}" data-status="${point.status}" cx="${point.x}" cy="${point.y}" r="${daily.length > 14 ? 2.5 : 3.5}" fill="${color[point.status]}"/>${state.toggles.trendRecords && point.records.length ? `<path class="bw-chart-record-mark" d="M${point.x},162 l4,4 l-4,4 l-4,-4 Z"/>` : ""}`).join("")}<circle class="bw-chart-current" cx="${selectedPoint.x}" cy="${selectedPoint.y}" r="6"/>${ticks.map(i => `<text class="bw-chart-date" x="${points[i].x}" y="190" text-anchor="${i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}">${Number(points[i].date.slice(5, 7))}/${Number(points[i].date.slice(8))}</text>`).join("")}<g aria-hidden="true">${points.map(point => `<rect class="bw-chart-hit" data-action="bw-trend-day:${point.date}" x="${Math.max(left - 6, point.x - step / 2)}" y="${top - 10}" width="${Math.min(right + 6, point.x + step / 2) - Math.max(left - 6, point.x - step / 2)}" height="166" fill="transparent"/>`).join("")}</g></svg>`;
+  }
+  function bodyWeatherTrendInspector(model) {
+    const index = model.daily.findIndex(day => day.date === model.selected.date);
+    return `<div class="bw-trend-inspector"><button type="button" id="bw-trend-prev" class="bw-trend-step" data-action="bw-trend-step:-1" aria-label="前一天" ${index === 0 ? "disabled" : ""}>${healthChevron("left")}</button><select id="bw-trend-date" aria-label="选择趋势日期">${model.daily.map(day => `<option value="${day.date}" ${day.date === model.selected.date ? "selected" : ""}>${Number(day.date.slice(5, 7))}月${Number(day.date.slice(8))}日 · ${BODY_WEATHER_STATES[day.status].label}</option>`).join("")}</select><button type="button" id="bw-trend-next" class="bw-trend-step" data-action="bw-trend-step:1" aria-label="后一天" ${index === model.daily.length - 1 ? "disabled" : ""}>${healthChevron()}</button></div>`;
+  }
+  function bodyWeatherTrendSection() {
+    const model = bodyWeatherTrendModel();
+    const heading = '<header class="bw-trend-header"><h2>完整状态趋势</h2>';
+    if (!model) return `<section class="bw-trend">${heading}</header><p class="bw-unready-note">有足够完整记录后，再显示身体天气趋势。</p></section>`;
+    const { days, daily, selected, distribution } = model;
+    const dateLabel = date => `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`;
+    const visibleRecords = Boolean(state.toggles.trendRecords);
+    const corrected = selected.date === beijingDateKey() && activeWeatherCorrection();
+    const recordsInRange = daily.reduce((sum, day) => sum + day.records.length, 0);
+    const most = distribution.reduce((a, b) => a[1] >= b[1] ? a : b);
+    return `<section class="bw-trend" aria-label="完整状态趋势">${heading}<span>示例数据</span></header><p class="bw-trend-range">${daily[0].date.replaceAll("-", "/")} — ${daily.at(-1).date.replaceAll("-", "/")}</p><div class="bw-trend-periods" role="group" aria-label="趋势时间范围">${[7, 14, 30].map(period => `<button type="button" data-action="bw-trend-period:${period}" aria-pressed="${period === days}">${period} 天</button>`).join("")}</div><div class="bw-trend-graph">${bodyWeatherTrendGraph(model)}</div>${bodyWeatherTrendInspector(model)}${weatherDistribution(distribution)}<h3 class="bw-recent-heading">最近 7 天</h3><div class="bw-trend-days" role="group" aria-label="最近7天每日身体天气">${model.recent.map(day => `<button type="button" id="bw-day-${day.date}" class="bw-trend-day ${day.status}" data-action="bw-trend-day:${day.date}" aria-pressed="${day.date === selected.date}" aria-label="${day.date}，${BODY_WEATHER_STATES[day.status].label}${visibleRecords && day.records.length ? `，${day.records.length} 条用户记录` : ""}"><span>${day.date === beijingDateKey() ? "今天" : dateLabel(day.date)}</span><strong>${BODY_WEATHER_STATES[day.status].label.slice(0, -1)}</strong>${visibleRecords && day.records.length ? '<i aria-hidden="true"></i>' : ""}</button>`).join("")}</div><label class="bw-trend-toggle"><input id="bw-trend-records" type="checkbox" ${visibleRecords ? "checked" : ""}>显示用户记录 <small>图中 ◆ · 卡片圆点</small></label><div class="bw-trend-selected" aria-live="polite"><header><span>${esc(healthDateLabel(selected.date))}</span><strong>${BODY_WEATHER_STATES[selected.status].label}</strong></header>${corrected ? '<p>你已补充不同感受，原状态记录仍保留。</p>' : ""}${visibleRecords ? selected.records.length ? selected.records.map(record => `<button type="button" class="bw-trend-record" data-action="record-detail:${esc(record.id)}"><span>${esc(record.label)}<br><small>用户记录 · ${esc(/^\d{4}-\d{2}-\d{2}$/.test(record.occurredAt) ? "按日期记录" : new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(record.occurredAt)))}</small></span>${healthChevron()}</button>`).join("") : '<p>这一天没有用户记录。</p>' : '<p>用户记录已隐藏，随时可以打开。</p>'}</div>${days === 30 ? `<section class="bw-trend-summary"><h3>这 30 天的回顾</h3><p>${most[0]}日最多，共 ${most[1]} 天。你在这段时间记下了 ${recordsInRange} 条感受。</p><button type="button" class="text-button" data-action="record-new">记下看完后的感受 ${healthChevron()}</button><button type="button" class="text-button" data-action="go:TOD-09">查看健康报告 ${healthChevron()}</button></section>` : ""}<p class="bw-trend-caption">状态不是分数；用户记录与状态同时出现，不代表因果。</p></section>`;
+  }
+  function bodyWeatherDetailPage() {
+    const data = bodyWeatherPageState();
+    const weather = currentBodyWeather();
+    const correction = activeWeatherCorrection();
+    const record = sleepReviewRecord();
+    const title = !data.active ? "连接戒指，开始了解自己" : !data.hasRecords ? "还没有收到身体记录" : !data.fresh ? "今天的记录还没更新" : data.limited ? "昨晚少了一段记录" : !data.ready ? "正在了解你的平时水平" : correction ? "先按你现在的感受来" : weather.homeTitle;
+    const summary = !data.active ? "戴着 Halo Ring 睡一晚，醒来后同步。" : !data.hasRecords ? "今晚照常佩戴，睡醒后打开 App 同步。" : !data.fresh ? "下面保留最近的记录，不用它判断今天。" : data.limited ? "02:10–03:00 缺少记录，暂不判断身体状态。" : !data.ready ? "已经收到的记录可以看，暂不与平时比较。" : correction ? "你的反馈已单独记下，戒指记录保持原样。" : `睡眠 ${sleepDuration(record.asleep)}，夜里清醒 ${record.awakenings} 次。身体能量接近平时。`;
+    const status = !data.active ? "尚未连接" : !data.hasRecords ? "等待记录" : !data.fresh ? "等待更新" : data.limited ? "记录不完整" : !data.ready ? "积累中" : correction ? "感受已补充" : weather.label;
+    const main = !data.active ? [state.membershipHardwareState === "unbound-retained" ? "重新连接 Halo Ring" : "连接 Halo Ring", "go:DEV-01", "primary"] : !data.hasRecords || data.limited || !data.fresh ? ["查看连接与同步", "go:DEV-10", "primary"] : !data.ready ? ["查看建立进度", "go:HLT-00", "primary"] : correction ? ["按我的感受聊聊", "bw-halo", "primary"] : ["看看今晚的放松内容", "go:NIG-01", "primary"];
+    const actions = {
+      restore: ["今天少安排一点", "先做必要的事，其他可以往后放。"],
+      slow: ["照常安排，留出休息时间", "先做重要的事，觉得累了就歇一会儿。"],
+      balance: ["按自己的节奏过今天", "安排可以照常，也记得给休息留时间。"],
+      active: ["做一件一直想做的事", "有精神时推进计划，累了也可以调整。"],
+    };
+    const action = correction ? ["下一步，先听听你的感受", "想继续、想休息，或有别的感觉，都可以和 Halo 说。"] : actions[state.bodyWeather] || actions.slow;
+    const dateText = data.hasRecords ? `${healthDateLabel(data.date)} · ${data.fresh ? "本次记录" : "最近记录"}` : "Body Weather";
+    const syncText = data.hasRecords ? todaySyncLabel() : "等待首次有效记录";
+    return `<article class="bw-detail"><header class="health-overview-header"><button type="button" data-action="previous" aria-label="返回">${healthChevron("left")}</button><h1>身体天气</h1><button type="button" data-action="bw-help" aria-label="关于身体天气">i</button></header><p class="bw-record-date">${esc(dateText)}</p><section class="bw-hero detail-conclusion ${data.ready ? "ready" : "pending"}"><div class="bw-state"><span>${esc(status)}</span><img src="${HALO_SYMBOL}" alt=""></div><h2>${esc(title)}</h2><p>${esc(summary)}</p></section>${data.ready ? interpretationCorrectionCard() : ""}<section class="bw-action detail-action" aria-label="下一步">${data.ready ? `<div><span>今天可以怎么做</span><h2>${esc(action[0])}</h2><p>${esc(action[1])}</p></div>` : data.limited ? '<p>记录缺口不代表身体异常，已同步内容仍然保留。</p>' : ""}${buttons([main])}</section>${bodyWeatherEvidence(data)}${bodyWeatherTrendSection()}${bodyWeatherRecordLinks()}<section class="bw-more"><h2>再了解一点</h2><button type="button" class="bw-link-row" data-action="bw-pressure"><span>了解压力变化</span>${healthChevron()}</button><details class="bw-source"><summary><span>数据来源与说明</span>${healthChevron()}</summary><div><p>${data.hasRecords ? `Halo Ring · ${esc(healthDateLabel(data.date))}的记录` : "尚无可用的身体记录"}<br>${esc(syncText)}</p><p>${data.limited ? "夜间记录有缺口，暂不汇总整晚；已同步的活动片段可以查看。" : data.hasRecords ? "睡眠按醒来日期归档；活动仅统计已同步的部分。" : "没有收到数据时，不用示例数值代替你的记录。"}</p><p>你主动记下的感受会单独标注，不改动戒指测量。身体天气是日常参考，不是诊断。</p><button class="text-button" data-action="go:TOD-11">查看数据来源与质量</button><button class="text-button" data-action="go:DEV-10">查看连接与同步</button></div></details></section>${data.ready ? `<div class="bw-secondary-actions">${buttons([["分享这次状态", "go:TOD-10", "secondary"], ["和 Halo 聊聊", "bw-halo", "secondary"]])}</div>` : ""}<p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
   function today(item) {
+    if (item.id === "TOD-10") return stateShare.body();
+    if (item.id === "TOD-09") return healthReports.body();
+    if (item.id === "TOD-03") return bodyWeatherDetailPage();
     if (item.id === "TOD-01" && !isHardwareActive()) return unboundToday(item);
     if (["TOD-03", "TOD-04", "TOD-05", "TOD-06", "TOD-07", "TOD-09", "TOD-10", "TOD-11"].includes(item.id) && !isHardwareActive()) return unboundHealthDetail(item);
     if (["TOD-04", "TOD-09", "TOD-11"].includes(item.id) && state.dataLifecycle !== "interpretable") return unreadyHealthPage(item);
     const map = {
       "TOD-01": () => todayWeatherHome(item),
-      "TOD-02": () => `${head(item, "QUICK CHECK-IN")}<div class="stack">${notice("此刻更接近哪些感受？", "可多选，只做轻记录，不评价你今天做得好不好。记录在解绑和重新绑定后仍保留。", "sage")}${state.recordDraft.reportMonth ? notice(`${Number(state.recordDraft.reportMonth.slice(5))} 月回顾反馈`, "选一个感受或写下想法，保存后会与这份回顾一起保留。", "sage") : ""}${subjectiveMarkers()}${state.subjectiveMarkers.length ? rows([["已保存的记录标签", state.subjectiveMarkers.join("、")], ["数据作用", "趋势回看 · 不改写设备数据"]]) : ""}${buttons([["保存并返回", "record-save", "primary"], ["返回今日", "go:TOD-01", "secondary"]])}</div>`,
-      "TOD-03": () => healthDetail(item, {
-        eyebrow: "BODY WEATHER",
-        allowCorrection: true,
-        copyVariant: currentBodyWeather().copyVariant,
-        statusLabel: currentBodyWeather().label,
-        conclusion: currentBodyWeather().homeTitle,
-        summary: currentBodyWeather().detailSummary,
-        why: currentBodyWeather().why,
-        reasonExtra: setting("白天的压力变化", `${currentBodyWeather().pressure} · 查看全天记录`, "info:stress"),
-        data: rows(currentBodyWeather().signals),
-        dataTitle: "今天先看这三件事",
-        trend: `${chartCard(`最近 ${state.trendPeriod} 天`, currentBodyWeather().trend, "gold")}${setting("查看完整趋势", "7 / 14 / 30 天与月度回顾", "go:TOD-04")}`,
-        lifecycleTitle: "Body Weather 数据状态",
-        source: "Halo Ring（用户记录仅用于趋势对照）",
-        quality: "昨晚记录完整",
-        updated: "07:42",
-        actionTitle: currentBodyWeather().actionTitle,
-        actionBody: currentBodyWeather().actionBody,
-        actions: [["查看今晚建议", "go:NIG-01", "primary"], ["分享今天状态", "go:TOD-10", "secondary"], ["和 Halo 聊聊", "go:HAL-01", "text-button"]],
-      }),
-      "TOD-04": () => { const days = Number(state.trendPeriod); const bars = days === 30 ? [56,62,52,66,64,71,68,72,69,74] : days === 14 ? [58,63,55,66,61,70,68,72,65,76,71,74,73,78] : [62,48,76,58,83,70,78]; const labels = days === 7 ? ["四","五","六","日","一","二","今"] : bars.map((_,i)=> i === bars.length - 1 ? "今" : `${i+1}`); const distribution = days === 30 ? [["修复",4,"restore"],["缓行",10,"slow"],["平衡",11,"balance"],["活力",5,"active"]] : [["修复",1,"restore"],["缓行",days===14?5:3,"slow"],["平衡",days===14?6:2,"balance"],["活力",days===14?2:1,"active"]]; return `${head(item, `${days} DAY TREND`)}<div class="stack">${segmented([["7","7 天"],["14","14 天"],["30","30 天"]], state.trendPeriod, "trend")}${chartCard("这段时间的 Body Weather", `最近 ${days} 天，平衡日和缓行日最多`, "gold")}${weatherDistribution(distribution)}${trendRecordControl(days)}<div class="trend-chart-wrap"><div class="bar-chart">${bars.map((h,i)=>`<span class="${i===bars.length-1?"active":""}" style="height:${h}%"><i>${labels[i]}</i></span>`).join("")}</div>${trendRecordNodes(days)}</div>${days === 30 ? monthlyReport() : ""}<p class="health-boundary">这张图用来回看近期变化，不代表疾病风险或训练成绩。</p></div>`; },
-      "TOD-05": () => healthDetail(item, {
-        eyebrow: "LAST NIGHT",
-        statusLabel: "昨夜睡眠",
-        conclusion: "昨晚睡得不算少，但中间醒了两次",
-        summary: "总时长接近平时，睡眠被打断得多一些。今天如果觉得困，先相信自己的感受。",
-        why: "总睡眠 6 小时 42 分，比你近两周平均少 36 分钟；夜里清醒 2 次，共 34 分钟。",
-        data: `${metrics([["总睡眠", "6h 42m", "比平时少 36 分"], ["睡眠效率", "86%", "记录完整"], ["清醒", "34m", "夜醒 2 次"]])}<section class="card"><div class="data-heading"><strong>睡眠阶段</strong><span>23:41 - 07:18</span></div><div class="sleep-timeline"><span class="light" style="flex:3"></span><span class="deep" style="flex:2"></span><span class="light" style="flex:4"></span><span class="rem" style="flex:2"></span><span class="awake" style="flex:.7"></span><span class="light" style="flex:3"></span><span class="rem" style="flex:2"></span></div><p>深睡 1h 14m · REM 1h 36m · 清醒 34m</p></section>`,
-        dataTitle: "昨晚的几个重点",
-        trend: chartCard(`最近 ${state.trendPeriod} 晚`, "最近几晚比月初睡得更连贯"),
-        trendTitle: "和最近几晚比",
-        lifecycleTitle: "睡眠数据状态",
-        source: "Halo Ring",
-        quality: "昨晚记录完整 93%",
-        updated: "07:22",
-        actionSectionTitle: "今晚可以怎么做",
-        actionTitle: "今晚按平时时间上床",
-        actionBody: "睡前少刷一会儿手机就够了，不用为了补觉提前很久躺下。",
-        actions: [["进入今晚建议", "go:NIG-01", "primary"], ["调整睡眠目标", "go:SET-02", "secondary"]],
-      }),
-      "TOD-06": () => healthDetail(item, {
-        eyebrow: "BODY ENERGY",
-        statusLabel: "今日状态",
-        conclusion: "今天可以照常安排",
-        summary: "夜间 HRV 估算和静息心率都接近平时。昨晚睡得不够连贯，今天按计划进行，累了再减量。",
-        why: "昨晚的夜间 HRV 估算为 42 毫秒，静息心率 58 次/分，都在你的常见范围内；睡眠比平时少 36 分钟。",
-        data: `${baselineBand("夜间 HRV 估算", "42 ms", 54)}${metrics([["静息心率", "58 bpm", "和最近几天接近"], ["有效片段", "91%", "已排除明显体动"]])}`,
-        dataTitle: "昨晚的几个信号",
-        educationTitle: "HRV 怎么看",
-        educationExtra: hrvExplainer(),
-        trend: chartCard(`最近 ${state.trendPeriod} 天 HRV 估算`, "只和你自己的夜间记录相比"),
-        lifecycleTitle: "身体能量数据状态",
-        source: "Halo Ring",
-        quality: "夜间有效记录 91%",
-        updated: "07:22",
-        actionTitle: "先按原计划，累了就减量",
-        actionBody: "工作和日常活动照常即可。如果下午明显疲惫，把高强度训练换成散步或拉伸。",
-        actions: [["记录此刻感受", "go:TOD-02", "primary"], ["查看夜间支持", "go:NIG-01", "secondary"]],
-      }),
-      "TOD-07": () => healthDetail(item, {
-        eyebrow: "ACTIVITY FIT",
-        statusLabel: "今日活动",
-        conclusion: "今天动一动就好，不用追数字",
-        summary: "你已经有 46 分钟轻量活动。接下来散步、拉伸或轻松瑜伽就够了。",
-        why: "最近 7 天以中低强度活动为主；昨晚睡眠略少，今天没有必要再补一段高强度训练。",
-        data: `${metrics([["步数", "4,862", "日常活动"], ["活动消耗", "284", "千卡"], ["久坐提醒", "1 次", "今日"]])}${activityMix([["轻量",46,"light"],["中等",14,"medium"],["较高",4,"high"]])}`,
-        dataTitle: "今天已经动了多少",
-        trend: chartCard(`最近 ${state.trendPeriod} 天活动`, "大多数天以中低强度为主", "gold"),
-        lifecycleTitle: "活动数据状态",
-        lifecycleOverride: { needed: "当前已完成 5 / 7 个有效佩戴日；继续积累日间活动记录。", next: "保持日常佩戴，完成同步后会更新活动趋势。" },
-        source: "Halo Ring + 手机",
-        quality: "当天记录完整 89%",
-        updated: "08:44",
-        actionTitle: "选一种舒服的方式动一动",
-        actionBody: "散步、拉伸或轻松瑜伽都可以。今天不需要为了完成数字再加练。",
-        actions: [["记录完成感受", "go:TOD-02", "primary"], ["查看身体天气", "go:TOD-03", "secondary"]],
-      }),
+      "TOD-02": recordEditorPage,
+      "TOD-05": () => sleepDetailPage(),
+      "TOD-06": () => energyDetailPage(),
+      "TOD-07": () => activityDetailPage(),
       "TOD-08": () => nightReviewPage(item),
-      "TOD-09": () => `${head(item, "REPORTS")}<div class="stack">${radialProgress(64, "9 / 14", "首份 14 晚报告", "还差 5 个完整夜晚")}<details class="visual-disclosure"><summary><span class="data-symbol baseline" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>Body Weather 已经可以看</strong><small>更完整的睡眠回顾还差 5 晚</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle("baseline", "14 晚报告进度", { label: "报告积累中", reason: "已经有 7 天记录，可以生成每天的 Body Weather；14 晚回顾还没有完成。", needed: "还差 5 个完整夜晚。", next: "继续戴着戒指睡觉，早上同步后会自动更新。" })}</div></details>${metrics([["日常状态","已可查看","已有 7 天记录"],["最近 9 晚","91%","记录完整度"]])}${chartCard("睡眠与夜间状态", "还在积累更长的趋势")}${card("8 月回顾", "有 30 天记录后生成", "30 DAY REPORT", "report-month:2026-08")}${buttons([["回看昨晚", "go:TOD-08", "primary"]])}</div>`,
-      "TOD-10": () => `${head(item, "SHARE CARD")}<div class="stack">${shareCard()}<section class="share-editor"><span class="section-label">背景</span>${segmented([["mist","雾白"],["night","深夜"],["photo","相册"]], state.shareBackground, "share-bg")}${state.shareBackground === "photo" ? `<input id="share-photo-input" type="file" accept="image/*" hidden><button class="secondary" data-action="share-photo">选择相册图片</button>` : ""}<label class="field-label">缩放 <input id="share-zoom" type="range" min="80" max="125" value="${esc(state.shareZoom)}"></label><p class="caption">卡片只保留状态名称和一句状态说明，不显示心率、HRV、血氧、温度等敏感数值。</p></section>${buttons([["预览并分享", "share-preview", "primary"], ["复制文字", "share-copy", "secondary"]])}</div>`,
-      "TOD-11": () => `${head(item, "DATA QUALITY")}<div class="stack">${lifecycle(state.dataLifecycle, "今天的数据进度")}${quality("Halo Ring", state.dataLifecycle === "limited" ? "昨晚缺少一段" : "昨晚记录完整", "08:42")}<section class="source-grid"><span><i>${domainIcon("sleep")}</i><b>睡眠</b><small>记录 93%</small></span><span><i>${domainIcon("energy")}</i><b>HRV</b><small>可查看</small></span><span><i>${domainIcon("activity")}</i><b>活动</b><small>已去重</small></span><span><i>${domainIcon("status")}</i><b>用户记录</b><small>${state.subjectiveMarkers.length ? `${state.subjectiveMarkers.length} 项` : "未带入"}</small></span></section><details class="visual-disclosure"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>这些数据从哪来</strong><small>查看缺少的时段和计算方式</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${rows([["睡眠", "Halo Ring · 记录完整度 93%"], ["HRV", "Halo Ring · 夜间记录可查看"], ["活动", "Halo Ring + 手机 · 重复时段只算一次"], ["用户记录", state.subjectiveMarkers.length ? state.subjectiveMarkers.join("、") : "这次没有带入"]])}${notice("主要来自 Halo Ring", "主动测量、Apple 健康、Health Connect 和用户记录会单独标明，同一时段不会重复计算。", "sage")}${notice("为什么会少一段", "戒指暂时断连、摘下或运动干扰都可能造成缺口。只要没有解绑，7 天内同步成功后会补回实际发生的日期。")}${education("为什么要先了解你的平时水平", "同一个数字对每个人意义不同。Halo 会先看你的常见范围，再说今天有没有变化。")}</div></details>${buttons([["重新同步", "toast:已开始重新同步", "secondary"], ["看看戒指怎么了", "go:DEV-10", "secondary"]])}<p class="health-boundary">用于日常健康管理，不替代医疗诊断。</p></div>`,
     };
     return map[item.id]?.() || generic(item);
   }
 
+  // One explicit review night. All durations, intervals and chart widths derive from this fixture.
+  // 00:02–07:18 = 436 minutes: 402 asleep + 34 awake; no fabricated multi-night trend.
+  const SLEEP_STAGE_META = {
+    light: { label: "浅睡", color: "#a4b39b", explanation: "浅睡是睡眠的正常组成部分，不等于没睡好。" },
+    deep: { label: "深睡", color: "#526d5c", explanation: "深睡也叫慢波睡眠，通常在前半夜更多。" },
+    rem: { label: "REM", color: "#90aebb", explanation: "快速眼动睡眠时大脑较活跃，梦常出现在这个阶段。" },
+    awake: { label: "清醒", color: "#bb8d57", explanation: "睡眠周期之间可能短暂醒来，不一定每次都记得。" },
+  };
+  function sleepReviewRecord() {
+    let minute = 2;
+    const segments = [["light",24],["deep",34],["light",26],["rem",18],["awake",16],["light",40],["deep",40],["light",36],["rem",28],["awake",18],["light",54],["rem",30],["light",52],["rem",20]].map(([stage, duration]) => {
+      const segment = { stage, duration, start: minute, end: minute + duration };
+      minute += duration;
+      return segment;
+    });
+    const totals = Object.fromEntries(Object.keys(SLEEP_STAGE_META).map(stage => [stage, segments.filter(item => item.stage === stage).reduce((sum, item) => sum + item.duration, 0)]));
+    return { segments, totals, start: segments[0].start, end: minute, asleep: totals.light + totals.deep + totals.rem, awakenings: segments.filter(item => item.stage === "awake").length };
+  }
+  function sleepTime(minute) { return `${String(Math.floor(minute / 60) % 24).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`; }
+  function sleepDuration(minutes) { return minutes < 60 ? `${minutes}分` : `${Math.floor(minutes / 60)}小时${minutes % 60 ? `${minutes % 60}分` : ""}`; }
+  function sleepRecordDate() { return state.healthDetailContext?.route === "TOD-05" ? state.healthDetailContext.date : beijingDateKey(); }
+  function selectSleepDate(date) {
+    if (!validHealthDate(date) || state.current !== "TOD-05") return;
+    state.healthSelectedDate = date;
+    state.healthDetailContext = { date, metric: "sleep", route: "TOD-05" };
+    state.sleepStage = "all";
+    render();
+    screen.scrollTop = 0;
+    capturePageView();
+    persistAppProgress();
+  }
+  function healthDetailDateHeader(title, date, namespace) {
+    return `<header class="health-overview-header"><button data-action="previous" aria-label="返回">${healthChevron("left")}</button><h1>${esc(title)}</h1><span></span></header><div class="health-date-rail"><button data-action="${namespace}-date:previous" aria-label="前一天" ${date <= "1900-01-01" ? "disabled" : ""}>${healthChevron("left")}</button><label class="health-date-picker"><span>${esc(healthDateLabel(date))}</span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 11h16"/></svg><input id="${namespace}-record-date" type="date" min="1900-01-01" max="${beijingDateKey()}" value="${date}" aria-label="选择${esc(title)}记录日期"></label><button data-action="${namespace}-date:next" aria-label="后一天" ${date >= beijingDateKey() ? "disabled" : ""}>${healthChevron()}</button></div>`;
+  }
+  function sleepDateHeader(date) { return healthDetailDateHeader("睡眠", date, "sleep"); }
+  function sleepStagesChart(record, selected) {
+    const ys = { awake: 18, rem: 57, light: 96, deep: 135 };
+    const x = minute => 52 + (minute - record.start) / (record.end - record.start) * 258;
+    const stageButtons = Object.entries(SLEEP_STAGE_META).map(([key, item]) => `<button type="button" class="sleep-stage-choice" data-action="sleep-stage:${key}" aria-pressed="${selected === key}" aria-controls="sleep-stage-readout"><i style="background:${item.color}" aria-hidden="true"></i><span>${item.label}</span><strong>${sleepDuration(record.totals[key])}</strong></button>`).join("");
+    const segments = record.segments.map((item, index) => `<g opacity="${selected === "all" || selected === item.stage ? 1 : .22}">${index ? `<path d="M${x(item.start)} ${ys[record.segments[index - 1].stage]}V${ys[item.stage]}" stroke="${SLEEP_STAGE_META[item.stage].color}" stroke-width="1"/>` : ""}<path data-sleep-segment="${item.stage}" data-minutes="${item.duration}" d="M${x(item.start)} ${ys[item.stage]}H${x(item.end)}" stroke="${SLEEP_STAGE_META[item.stage].color}" stroke-width="6" stroke-linecap="round"/></g>`).join("");
+    const tickMarks = [record.start, 120, 240, record.end].map(minute => `<path d="M${x(minute)} 8V150" stroke="#e1e3df" stroke-dasharray="3 4"/><text x="${x(minute)}" y="170" text-anchor="${minute === record.start ? "start" : minute === record.end ? "end" : "middle"}">${sleepTime(minute)}</text>`).join("");
+    const readout = selected === "all" ? '<div id="sleep-stage-readout" role="status"></div>' : `<div id="sleep-stage-readout" class="sleep-stage-readout" role="status"><div><strong>${SLEEP_STAGE_META[selected].label} · ${sleepDuration(record.totals[selected])}</strong><button type="button" data-action="sleep-stage:all">查看全部</button></div><p>${SLEEP_STAGE_META[selected].explanation}</p><ul aria-label="${SLEEP_STAGE_META[selected].label}时段">${record.segments.filter(item => item.stage === selected).map(item => `<li>${sleepTime(item.start)}–${sleepTime(item.end)}<span>${sleepDuration(item.duration)}</span></li>`).join("")}</ul></div>`;
+    return `<section class="sleep-stage-panel"><div class="sleep-section-title"><h2>睡眠阶段</h2><span>阶段估算</span></div><svg class="sleep-stage-chart" viewBox="0 0 320 180" role="img" aria-label="${selected === "all" ? "整晚睡眠阶段" : `${SLEEP_STAGE_META[selected].label}时段已突出显示`}，${sleepTime(record.start)} 至 ${sleepTime(record.end)}"><g fill="none">${tickMarks}${segments}</g>${Object.entries(ys).map(([key, y]) => `<text x="0" y="${y + 4}">${SLEEP_STAGE_META[key].label}</text>`).join("")}</svg><p class="sleep-stage-hint">点选阶段，查看时段</p><div class="sleep-stage-choices" role="group" aria-label="选择睡眠阶段">${stageButtons}</div>${readout}</section>`;
+  }
+  function sleepDetailPage() {
+    const date = sleepRecordDate();
+    const active = isHardwareActive();
+    const dated = date === state.healthDemoRecordDate;
+    const available = active && dated && ["accumulating", "baseline", "interpretable"].includes(state.dataLifecycle);
+    const limited = active && dated && state.dataLifecycle === "limited";
+    const record = sleepReviewRecord();
+    const selected = SLEEP_STAGE_META[state.sleepStage] ? state.sleepStage : "all";
+    const heading = sleepDateHeader(date);
+    if (!available) {
+      const title = !active ? "连接戒指后，开始记录睡眠" : limited ? "这一晚的记录不完整" : "这一天还没有睡眠记录";
+      const message = !active ? "戴着戒指睡一晚，醒来后打开 App 同步。" : limited ? "02:10–03:00 少了一段记录，暂不汇总整晚。" : "可以换个日期看看，已有记录不会受影响。";
+      const action = !active ? ["连接 Halo Ring", "go:DEV-01", "primary"] : !dated && state.dataLifecycle !== "none" ? ["查看最近记录", "sleep-date:latest", "primary"] : ["查看连接与同步", "go:DEV-10", "primary"];
+      return `<article class="sleep-detail health-dated-empty">${heading}<div class="sleep-empty"><span class="sleep-empty-icon" aria-hidden="true">${domainIcon("sleep")}</span><h2>${title}</h2><p>${message}</p>${limited ? '<small>这是记录缺口，不代表身体异常。</small>' : ""}</div>${buttons([action, ["返回健康数据", "go:HLT-00", "secondary"]])}</article>`;
+    }
+    const sunrise = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 18h20M6 18a6 6 0 0 1 12 0M12 2v3M4.2 6.2l2.1 2.1m11.4 0 2.1-2.1M2 12h3m14 0h3"/></svg>';
+    return `<article class="sleep-detail">${heading}<section class="sleep-summary"><p>睡眠时长</p><div class="sleep-duration" aria-label="${sleepDuration(record.asleep)}"><b>${Math.floor(record.asleep / 60)}</b><span>小时</span><b>${record.asleep % 60}</b><span>分</span></div><p class="sleep-summary-note">夜里清醒 ${record.awakenings} 次，共 ${record.totals.awake} 分钟。</p><div class="sleep-times"><div>${domainIcon("sleep")}<span>入睡</span><strong>${sleepTime(record.start)}</strong></div><div>${sunrise}<span>醒来</span><strong>${sleepTime(record.end)}</strong></div></div></section>${sleepStagesChart(record, selected)}<div class="sleep-disclosures"><details><summary>怎么看睡眠阶段${healthChevron()}</summary><div><p>浅睡、深睡和 REM 会在一晚中交替出现，不是深睡越多就一定越好。</p>${Object.values(SLEEP_STAGE_META).map(item => `<p><strong>${item.label}</strong> · ${item.explanation}</p>`).join("")}<a href="https://www.nhlbi.nih.gov/health/sleep/stages-of-sleep" target="_blank" rel="noopener noreferrer">了解睡眠阶段 · NIH</a></div></details><details><summary>数据来源与说明${healthChevron()}</summary><div><p>Halo Ring · ${esc(healthDateLabel(date))}的睡眠记录<br>同步于 ${esc(healthDateLabel(date))} 08:44</p><p>按醒来日期归档。总睡眠由浅睡、深睡和 REM 相加，不包含清醒时间。</p><p>戒指估算的阶段仅供日常参考，不等同于医院的睡眠检查。</p>${state.dataLifecycle !== "interpretable" ? '<p>记录已经可以看，个人范围还在积累中，暂不与平时比较。</p>' : ""}<button class="text-button" data-action="go:DEV-10">查看连接与同步</button></div></details></div><section class="sleep-actions"><h2>今晚</h2>${buttons([["去夜间放松", "go:NIG-01", "primary"], ["调整睡眠目标", "go:SET-02", "secondary"]])}</section><p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
+  function energyRecordDate() { return state.healthDetailContext?.route === "TOD-06" ? state.healthDetailContext.date : beijingDateKey(); }
+  function energyDataState() {
+    const date = energyRecordDate();
+    const active = isHardwareActive();
+    const dated = date === state.healthDemoRecordDate;
+    const hasReading = active && dated && ["accumulating", "baseline", "interpretable"].includes(state.dataLifecycle);
+    return { date, active, dated, hasReading, canCompare: hasReading && state.dataLifecycle === "interpretable", limited: active && dated && state.dataLifecycle === "limited" };
+  }
+  function selectEnergyDate(date) {
+    if (!validHealthDate(date) || state.current !== "TOD-06") return;
+    state.healthSelectedDate = date;
+    state.healthDetailContext = { date, metric: state.healthDetailContext?.metric === "hrv" ? "hrv" : "energy", route: "TOD-06" };
+    render();
+    screen.scrollTop = 0;
+    capturePageView();
+    persistAppProgress();
+  }
+  function energyRecordDisclosure(title = "记下此刻感受") {
+    const recent = [...state.subjectiveRecords].slice(-3).reverse();
+    const editor = state.recordDraft.reportMonth
+      ? `<p>你还有一份月度回顾草稿，先继续那条记录。</p>${buttons([["继续回顾草稿", "go:TOD-02", "secondary"]])}`
+      : `${subjectiveMarkers()}${recent.length ? `<div class="energy-user-records"><h3>最近的用户记录</h3>${recent.map(record => `<button type="button" data-action="record-detail:${esc(record.id)}"><span>${esc(record.label)}<small>${esc(record.occurredAt ? recordDateTime(record.occurredAt) : "未记录时间")}</small></span>${healthChevron()}</button>`).join("")}</div>` : ""}`;
+    return `<details class="energy-record"><summary><span>${esc(title)}<small>保存为用户记录</small></span>${healthChevron()}</summary><div>${editor}</div></details>`;
+  }
+  function energyDetailPage() {
+    const data = energyDataState();
+    const { date, active, dated, hasReading, canCompare, limited } = data;
+    const sleep = sleepReviewRecord();
+    const title = canCompare ? "接近平时" : !active ? "连接戒指，开始记录" : !dated ? "这一天还没有记录" : limited ? "记录还不完整" : hasReading ? "个人范围建立中" : "等待第一晚记录";
+    const description = canCompare ? (date === beijingDateKey() ? "今天先按计划，累了就歇一会儿。" : "这一晚的 HRV 和静息心率接近平时。") : !active ? "戴着戒指睡一晚，醒来后打开 App 同步。" : !dated ? "可以换个日期看看，已有记录不会受影响。" : limited ? "02:10–03:00 少了一段，暂不判断身体状态。" : hasReading ? "已有记录可以看，暂不与平时比较。" : "照常佩戴戒指，睡醒后同步。";
+    const next = !active ? ["连接 Halo Ring", "go:DEV-01", "secondary"] : !dated && state.dataLifecycle !== "none" ? ["查看最近记录", "energy-date:latest", "secondary"] : hasReading ? ["查看建立进度", "go:HLT-00", "text-button"] : ["查看连接与同步", "go:DEV-10", "secondary"];
+    const signals = !hasReading ? "" : `<section class="energy-evidence"><h2>${canCompare ? "这次参考了什么" : "已有的夜间记录"}</h2><div class="energy-evidence-panel"><section class="energy-hrv"><div class="energy-signal-row"><span class="energy-signal-icon" aria-hidden="true">${domainIcon("energy")}</span><span class="energy-signal-label"><strong>夜间 HRV</strong><small>戒指估算</small></span><span class="energy-signal-value"><b>42</b><small>ms</small><em>${canCompare ? "接近平时" : "暂不比较"}</em></span></div>${canCompare ? '<div class="energy-comparison" role="img" aria-label="HRV 与个人平时相比：接近平时。这里显示状态类别，不是评分或医学正常范围。"><span>比平时低</span><span class="is-current"><i aria-hidden="true"></i>接近平时</span><span>比平时高</span></div>' : ""}</section><div class="energy-signal-row"><span class="energy-signal-icon" aria-hidden="true">${domainIcon("heart")}</span><span class="energy-signal-label"><strong>夜间静息心率</strong><small>${canCompare ? "接近平时" : "暂不比较"}</small></span><span class="energy-signal-value"><b>58</b><small>次/分</small></span></div><button type="button" class="energy-signal-row energy-sleep-link" data-action="energy-open-sleep"><span class="energy-signal-icon" aria-hidden="true">${domainIcon("sleep")}</span><span class="energy-signal-label"><strong>睡眠</strong><small>清醒 ${sleep.awakenings} 次 · 共 ${sleep.totals.awake} 分钟</small></span><span class="energy-sleep-duration">${sleepDuration(sleep.asleep)}</span>${healthChevron()}</button></div><p class="energy-context-note">身体能量不只看 HRV，也要结合睡眠和你的感受。</p></section>`;
+    return `<article class="energy-detail ${!hasReading ? "health-dated-empty" : ""}">${healthDetailDateHeader("身体能量", date, "energy")}<section class="energy-status"><img src="${HALO_SYMBOL}" alt="" width="40" height="48"><h2>${title}</h2><p>${description}</p>${canCompare ? "" : buttons([next])}</section>${signals}<div class="sleep-disclosures energy-disclosures"><section class="education-section">${hrvExplainer(data)}</section><details><summary>数据来源与说明${healthChevron()}</summary><div><p>${esc(healthDateLabel(date))} · Halo Ring</p><p>${hasReading ? `夜间 HRV 为戒指估算。静息心率和睡眠来自同一晚记录，已于 ${esc(healthDateLabel(date))} 08:44 同步。` : limited ? "这一晚记录有缺口，未用缺失片段推算整晚结果。" : !active ? "当前未连接戒指，未展示任何个人健康数值。" : "这一天还没有可用夜间记录。"}</p><p>只与同一种测量条件下的个人记录比较，不用别人的数字作标准。</p><p>身体能量是日常状态参考，不是剩余电量，也不能代替疾病诊断。</p>${buttons([["查看连接与同步", active ? "go:DEV-10" : "go:DEV-01", "text-button"]])}</div></details>${energyRecordDisclosure()}</div>${buttons([["去夜间放松", "go:NIG-01", "primary"]])}<p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
+  function activityRecordDate() { return state.healthDetailContext?.route === "TOD-07" ? state.healthDetailContext.date : beijingDateKey(); }
+  function activityUpdatedLabel(date) {
+    const receipt = state.activitySync.receipt;
+    if (receipt?.date === date) {
+      const time = new Date(receipt.at);
+      const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(time);
+      const clock = time.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false, hour: "2-digit", minute: "2-digit" });
+      return `${day === beijingDateKey() ? date === day ? "" : "今天 " : `${healthDateLabel(day)} `}${clock}`;
+    }
+    return `${date === beijingDateKey() ? "" : `${healthDateLabel(date)} `}08:44`;
+  }
+  function activitySyncError(inFlight = false) {
+    if (!state.signedIn || !isHardwareActive()) return "连接并激活戒指后，再同步记录。";
+    if (!state.toggles.bluetooth) return "蓝牙已关闭，开启后再试。";
+    if (navigator.onLine === false) return "网络暂不可用，恢复网络后重试同步。";
+    if (inFlight && state.deviceStatus !== "syncing") return "连接已中断，已有记录仍然保留。";
+    if (inFlight && (state.deviceResetStatus === "pending" || state.measurementStatus === "running" || deviceMaintenance?.blocks() || deviceInfo?.isBusy() || deviceInfo?.unresolved() || ["downloading", "verifying"].includes(state.firmwareStatus))) return "戒指正在处理其他操作，请稍后重试。";
+    return inFlight ? "" : deviceOperationUnavailable("sync");
+  }
+  function settleActivitySync(requestId) {
+    const request = state.activitySync.request;
+    if (request?.id !== requestId || request.status !== "pending") return false;
+    const error = activitySyncError(true);
+    if (!error && Date.now() < request.readyAt) return false;
+    const failure = error || (request.outcome === "failed" ? "这次没有同步成功，请重试。" : "");
+    request.status = failure ? "failed" : "complete";
+    request.completedAt = new Date().toISOString();
+    state.activitySync.blocked = Boolean(error);
+    if (state.deviceStatus === "syncing") state.deviceStatus = request.previousDeviceStatus === "low" ? "low" : "connected";
+    if (failure) state.activitySync.message = failure;
+    else {
+      state.deviceLastSyncedAt = request.completedAt;
+      const hasRecords = ["accumulating", "baseline", "interpretable", "limited"].includes(state.dataLifecycle);
+      // A mock response returns the same dated fixture; never mint steps or change its date.
+      if (hasRecords) state.activitySync.receipt = { date: state.healthDemoRecordDate, at: request.completedAt };
+      state.activitySync.message = "同步完成，没有新的活动记录。";
+    }
+    persistAppProgress();
+    return true;
+  }
+  function resumeActivitySync() {
+    clearTimeout(activitySyncTimer);
+    const request = state.activitySync.request;
+    if (request?.status !== "pending") return;
+    if (settleActivitySync(request.id)) {
+      if (state.current === "TOD-07") render();
+      return;
+    }
+    activitySyncTimer = setTimeout(() => {
+      if (settleActivitySync(request.id) && state.current === "TOD-07") render();
+    }, Math.min(2147483647, Math.max(0, request.readyAt - Date.now())));
+  }
+  function startActivitySync() {
+    if (state.current !== "TOD-07" || !state.signedIn || state.activitySync.request?.status === "pending") return;
+    const error = activitySyncError();
+    if (error) { state.activitySync.message = error; state.activitySync.blocked = true; return render(); }
+    const startedAt = Date.now();
+    state.activitySync.request = { id: `activity-sync-${startedAt}-${Math.random().toString(36).slice(2, 7)}`, status: "pending", startedAt, readyAt: startedAt + 1800, outcome: activitySyncReviewOutcome, previousDeviceStatus: state.deviceStatus, simulated: true };
+    state.activitySync.message = "正在同步，可以继续浏览。";
+    state.activitySync.blocked = false;
+    state.deviceStatus = "syncing";
+    render();
+  }
+  function activitySyncControls(hasReading, date) {
+    const busy = state.deviceStatus === "syncing" || state.activitySync.request?.status === "pending";
+    const failed = state.activitySync.request?.status === "failed" || state.activitySync.blocked;
+    const currentError = failed && !busy ? activitySyncError() : "";
+    const status = failed && !busy ? currentError || (state.activitySync.blocked ? "现在可以重试同步。" : state.activitySync.message) : state.activitySync.message;
+    const recovery = currentError && isHardwareActive() && !state.toggles.bluetooth ? ["开启蓝牙", "PERM-01"]
+      : currentError && navigator.onLine !== false && !["connected", "low", "syncing"].includes(state.deviceStatus) ? ["查看设备连接", "DEV-10"] : null;
+    return `<section class="activity-sync" aria-label="活动同步"><div class="activity-sync-line">${hasReading ? `<span>更新于 ${esc(activityUpdatedLabel(date))}</span>` : '<span>尚无活动记录</span>'}${isHardwareActive() ? `<button type="button" data-action="activity-sync" ${busy ? "disabled" : ""}>${busy ? '<i class="activity-sync-spinner" aria-hidden="true"></i>同步中' : failed ? "重试同步" : "同步"}</button>` : ""}</div><p class="activity-sync-status" role="status" aria-live="polite">${esc(status)}</p>${recovery ? `<button type="button" class="text-button" data-action="go:${recovery[1]}">${recovery[0]}</button>` : ""}</section>`;
+  }
+  function activitySyncReviewControls(item) {
+    if (item.id !== "TOD-07") return "";
+    const busy = state.activitySync.request?.status === "pending";
+    return `<section class="review-controls"><p>ACTIVITY REVIEW</p><h3>活动同步演示</h3><small>本地模拟，不连接真实硬件。成功只返回已有记录，不增加步数；1.8秒为演示等待。</small><div class="review-control-group"><strong>下一次同步结果</strong><div>${[["success", "正常完成"], ["failed", "同步失败"]].map(([value, label]) => `<button data-action="activity-sync-review:${value}" class="${activitySyncReviewOutcome === value ? "active" : ""}" ${busy ? "disabled" : ""}>${label}</button>`).join("")}</div></div></section>`;
+  }
+  function activityDraftValidation() {
+    const draft = state.activityRecordDraft;
+    if (draft.note.length > 500) return "最多写500字，请稍微缩短一下。";
+    return draft.feeling || draft.note.trim() ? "" : "选一种感受，或写一句再保存。";
+  }
+  function updateActivityRecordControls() {
+    const button = screen.querySelector('[data-action="activity-record-save"]');
+    if (!button) return;
+    const hint = activityDraftValidation();
+    button.disabled = Boolean(hint);
+    screen.querySelector("#activity-record-hint").textContent = activityRecordError || hint;
+  }
+  function activityRecordDisclosure() {
+    const draft = state.activityRecordDraft;
+    const today = healthDateLabel(beijingDateKey());
+    const historical = activityRecordDate() !== beijingDateKey();
+    const otherDraft = state.recordDraft.note.trim() || state.recordDraft.labels.length || state.recordDraft.reportMonth;
+    const records = activityRecordsForScope();
+    const dayCount = activityRecordsForScope("day").length;
+    const hasDraft = Boolean(draft.feeling || draft.note.trim());
+    return `<section class="activity-journal" aria-labelledby="activity-journal-title"><header><h2 id="activity-journal-title">活动感受</h2><span>用户记录</span></header><details class="activity-record" data-activity-section="record"><summary><span>${hasDraft ? "继续记录此刻" : "记录此刻"}<small>${hasDraft ? "有未保存的内容" : "活动后，感觉怎么样？"}</small></span>${healthChevron()}</summary><div><p class="activity-record-date">${historical ? `正在查看${esc(healthDateLabel(activityRecordDate()))}。这条感受将记在${esc(today)}。` : `这条感受将记在${esc(today)}。`}</p><div class="activity-feelings" role="group" aria-label="此刻活动后的感受">${ACTIVITY_FEELINGS.map(feeling => `<button type="button" data-action="activity-feeling:${feeling}" aria-pressed="${draft.feeling === feeling}">${feeling}</button>`).join("")}</div><label class="field-label" for="activity-record-note">想补充一句吗？<small>选填</small></label><textarea id="activity-record-note" class="field" maxlength="500" placeholder="比如：散步回来，感觉轻松了些。">${esc(draft.note)}</textarea><p id="activity-record-hint" class="activity-record-hint" role="status">${esc(activityRecordError || activityDraftValidation())}</p>${buttons([["保存感受", "activity-record-save", "secondary", Boolean(activityDraftValidation())]])}${otherDraft ? `<div class="activity-other-draft"><p>你还有一条${state.recordDraft.reportMonth ? "月度回顾" : "其他"}草稿。</p>${buttons([["继续原草稿", "record-new", "text-button"]])}</div>` : ""}</div></details><details class="activity-history" data-activity-section="history"><summary><span>查看记录<small>${esc(healthDateLabel(activityRecordDate()))} · ${dayCount ? `${dayCount} 条感受` : "还没有感受记录"}</small></span>${healthChevron()}</summary><div><div class="activity-record-filters" role="group" aria-label="活动感受范围">${[["day", "当日记录"], ["all", "全部记录"]].map(([value, label]) => `<button type="button" data-action="activity-records-scope:${value}" aria-pressed="${state.activityRecordsScope === value}">${label}</button>`).join("")}</div><section class="energy-user-records activity-user-records"><h3>${state.activityRecordsScope === "all" ? "全部活动感受" : `${esc(healthDateLabel(activityRecordDate()))}的感受`}</h3>${records.length ? records.map(record => `<button type="button" data-action="record-detail:${esc(record.id)}"><span>${esc(record.label)}<small>${esc(record.occurredAt ? recordDateTime(record.occurredAt) : "未记录时间")} · 用户记录</small></span>${healthChevron()}</button>`).join("") : `<p>${state.activityRecordsScope === "all" ? "还没有保存过活动感受。" : "这一天还没有感受记录，可以切换到全部记录。"}</p>`}</section></div></details></section>`;
+  }
+  function activityRecordsForScope(scope = state.activityRecordsScope) {
+    return state.subjectiveRecords.filter(record => {
+      if (record.category !== "activity") return false;
+      if (scope === "all") return true;
+      if (!record.occurredAt) return false;
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(record.occurredAt) ? record.occurredAt : Number.isFinite(Date.parse(record.occurredAt)) ? beijingDateKey(new Date(record.occurredAt)) : "";
+      return date === activityRecordDate();
+    }).slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+  }
+  function saveActivityRecord() {
+    if (state.current !== "TOD-07" || !state.signedIn) return;
+    const validation = activityDraftValidation();
+    if (validation) { activityRecordError = validation; return updateActivityRecordControls(); }
+    const draft = state.activityRecordDraft;
+    draft.id ||= `activity-record-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const record = { id: draft.id, category: "activity", label: draft.feeling || "活动感受", labels: draft.feeling ? [draft.feeling] : [], original: draft.note.trim(), occurredAt: new Date().toISOString(), source: "user-record" };
+    const previousError = state.recordEditorError;
+    const committed = state.subjectiveRecords.some(item => item.id === draft.id) || commitUserRecords([...state.subjectiveRecords, record]);
+    if (!committed) activityRecordError = "这次没保存成功，内容还在，请重试。";
+    state.recordEditorError = previousError;
+    if (!committed) return updateActivityRecordControls();
+    state.activityRecordDraft = { id: "", feeling: "", note: "" };
+    activityRecordError = "";
+    state.activityRecordsScope = activityRecordDate() === beijingDateKey() ? "day" : "all";
+    render();
+    screen.querySelector(".activity-record").open = false;
+    screen.querySelector(".activity-history").open = true;
+    capturePageView(); persistAppProgress();
+    flash("活动感受已保存");
+  }
+  function showActivityRecords() {
+    const records = state.subjectiveRecords.filter(record => record.category === "activity").slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+    modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal" aria-labelledby="activity-records-title"><header class="modal-title-row"><h2 id="activity-records-title">活动感受</h2><button class="text-button" data-action="close-modal">关闭</button></header><div class="activity-record-list">${records.map(record => setting(record.label, `用户记录 · ${record.occurredAt ? recordDateTime(record.occurredAt) : "未记录时间"}`, `record-detail:${record.id}`)).join("") || '<p>还没有活动感受。</p>'}</div></section></div>`;
+  }
+  function activityDataState() {
+    const date = activityRecordDate();
+    const active = isHardwareActive();
+    const dated = date === state.healthDemoRecordDate;
+    // Night-time gaps do not invalidate the activity fragments already synchronized.
+    const hasReading = active && dated && ["accumulating", "baseline", "interpretable", "limited"].includes(state.dataLifecycle);
+    return { date, active, dated, hasReading, limited: hasReading && state.dataLifecycle === "limited" };
+  }
+  function selectActivityDate(date) {
+    if (!validHealthDate(date) || state.current !== "TOD-07") return;
+    state.healthSelectedDate = date;
+    state.healthDetailContext = { date, metric: "activity", route: "TOD-07" };
+    render();
+    screen.scrollTop = 0;
+    capturePageView();
+    persistAppProgress();
+  }
+  function activityDetailPage() {
+    const { date, active, dated, hasReading, limited } = activityDataState();
+    const walking = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m7 13 1-4 4-2 4 4 4 1M12 8l-1 6 4 3 1 5M11 14l-4 8"/></svg>';
+    const flame = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c1 5-6 6-6 12a6 6 0 0 0 12 0c0-3-2-5-2-5 0 3-2 4-2 4 1-5-2-11-2-11Z"/><path d="M12 14c0 3-3 3-2 6m3 1c2-2 0-4 0-4"/></svg>';
+    const missingTitle = !active ? "连接戒指，开始记录活动" : "这一天还没有活动记录";
+    const missingText = !active ? "戴上戒指，日常走动也会留下记录。" : "暂无记录不等于没有活动，可以换个日期看看。";
+    const next = !active ? ["连接 Halo Ring", "go:DEV-01", "primary"] : !dated && state.dataLifecycle !== "none" ? ["查看最近记录", "activity-date:latest", "primary"] : ["查看连接与同步", "go:DEV-10", "primary"];
+    const summary = hasReading
+      ? `<section class="activity-summary"><span class="activity-summary-icon" aria-hidden="true">${walking}</span><p>已同步步数</p><div class="activity-step-count" aria-label="已同步4862步"><strong>4,862</strong><span>步</span></div>${activitySyncControls(true, date)}</section><section class="activity-calories"><span class="activity-calorie-icon">${flame}</span><span><strong>活动消耗</strong><small>戒指估算</small></span><span class="activity-calorie-value"><b>284</b><small>千卡</small></span></section>${limited ? '<p class="activity-partial">目前只有已同步片段，不代表全天活动。</p>' : ""}`
+      : `<section class="sleep-empty"><span class="sleep-empty-icon" aria-hidden="true">${walking}</span><h2>${missingTitle}</h2><p>${missingText}</p></section>${active ? activitySyncControls(false, date) : ""}${buttons([next])}`;
+    const source = hasReading ? `来自 Halo Ring · ${esc(healthDateLabel(date))}<br>更新于 ${esc(activityUpdatedLabel(date))}` : !active ? "连接戒指后，这里会显示活动记录。" : "这一天还没有可用的活动记录。";
+    return `<article class="activity-detail ${hasReading ? "" : "health-dated-empty"}">${healthDetailDateHeader("活动", date, "activity")}${summary}<div class="sleep-disclosures activity-disclosures">${activityRecordDisclosure()}<button type="button" class="activity-energy-link" data-action="activity-open-energy"><span>身体能量<small>${date === beijingDateKey() ? "看看今天的身体状态" : "看看这一天的身体状态"}</small></span>${healthChevron()}</button><details class="activity-source" data-activity-section="source"><summary>数据来源与说明${healthChevron()}</summary><div><p>${source}</p><p>尚未同步的活动可能未计入，未佩戴时也可能少记。</p><p>步数不能反映所有类型的活动，活动消耗为估算值，仅作日常参考。</p>${buttons([["查看连接与同步", active ? "go:DEV-10" : "go:DEV-01", "text-button"]])}</div></details></div><p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
+  let disposeHeartTrend = () => {};
+  function heartRecordDate() { return state.healthDetailContext?.route === "HLT-01" ? state.healthDetailContext.date : beijingDateKey(); }
+  function heartDataModel(date = heartRecordDate()) { return window.HALO_HEART_TREND.model({ date, recordDate: state.healthDemoRecordDate, stage: state.dataLifecycle, active: isHardwareActive() }); }
+  function heartReturnContext() { return { route: "HLT-01", date: heartRecordDate(), view: { ...state.pageViews["HLT-01"] }, trendSelection: state.heartTrendSelection ? { ...state.heartTrendSelection } : null }; }
+  function selectHeartDate(date) {
+    if (!validHealthDate(date) || state.current !== "HLT-01") return;
+    state.healthSelectedDate = date;
+    state.healthDetailContext = { date, metric: "heart", route: "HLT-01" };
+    render(); screen.scrollTop = 0; capturePageView(); persistAppProgress();
+  }
+  function heartDetailPage() {
+    const date = heartRecordDate();
+    const active = isHardwareActive();
+    const dated = date === state.healthDemoRecordDate;
+    const model = heartDataModel(date);
+    const hasReading = Boolean(model.latest);
+    const partial = hasReading && model.partial;
+    const reading = { latest: model.latest?.value, measuredAt: model.latest?.time, dayResting: model.resting.day, nightResting: model.resting.night };
+    const emptyAction = !active ? ["连接 Halo Ring", "go:DEV-01", "primary"] : !dated && state.dataLifecycle !== "none" ? ["查看最近记录", "heart-date:latest", "primary"] : ["查看连接与同步", "go:DEV-10", "primary"];
+    const summary = hasReading
+      ? `<section class="heart-summary"><span class="heart-summary-icon" aria-hidden="true">${domainIcon("heart")}</span><p>最近一次</p><div class="heart-reading"><strong>${reading.latest}</strong><span>次/分</span></div><p class="heart-measured-at"><time datetime="${date}T${reading.measuredAt}:00+08:00">${reading.measuredAt} 采集</time><span>非实时读数</span></p><button type="button" class="heart-sync-link" data-action="go:DEV-10">查看连接与同步 ${healthChevron()}</button></section>${window.HALO_HEART_TREND.render(model)}${partial ? '<p class="heart-partial">已保留这一条读数，其他时段的记录还不完整。</p>' : `<section class="heart-resting" aria-labelledby="heart-resting-title"><h2 id="heart-resting-title">静息摘要</h2><div><span><span>日间静息</span><strong>${reading.dayResting === null ? "—" : reading.dayResting}<small>次/分</small></strong></span><span><span>夜间静息</span><strong>${reading.nightResting === null ? "—" : reading.nightResting}<small>次/分</small></strong></span></div></section>`}`
+      : `<section class="sleep-empty"><span class="sleep-empty-icon" aria-hidden="true">${domainIcon("heart")}</span><h2>${!active ? "连接戒指，开始记录心率" : "这一天还没有心率记录"}</h2><p>${!active ? "已有的感受记录仍可查看和补充。" : "可以换个日期看看，或查看戒指的同步情况。"}</p></section>${buttons([emptyAction])}`;
+    const hasDraft = Boolean(state.recordDraft.labels.length || state.recordDraft.note.trim());
+    const recordLabel = hasDraft ? state.recordDraft.reportMonth ? "继续月度回顾草稿" : "继续未保存的记录" : "记下此刻感受";
+    const records = state.subjectiveRecords.filter(record => record.category !== "rhythm").slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+    const source = hasReading ? `演示记录 · Halo Ring · ${esc(healthDateLabel(date))}<br>最近一次采集于 ${reading.measuredAt}。${partial ? "当前只有部分记录。" : "单次读数与静息摘要分开显示。"}` : "所选日期暂无可用心率读数，不显示数值或趋势。";
+    return `<article class="heart-detail${hasReading ? "" : " health-dated-empty"}">${healthDetailDateHeader("心率", date, "heart")}${summary}<section class="heart-journal"><button type="button" class="heart-record-entry" data-action="record-new"><span><strong>${recordLabel}</strong><small>用户记录 · 按保存时间记录</small></span>${healthChevron()}</button><details class="heart-records"><summary><span>我的感受记录<small>${records.length ? `共 ${records.length} 条 · 不限日期` : "还没有保存过记录"}</small></span>${healthChevron()}</summary><div class="energy-user-records">${records.slice(0, 3).map(record => `<button type="button" data-action="record-detail:${esc(record.id)}"><span>${esc(record.label)}<small>${esc(record.occurredAt ? recordDateTime(record.occurredAt) : "未记录时间")} · 用户记录</small></span>${healthChevron()}</button>`).join("") || '<p>想记的时候，点上方“记下此刻感受”。</p>'}${records.length > 3 ? buttons([["查看全部记录", "bw-records", "text-button"]]) : ""}${state.recordEditDraft ? buttons([["继续上次未保存的修改", `record-edit:${state.recordEditDraft.id}`, "text-button"]]) : ""}</div></details></section><div class="sleep-disclosures heart-disclosures"><details><summary>数据来源与说明${healthChevron()}</summary><div><p>${source}</p>${hasReading ? '<p>图中的空白处表示没有记录，不是心率为零。</p>' : ""}<p>同步时间与采集时间可能不同，请留意读数旁的时间。</p>${buttons([[active ? "查看连接与同步" : "连接 Halo Ring", active ? "go:DEV-10" : "go:DEV-01", "text-button"]])}</div></details></div><p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
+  let disposeRespirationTrend = () => {};
+  function respirationRecordDate() { return state.healthDetailContext?.route === "HLT-02" ? state.healthDetailContext.date : beijingDateKey(); }
+  function respirationDataModel(date = respirationRecordDate()) {
+    const end = state.respirationWindowEnd;
+    const windowEnd = validHealthDate(end) && date <= end && date >= window.HALO_RESPIRATION_TREND.shiftDate(end, -6) ? end : date;
+    return window.HALO_RESPIRATION_TREND.model({ date, windowEnd, recordDate: state.healthDemoRecordDate, stage: state.dataLifecycle, active: isHardwareActive() });
+  }
+  function respirationReturnContext() { return { route: "HLT-02", date: respirationRecordDate(), windowEnd: respirationDataModel().windowEnd, view: { ...state.pageViews["HLT-02"] } }; }
+  function selectRespirationDate(date, keepWindow = false) {
+    if (!validHealthDate(date) || state.current !== "HLT-02") return;
+    capturePageView();
+    state.respirationWindowEnd = keepWindow ? respirationDataModel().windowEnd : date;
+    state.healthSelectedDate = date;
+    state.healthDetailContext = { date, metric: "breath", route: "HLT-02" };
+    render();
+    if (!keepWindow) screen.scrollTop = 0;
+    capturePageView(); persistAppProgress();
+  }
+  function respirationDetailPage() {
+    const date = respirationRecordDate();
+    const active = isHardwareActive();
+    const model = respirationDataModel();
+    const value = model.selected.value;
+    const hasReading = Number.isFinite(value);
+    const limited = active && date === state.healthDemoRecordDate && state.dataLifecycle === "limited";
+    const shortDate = day => `${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`;
+    const nightLabel = `${shortDate(window.HALO_RESPIRATION_TREND.shiftDate(date, -1))}晚—${shortDate(date)}晨`;
+    const action = !active ? ["连接 Halo Ring", "go:DEV-01", "primary"] : limited || !model.latest ? ["查看连接与同步", "go:DEV-10", "secondary"] : ["查看最近记录", "respiration-date:latest", "secondary"];
+    const summary = hasReading
+      ? `<section class="respiration-summary heart-summary"><span class="heart-summary-icon" aria-hidden="true">${domainIcon("breath")}</span><p>夜间平均</p><div class="heart-reading" id="respiration-reading"><strong>${value.toFixed(1)}</strong><span>次/分</span></div><p class="respiration-night">${nightLabel}</p><button type="button" class="heart-sync-link" data-action="go:DEV-10">查看连接与同步 ${healthChevron()}</button></section>`
+      : `<section class="respiration-empty${model.hasAny ? " has-history" : ""}"><span class="heart-summary-icon" aria-hidden="true">${domainIcon("breath")}</span><h2>${!active ? "连接戒指，开始记录" : limited ? "这一晚的记录不完整" : "这一晚暂无呼吸率记录"}</h2><p>${!active ? "戴着戒指睡一晚，醒来后打开 App 同步。" : limited ? "暂不估算整晚平均值。可以查看同步情况。" : "可以换一晚看看，已有记录仍然保留。"}</p>${buttons([action])}</section>`;
+    const hasDraft = Boolean(state.recordDraft.labels.length || state.recordDraft.note.trim());
+    const recordLabel = hasDraft ? state.recordDraft.reportMonth ? "继续月度回顾草稿" : "继续未保存的记录" : "记下此刻感受";
+    const records = state.subjectiveRecords.filter(record => record.category !== "rhythm").slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+    return `<article class="respiration-detail">${healthDetailDateHeader("夜间呼吸率", date, "respiration")}${date !== beijingDateKey() ? '<button type="button" class="respiration-today" data-action="respiration-date:today">回到今天</button>' : ""}${summary}${window.HALO_RESPIRATION_TREND.render(model)}${active ? `<button type="button" class="respiration-sleep-link heart-record-entry" data-action="respiration-open-sleep"><span><strong>查看这一晚的睡眠</strong><small>${nightLabel}</small></span>${healthChevron()}</button>` : ""}<div class="sleep-disclosures respiration-disclosures"><details><summary>如何理解呼吸率${healthChevron()}</summary><div><p>夜间呼吸率，是你睡着时平均每分钟呼吸的次数。</p><p>重点看自己连续几晚的变化，单晚数字不能用来判断是否健康。更高或更低，都不直接等于更健康。</p></div></details></div><section class="heart-journal respiration-journal"><button type="button" class="heart-record-entry" data-action="record-new"><span><strong>${recordLabel}</strong><small>用户记录 · 按保存时间记录</small></span>${healthChevron()}</button><details class="heart-records"><summary><span>我的感受记录<small>${records.length ? `共 ${records.length} 条 · 不限日期` : "还没有保存过记录"}</small></span>${healthChevron()}</summary><div class="energy-user-records">${records.slice(0, 3).map(record => `<button type="button" data-action="record-detail:${esc(record.id)}"><span>${esc(record.label)}<small>${esc(record.occurredAt ? recordDateTime(record.occurredAt) : "未记录时间")} · 用户记录</small></span>${healthChevron()}</button>`).join("") || '<p>想记的时候，点上方“记下此刻感受”。</p>'}${records.length > 3 ? buttons([["查看全部记录", "bw-records", "text-button"]]) : ""}${state.recordEditDraft ? buttons([["继续上次未保存的修改", `record-edit:${state.recordEditDraft.id}`, "text-button"]]) : ""}</div></details></section><div class="sleep-disclosures respiration-disclosures"><details><summary>数据来源与说明${healthChevron()}</summary><div><p>${hasReading ? `${esc(healthDateLabel(date))}醒来的这一晚 · Halo Ring · 示例数据` : "所选夜晚没有可用的整晚平均值。"}</p><p>按醒来日期查看。每个点代表一晚的平均值，空白表示没有有效记录，不是呼吸率为零。</p><p>示例数值仅用于体验交互，不代表你的实际测量结果。个人范围尚未建立时，仍可查看已有读数。</p>${buttons([[active ? "查看连接与同步" : "连接 Halo Ring", active ? "go:DEV-10" : "go:DEV-01", "text-button"]])}</div></details></div><p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
+  let disposeOxygenTrend = () => {};
+  let disposeOxygenDay = () => {};
+  let disposeTemperatureTrend = () => {};
+  const TEMPERATURE_SCENARIOS = ["supported", "baseline", "quality", "unknown", "unsupported"];
+  function temperatureRecordDate() { return state.healthDetailContext?.route === "HLT-06" && validHealthDate(state.healthDetailContext.date) ? state.healthDetailContext.date : beijingDateKey(); }
+  function temperatureAllowed() { return state.signedIn && state.authVerified && state.healthDeletionStatus === "ready" && state.accountDeletionStatus === "ready"; }
+  function temperatureDataModel(date = temperatureRecordDate()) {
+    const end = state.temperatureWindowEnd;
+    const windowEnd = validHealthDate(end) && date <= end && date >= window.HALO_TEMPERATURE_TREND.shiftDate(end, -6) ? end : date;
+    const data = window.HALO_TEMPERATURE_TREND.model({ date, windowEnd, recordDate: state.healthDemoRecordDate, active: isHardwareActive(), hasRecords: temperatureAllowed() && state.dataLifecycle !== "none", scenario: state.temperatureReviewScenario });
+    if (!temperatureAllowed()) data.selected.reason = "privacy";
+    return data;
+  }
+  function temperatureReturnContext() { return { route: "HLT-06", date: temperatureRecordDate(), windowEnd: temperatureDataModel().windowEnd, view: { ...state.pageViews["HLT-06"] } }; }
+  function selectTemperatureDate(date, keepWindow = false) {
+    if (!validHealthDate(date) || state.current !== "HLT-06") return;
+    const refocus = document.activeElement?.id === "temperature-trend-plot";
+    capturePageView();
+    state.temperatureWindowEnd = keepWindow ? temperatureDataModel().windowEnd : date;
+    state.healthSelectedDate = date;
+    state.healthDetailContext = { date, metric: "temperature", route: "HLT-06" };
+    render();
+    if (!keepWindow) screen.scrollTop = 0;
+    if (refocus) screen.querySelector("#temperature-trend-plot")?.focus({ preventScroll: true });
+    capturePageView(); persistAppProgress();
+  }
+  function temperatureDetailPage() {
+    const data = temperatureDataModel(), date = data.date, value = data.selected.value;
+    const ready = Number.isFinite(value), active = isHardwareActive(), allowed = temperatureAllowed();
+    const short = day => `${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`;
+    const night = `${short(window.HALO_TEMPERATURE_TREND.shiftDate(date, -1))}晚—${short(date)}晨`;
+    const empty = {
+      privacy: ["记录暂不可查看", "请先查看数据处理状态。", "查看数据与隐私", "go:SET-01"],
+      unbound: ["连接戒指，开始记录", "连接后，可查看这款戒指支持的数据类型。", "连接 Halo Ring", "go:DEV-01"],
+      unknown: ["皮肤温度功能待确认", "暂时无法确认这款戒指是否支持皮肤温度记录。", "查看设备信息", "go:DEV-11"],
+      unsupported: ["当前戒指不支持皮肤温度", "其他已支持的功能不受影响。", "查看设备信息", "go:DEV-11"],
+      baseline: ["正在了解你的平时温度", "已有皮肤温度记录，个人基线建立后再显示相对变化。", "了解个人基线", "temperature-baseline"],
+      quality: ["这一晚的记录不完整", "暂不估算整晚变化。已有的历史记录仍可查看。", "查看连接与同步", "go:DEV-10"],
+    }[data.selected.reason] || ["这一晚暂无温度记录", "可以换一晚看看，或查看连接与同步情况。", data.latest ? "查看最近记录" : "查看连接与同步", data.latest ? "temperature-date:latest" : "go:DEV-10"];
+    const summary = ready ? `<section class="temperature-summary heart-summary"><p>夜间皮肤温度 · 相对平时</p><div class="heart-reading"><strong>${window.HALO_TEMPERATURE_TREND.formatValue(value)}</strong><span>°C</span></div><p>${value === 0 ? "与自己的平时水平一致" : value > 0 ? "高于自己的平时水平" : "低于自己的平时水平"}</p><p class="temperature-night">${night}</p><small class="temperature-demo">示例数据 · 不是体温计读数</small></section>` : `<section class="temperature-empty"><h2>${empty[0]}</h2><p>${empty[1]}</p>${buttons([[empty[2], empty[3], "secondary"]])}</section>`;
+    const draft = Boolean(state.recordDraft.labels.length || state.recordDraft.note.trim());
+    const records = state.subjectiveRecords.filter(record => record.category !== "rhythm").slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+    return `<article class="temperature-detail">${healthDetailDateHeader("皮肤温度", date, "temperature")}${date !== beijingDateKey() ? '<button type="button" class="oxygen-today" data-action="temperature-date:today">回到今天</button>' : ""}${summary}${window.HALO_TEMPERATURE_TREND.render(data)}${active && allowed ? `<button type="button" class="heart-record-entry temperature-sleep-link" data-action="temperature-open-sleep"><span><strong>查看这一晚的睡眠</strong><small>${night}</small></span>${healthChevron()}</button>` : ""}<div class="sleep-disclosures"><details><summary>这个数值怎么看${healthChevron()}</summary><div><p>这里显示的是皮肤温度相对你平时水平的变化，不是身体的实际体温。</p><p>正数表示比平时高，负数表示比平时低；0 表示接近平时，不是体温为零。高或低都不直接代表生病。</p><p>睡眠环境、佩戴情况和身体状态都可能影响皮肤温度。看连续几晚的变化，比只看一个数字更有意义。</p></div></details><button type="button" class="oxygen-safety-link" data-action="temperature-help"><span>感觉发热或不舒服？</span>${healthChevron()}</button></div>${allowed ? `<section class="heart-journal"><button type="button" class="heart-record-entry" data-action="record-new"><span><strong>${draft ? "继续未保存的记录" : "记下此刻感受"}</strong><small>用户记录 · 按保存时间记录</small></span>${healthChevron()}</button><details class="heart-records"><summary><span>我的感受记录<small>${records.length ? `共 ${records.length} 条 · 不限日期` : "还没有保存过记录"}</small></span>${healthChevron()}</summary><div class="energy-user-records">${records.slice(0, 3).map(record => `<button type="button" data-action="record-detail:${esc(record.id)}"><span>${esc(record.label)}<small>${esc(record.occurredAt ? recordDateTime(record.occurredAt) : "未记录时间")} · 用户记录</small></span>${healthChevron()}</button>`).join("") || "<p>想记的时候，点上方“记下此刻感受”。</p>"}${records.length > 3 ? buttons([["查看全部记录", "bw-records", "text-button"]]) : ""}${state.recordEditDraft ? buttons([["继续上次未保存的修改", `record-edit:${state.recordEditDraft.id}`, "text-button"]]) : ""}</div></details></section>` : ""}<div class="sleep-disclosures"><details><summary>数据来源与说明${healthChevron()}</summary><div><p>${esc(healthDateLabel(date))}醒来的这一晚 · Halo Ring · 示例数据</p><p>图中 0 线代表个人基线，不是正常体温线。每个点是一晚的相对变化，缺失留空，不按零计算。</p><p>皮肤温度的个人基线与 Body Weather 的建立进度分开判断。基线未建立时，不提前显示相对变化。</p><p>本页示例未接入真实设备，不用于判断发热、排卵或激素水平。</p>${buttons([[allowed ? active ? "查看连接与同步" : "连接 Halo Ring" : "查看数据与隐私", allowed ? active ? "go:DEV-10" : "go:DEV-01" : "go:SET-01", "text-button"]])}</div></details></div><p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
+  function temperatureReviewControls() {
+    return `<section class="oxygen-review-controls"><h3>皮肤温度审阅示例</h3><small>仅切换演示，不确认量产能力。温度个人基线独立于 Body Weather；默认功能待确认。</small><div class="review-control-group"><div>${[["supported", "相对变化可用"], ["baseline", "温度基线建立中"], ["quality", "当晚记录不足"], ["unknown", "功能待确认"], ["unsupported", "设备不支持"]].map(([key, label]) => `<button type="button" data-action="temperature-review:${key}" class="${state.temperatureReviewScenario === key ? "active" : ""}">${label}</button>`).join("")}</div></div></section>`;
+  }
+  const OXYGEN_SCENARIOS = ["supported", "unknown", "unsupported", "off", "quality"];
+  function oxygenRecordDate() { return state.healthDetailContext?.route === "HLT-05" ? state.healthDetailContext.date : beijingDateKey(); }
+  function oxygenDataModel(date = oxygenRecordDate()) {
+    const end = state.oxygenWindowEnd;
+    const windowEnd = validHealthDate(end) && date <= end && date >= window.HALO_OXYGEN_TREND.shiftDate(end, -6) ? end : date;
+    return window.HALO_OXYGEN_TREND.model({ date, windowEnd, recordDate: state.healthDemoRecordDate, stage: state.dataLifecycle, active: isHardwareActive(), scenario: OXYGEN_SCENARIOS.includes(state.oxygenReviewScenario) ? state.oxygenReviewScenario : "unknown" });
+  }
+  function oxygenReturnContext() { return { route: "HLT-05", date: oxygenRecordDate(), windowEnd: oxygenDataModel().windowEnd, mode: state.oxygenMode, daySelection: state.oxygenDaySelection, view: { ...state.pageViews["HLT-05"] } }; }
+  function oxygenDayModel(date = oxygenRecordDate()) {
+    return window.HALO_OXYGEN_DAY.model({ date, recordDate: state.healthDemoRecordDate, stage: state.dataLifecycle, active: isHardwareActive(), scenario: state.oxygenReviewScenario, manualRecords: oxygenMeasurement?.records() || [], selection: state.oxygenDaySelection });
+  }
+  function oxygenModeControls() {
+    return `<div class="oxygen-modes" role="group" aria-label="血氧记录类型">${[["day", "当日记录"], ["night", "睡眠血氧"]].map(([mode, label]) => `<button type="button" data-action="oxygen-mode:${mode}" aria-pressed="${state.oxygenMode === mode}">${label}</button>`).join("")}</div>`;
+  }
+  function oxygenMeasurementEntry() {
+    const request = oxygenMeasurement?.request();
+    const resumable = request && request.status !== "complete";
+    const unavailable = resumable ? "" : oxygenMeasurementUnavailable();
+    return `<section class="oxygen-measure-entry">${buttons([[resumable ? "继续本次测量" : "测一次血氧", resumable ? "go:HLT-04" : "oxygen-measure:start", "secondary", Boolean(unavailable)]])}${unavailable ? `<p>${esc(unavailable)}</p>` : `<p>${oxygenRecordDate() !== beijingDateKey() ? "测量此刻血氧，结果会记在今天。" : "保持手部安静 · 原型演示"}</p>`}${oxygenMeasurement?.message() ? `<p class="oxygen-measure-error" role="alert">${esc(oxygenMeasurement.message())}</p>` : ""}</section>`;
+  }
+  function oxygenDaySummary(data) {
+    const point = data.latest;
+    if (point) return `<section class="oxygen-day-summary heart-summary"><p>当日最近一次 · SpO₂</p><div class="heart-reading" id="oxygen-reading"><strong>${point.value}</strong><span>%</span></div><p class="oxygen-point-time">${point.time} · ${point.kind === "manual" ? "主动测量" : "自动记录"}</p><p class="oxygen-sample-label">示例数据 · 非实时读数</p></section>`;
+    const copy = {
+      unbound: ["先连接 Halo Ring", "连接后，可查看设备支持的数据类型。", "连接 Halo Ring", "go:DEV-01"],
+      unknown: ["血氧功能待确认", "暂时无法确认这款戒指是否支持血氧记录。", "查看设备信息", "go:DEV-11"],
+      unsupported: ["当前戒指不支持血氧记录", "其他已支持的功能不受影响。", "查看设备信息", "go:DEV-11"],
+      off: ["当天没有自动记录", "自动记录未开启，已保存的主动测量仍可查看。", "查看设备信息", "go:DEV-11"],
+      quality: ["当天的自动记录不足", "暂不展示无效读数，已保存的主动测量仍可查看。", "查看连接与同步", "go:DEV-10"],
+    }[data.reason] || ["当天暂无血氧记录", "可以换一天看看，或查看连接与同步情况。", "查看连接与同步", "go:DEV-10"];
+    return `<section class="oxygen-empty"><h2>${copy[0]}</h2><p>${copy[1]}</p>${buttons([[copy[2], copy[3], "secondary"]])}</section>`;
+  }
+  function oxygenDayRecords(data) {
+    if (!data.samples.length) return "";
+    return `<details class="oxygen-record-list"><summary><span>当日全部记录 <small>${data.samples.length} 条</small></span>${healthChevron()}</summary><div>${data.samples.slice().reverse().map(point => `<button type="button" data-action="oxygen-reading:${esc(point.id)}"><span><strong>${point.time}</strong><small>${point.kind === "manual" ? "主动测量" : "自动记录"} · 示例数据</small></span><b>${point.value}%</b>${healthChevron()}</button>`).join("")}</div></details>`;
+  }
+  function oxygenPlotBody(night) {
+    if (state.oxygenMode === "day") {
+      const data = oxygenDayModel();
+      return `${window.HALO_OXYGEN_DAY.render(data)}${oxygenDayRecords(data)}`;
+    }
+    return `${night.scenario === "off" && Number.isFinite(night.selected.value) ? '<p class="oxygen-status-note">睡眠血氧记录未开启，当前查看的是已保存的历史示例。</p>' : ""}${window.HALO_OXYGEN_TREND.render(night)}`;
+  }
+  function returnFromOxygenMeasurement(context, record, push = false) {
+    if (record) {
+      const date = new Date(Date.parse(record.occurredAt) + 8 * 3600000).toISOString().slice(0, 10);
+      restoreHealthDetailReturn({ route: "HLT-05", date, mode: "day", daySelection: { date, id: record.id }, windowEnd: date, view: { top: 0, open: [], oxygenMode: "day" } });
+      return go("HLT-05", push);
+    }
+    if (restoreHealthDetailReturn(context)) return go("HLT-05", false);
+    return go("HLT-03", false);
+  }
+  function selectOxygenDate(date, keepWindow = false) {
+    if (!validHealthDate(date) || state.current !== "HLT-05") return;
+    capturePageView();
+    state.oxygenWindowEnd = keepWindow ? oxygenDataModel().windowEnd : date;
+    state.healthSelectedDate = date;
+    state.healthDetailContext = { date, metric: "oxygen", route: "HLT-05" };
+    render(); if (!keepWindow) screen.scrollTop = 0; capturePageView(); persistAppProgress();
+  }
+  function oxygenEmptyCopy(model) {
+    const copies = {
+      unbound: ["先连接 Halo Ring", "连接后，可查看设备支持的数据类型。", "连接 Halo Ring", "go:DEV-01"],
+      unknown: ["血氧功能待确认", "暂时无法确认这款戒指是否支持血氧记录。", "查看设备信息", "go:DEV-11"],
+      unsupported: ["当前戒指不支持血氧记录", "其他已支持的功能不受影响。", "查看设备信息", "go:DEV-11"],
+      off: ["夜间血氧记录未开启", "已有历史记录仍可查看。可前往设备信息了解当前支持情况。", "查看设备信息", "go:DEV-11"],
+      quality: ["这一晚的记录不足", "暂不汇总整晚平均值，其他夜晚的有效记录仍可查看。", "查看连接与同步", "go:DEV-10"],
+    };
+    return copies[model.selected.reason] || ["这一晚暂无血氧记录", "可以换一晚看看，或查看同步情况。", model.latest ? "查看最近记录" : "查看连接与同步", model.latest ? "oxygen-date:latest" : "go:DEV-10"];
+  }
+  function oxygenReviewControls(item) {
+    if (item.id !== "HLT-05") return "";
+    const options = [["supported", "可用示例"], ["unknown", "能力待确认"], ["unsupported", "不支持"], ["off", "自动记录关闭"], ["quality", "当天自动记录不足"]];
+    return `<section class="review-controls"><p>OXYGEN REVIEW</p><h3>血氧演示场景</h3><small>只切换原型示例，不写入硬件能力或采集设置；未选择示例时默认待确认。自动记录关闭/质量不足保留历史及已保存主动结果；可用示例假定自动和主动均支持，不代表量产能力。</small><div class="review-control-group"><div>${options.map(([value, label]) => `<button type="button" data-action="oxygen-review:${value}" class="${state.oxygenReviewScenario === value ? "active" : ""}">${label}</button>`).join("")}</div></div></section>`;
+  }
+  function oxygenDetailPage() {
+    const date = oxygenRecordDate(), active = isHardwareActive(), model = oxygenDataModel();
+    const hasReading = Number.isFinite(model.selected.value);
+    const shortDate = day => `${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`;
+    const nightLabel = `${shortDate(window.HALO_OXYGEN_TREND.shiftDate(date, -1))}晚—${shortDate(date)}晨`;
+    const [emptyTitle, emptyBody, actionLabel, action] = oxygenEmptyCopy(model);
+    const summary = state.oxygenMode === "day" ? oxygenDaySummary(oxygenDayModel()) : hasReading ? `<section class="oxygen-summary heart-summary"><p>夜间平均 · SpO₂</p><div class="heart-reading" id="oxygen-reading"><strong>${model.selected.value}</strong><span>%</span></div><p class="oxygen-night">${nightLabel}</p><p class="oxygen-sample-label">示例数据 · 非实时读数</p></section>` : `<section class="oxygen-empty${model.hasAny ? " has-history" : ""}"><h2>${emptyTitle}</h2><p>${emptyBody}</p>${buttons([[actionLabel, action, "secondary"]])}</section>`;
+    const hasDraft = Boolean(state.recordDraft.labels.length || state.recordDraft.note.trim());
+    const recordLabel = hasDraft ? state.recordDraft.reportMonth ? "继续月度回顾草稿" : "继续未保存的记录" : "记下此刻感受";
+    const records = state.subjectiveRecords.filter(record => record.category !== "rhythm").slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+    return `<article class="oxygen-detail" data-oxygen-mode="${state.oxygenMode}">${healthDetailDateHeader("血氧", date, "oxygen")}${date !== beijingDateKey() ? '<button type="button" class="oxygen-today" data-action="oxygen-date:today">回到今天</button>' : ""}${oxygenModeControls()}<div class="oxygen-summary-layout${state.oxygenMode === "day" && oxygenDayModel().latest ? " has-reading" : ""}">${summary}${oxygenMeasurementEntry()}</div>${oxygenPlotBody(model)}<button type="button" class="oxygen-safety-link" data-action="oxygen-help"><span>读数或身体感觉不对时</span>${healthChevron()}</button>${active && state.oxygenMode === "night" ? `<section class="oxygen-related"><button type="button" class="heart-record-entry" data-action="oxygen-open-sleep"><span><strong>这一晚的睡眠</strong><small>${nightLabel}</small></span>${healthChevron()}</button><button type="button" class="heart-record-entry" data-action="oxygen-open-respiration"><span><strong>这一晚的呼吸率</strong><small>每分钟呼吸次数，与血氧不同</small></span>${healthChevron()}</button></section>` : ""}<div class="sleep-disclosures oxygen-disclosures"><details><summary>如何理解血氧${healthChevron()}</summary><div><p>血氧饱和度（SpO₂）是血液携氧情况的一个指标，用百分比表示。</p><p>白天和睡眠时都可以有血氧记录。读数旁的时间说明它是什么时候测得的，不代表此刻的血氧。单次读数与睡眠期间的平均值分开看。</p><p>佩戴松紧、手部活动、皮肤温度和肤色等都可能影响光学测量。不要只凭一个数字判断身体状况。</p></div></details></div><section class="heart-journal oxygen-journal"><button type="button" class="heart-record-entry" data-action="record-new"><span><strong>${recordLabel}</strong><small>用户记录 · 按保存时间记录</small></span>${healthChevron()}</button><details class="heart-records"><summary><span>我的感受记录<small>${records.length ? `共 ${records.length} 条 · 不限日期` : "还没有保存过记录"}</small></span>${healthChevron()}</summary><div class="energy-user-records">${records.slice(0, 3).map(record => `<button type="button" data-action="record-detail:${esc(record.id)}"><span>${esc(record.label)}<small>${esc(record.occurredAt ? recordDateTime(record.occurredAt) : "未记录时间")} · 用户记录</small></span>${healthChevron()}</button>`).join("") || '<p>想记的时候，点上方“记下此刻感受”。</p>'}${records.length > 3 ? buttons([["查看全部记录", "bw-records", "text-button"]]) : ""}${state.recordEditDraft ? buttons([["继续上次未保存的修改", `record-edit:${state.recordEditDraft.id}`, "text-button"]]) : ""}</div></details></section><div class="sleep-disclosures oxygen-disclosures"><details><summary>数据来源与说明${healthChevron()}</summary><div><p>${state.oxygenMode === "day" ? `${esc(healthDateLabel(date))} · 按采集时间查看` : `${esc(healthDateLabel(date))}醒来的这一晚 · 睡眠平均`}</p><p>当日记录区分自动记录和主动测量，按北京时间归档。睡眠血氧按醒来日期查看；主动测量不计入睡眠平均。缺失或质量不足的记录留空，不按零计算。</p><p>示例仅用于体验交互，不代表你的实际测量结果。是否提供血氧记录，以设备确认支持的功能为准。</p>${buttons([[active ? "查看连接与同步" : "连接 Halo Ring", active ? "go:DEV-10" : "go:DEV-01", "text-button"], ...(active ? [["查看设备信息", "go:DEV-11", "text-button"]] : [])])}</div></details></div><p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。明显不适时不要等待下一次记录。</p></article>`;
+  }
+  // Metrics use dated fixtures; respiration and oxygen own explicitly dated nightly series.
+  const HEALTH_OVERVIEW_ITEMS = [
+    { key: "sleep", title: "睡眠", route: "TOD-05", icon: "sleep", detail: "昨晚", value: "6小时42分" },
+    { key: "energy", title: "身体能量", route: "TOD-06", icon: "body", detail: "今日状态", value: "接近平时" },
+    { key: "activity", title: "活动", route: "TOD-07", icon: "activity", detail: "今日步数", value: "4,862", unit: "步" },
+    { key: "heart", title: "心率", route: "HLT-01", icon: "heart", detail: "最近一次 · 08:38", value: "72", unit: "次/分" },
+    { key: "hrv", title: "HRV", route: "TOD-06", icon: "energy", detail: "夜间估算", value: "42", unit: "ms" },
+    { key: "breath", title: "呼吸率", route: "HLT-02", icon: "breath", detail: "夜间平均", value: "15.2", unit: "次/分" },
+    { key: "oxygen", title: "血氧", route: "HLT-05", icon: "oxygen", detail: "夜间平均", value: "98", unit: "%" },
+    { key: "temperature", title: "皮肤温度", route: "HLT-06", icon: "temperature", detail: "相对平时", value: "+0.2", unit: "°C" },
+  ];
+  function validHealthDate(value) {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value < "1900-01-01" || value > beijingDateKey()) return false;
+    const parsed = new Date(`${value}T12:00:00Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }
+  function healthDateLabel(date = state.healthSelectedDate) {
+    const text = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric" }).format(new Date(`${date}T12:00:00+08:00`));
+    return `${date === beijingDateKey() ? "今天 · " : date.slice(0, 4) !== beijingDateKey().slice(0, 4) ? `${date.slice(0, 4)}年` : ""}${text}`;
+  }
+  function healthOverviewReading(item, date = state.healthSelectedDate) {
+    if (date !== beijingDateKey()) item = { ...item, detail: item.detail.replace("今日", "当日").replace("昨晚", "前一晚") };
+    const empty = (detail, value = "—") => ({ ...item, detail, value, unit: "", empty: true });
+    if (item.key === "temperature") {
+      const data = temperatureDataModel(date), value = data.selected.value;
+      return Number.isFinite(value) ? { ...item, value: window.HALO_TEMPERATURE_TREND.formatValue(value), detail: "夜间相对平时 · 示例数据" } : empty({ baseline: "个人温度基线建立中", quality: "这一晚记录不完整", unknown: "功能待确认", unsupported: "当前戒指不支持", unbound: "连接后开始记录", privacy: "数据处理中" }[data.selected.reason] || "暂无记录");
+    }
+    if (!isHardwareActive()) return empty(state.membershipHardwareState === "unbound-retained" ? "等待重新连接" : "连接后开始记录");
+    if (item.key === "oxygen") {
+      const model = oxygenDayModel(date);
+      return model.latest ? { ...item, value: String(model.latest.value), detail: `最近一次 · ${model.latest.time} · ${model.latest.kind === "manual" ? "主动测量" : "自动记录"}` } : empty({ unknown: "功能待确认", unsupported: "当前设备不支持", off: "自动记录未开启", quality: "当天自动记录不足" }[model.reason] || "暂无记录");
+    }
+    if (item.key === "breath") {
+      const reading = respirationDataModel(date).selected;
+      return Number.isFinite(reading.value) ? { ...item, value: reading.value.toFixed(1), detail: "夜间平均 · 示例数据" } : empty(date === state.healthDemoRecordDate && state.dataLifecycle === "limited" ? "夜间记录有缺口" : "暂无记录");
+    }
+    if (date !== state.healthDemoRecordDate || state.dataLifecycle === "none") return empty("暂无记录");
+    if (item.key === "heart") {
+      const latest = heartDataModel(date).latest;
+      return latest ? { ...item, value: String(latest.value), detail: `最近一次 · ${latest.time}` } : empty("暂无记录");
+    }
+    if (state.dataLifecycle === "limited" && !["heart", "activity"].includes(item.key)) return empty(item.key === "energy" ? "暂不判断身体状态" : "夜间记录有缺口", "记录不完整");
+    if (state.dataLifecycle !== "interpretable") {
+      if (item.key === "energy") return empty("个人范围尚未建立", "积累中");
+      if (item.key === "temperature") return empty("等待建立个人范围", "已有记录");
+      return { ...item, detail: state.dataLifecycle === "limited" ? "已同步片段" : item.key === "hrv" ? "夜间估算 · 暂不比较" : item.detail };
+    }
+    return item;
+  }
+  function healthChevron(direction = "right") {
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="${direction === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"}"/></svg>`;
+  }
+  function healthOverviewRow(item) {
+    const reading = healthOverviewReading(item);
+    return `<button class="health-overview-row ${reading.empty ? "is-empty" : ""}" data-health-metric="${item.key}" data-action="health-open:${item.key}"><span class="health-overview-icon" aria-hidden="true">${domainIcon(item.icon)}</span><span class="health-overview-label"><strong>${item.title}</strong><small>${esc(reading.detail)}</small></span><span class="health-overview-value ${["sleep", "energy"].includes(item.key) || reading.empty ? "is-text" : ""}">${esc(reading.value)}${reading.unit ? `<small>${esc(reading.unit)}</small>` : ""}</span><span class="health-overview-chevron">${healthChevron()}</span></button>`;
+  }
+  function healthBodyWeatherProgress() {
+    const active = isHardwareActive();
+    const retained = !active && state.membershipHardwareState === "unbound-retained";
+    // Review fixtures follow the existing lifecycle: 7 valid days, not the 14-night report.
+    // An unbound account with no retained count must not be represented as starting over.
+    const days = retained ? null : !active ? 0 : ({ none: 0, accumulating: 3, baseline: 5, interpretable: 7, limited: 7 }[state.dataLifecycle] ?? 0);
+    const complete = days === 7;
+    const label = retained ? "暂停更新" : !active ? "等待连接" : complete ? "已建立" : "建立中";
+    const hint = retained ? "重新连接后，继续积累。" : !active ? "连接戒指后，开始积累 7 天记录。" : state.dataLifecycle === "limited" ? "已建立个人范围，今天的记录待补全。" : complete ? "已完成 7 天记录，可以与平时比较。" : days === 0 ? "从第一晚记录开始。" : `再记录 ${7 - days} 天，就能查看第一版。`;
+    const action = !active ? "go:DEV-01" : complete && state.dataLifecycle !== "limited" ? "go:TOD-03" : "go:DEV-10";
+    const actionLabel = !active ? "连接 Halo Ring" : complete && state.dataLifecycle !== "limited" ? "查看 Body Weather" : "查看连接与同步";
+    const explanation = retained ? "已有记录会保留。重新连接后继续更新，不会因为解绑就把过去的记录清零。" : complete ? "这 7 天的记录帮助 Halo 了解你的平常状态。某一晚记录不完整，不会让建立进度重新开始。" : "戴着戒指照常生活和睡觉，同步后会更新进度。只计算记录完整的天数；少记一天，已有进度也会保留。";
+    return `<details class="health-weather-progress" data-weather-stage="${esc(label)}"><summary><span class="health-weather-heading"><img src="${HALO_SYMBOL}" alt="" width="28" height="34"><span><strong>Body Weather</strong><small>建立进度 · 当前累计</small></span><span class="health-weather-status">${label}</span></span>${days !== null ? `<span class="health-weather-meter" role="progressbar" aria-label="Body Weather 建立进度" aria-valuemin="0" aria-valuemax="7" aria-valuenow="${days}" aria-valuetext="${days} / 7 天，${label}"><span class="health-weather-segments" aria-hidden="true">${Array.from({ length: 7 }, (_, index) => `<i class="${index < days ? "is-complete" : ""}"></i>`).join("")}</span><span class="health-weather-count" aria-hidden="true"><b>${days}</b> / 7 天</span></span>` : ""}<span class="health-weather-hint">${hint}</span><span class="health-weather-disclosure"><span class="when-closed">查看说明</span><span class="when-open">收起说明</span>${healthChevron()}</span></summary><div class="health-weather-explanation"><p>${explanation}</p><p>此处为当前累计进度，不随上方日期切换。14 晚健康报告另行积累。</p><button data-action="${action}">${actionLabel}${healthChevron()}</button></div></details>`;
+  }
+  function healthOverviewPage() {
+    const date = state.healthSelectedDate;
+    const hasDate = date === state.healthDemoRecordDate || Number.isFinite(respirationDataModel(date).selected.value) || Boolean(oxygenDayModel(date).latest);
+    const active = isHardwareActive();
+    const hasRecords = active && hasDate && state.dataLifecycle !== "none";
+    const status = !active ? "尚未连接 Halo Ring" : !hasRecords ? "暂无同步记录" : state.dataLifecycle === "limited" ? "部分记录尚未同步" : `更新于 ${date === beijingDateKey() ? "" : `${healthDateLabel(date)} `}08:44`;
+    const guide = !active ? { title: state.membershipHardwareState === "unbound-retained" ? "连接戒指，继续记录" : "连接戒指，开始记录", body: "睡眠和日常身体记录会在这里显示。", label: "连接 Halo Ring", action: "go:DEV-01" }
+      : !hasDate ? { title: "这一天还没有记录", body: "已保存的其他日期记录不会受影响。", label: state.dataLifecycle === "none" ? "回到今天" : "查看最近记录", action: state.dataLifecycle === "none" ? "health-date:today" : "health-date:latest" }
+      : state.dataLifecycle === "none" ? { title: "等待第一份记录", body: "戴着戒指睡一晚，醒来后打开 App 同步。", label: "查看连接与同步", action: "go:DEV-10" }
+      : state.dataLifecycle === "limited" ? { title: "夜间记录少了一段", body: "已收到的心率和活动仍可查看。", label: "查看连接与同步", action: "go:DEV-10" } : null;
+    const section = (title, items) => `<section class="health-overview-section"><h2>${title}</h2><div class="health-overview-list">${items.map(healthOverviewRow).join("")}</div></section>`;
+    return `<article class="health-overview"><header class="health-overview-header"><button data-action="previous" aria-label="返回">${healthChevron("left")}</button><h1>健康数据</h1><span></span></header><div class="health-date-rail"><button data-action="health-date:previous" aria-label="前一天" ${date <= "1900-01-01" ? "disabled" : ""}>${healthChevron("left")}</button><label class="health-date-picker"><span>${esc(healthDateLabel())}</span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 11h16"/></svg><input id="health-overview-date" type="date" min="1900-01-01" max="${beijingDateKey()}" value="${date}" aria-label="选择健康记录日期"></label><button data-action="health-date:next" aria-label="后一天" ${date >= beijingDateKey() ? "disabled" : ""}>${healthChevron()}</button></div><div class="health-overview-sync" aria-live="polite"><span><i class="${hasRecords ? "has-records" : ""}"></i>${esc(status)}</span><button data-action="health-open:quality">数据说明${healthChevron()}</button></div>${healthBodyWeatherProgress()}${date !== beijingDateKey() ? `<button class="health-return-today" data-action="health-date:today">回到今天</button>` : ""}${guide ? `<section class="health-overview-guide"><strong>${guide.title}</strong><p>${guide.body}</p><button data-action="${guide.action}">${guide.label}${healthChevron()}</button></section>` : ""}${section("主要记录", HEALTH_OVERVIEW_ITEMS.slice(0, 3))}${section("生理指标", HEALTH_OVERVIEW_ITEMS.slice(3))}<section class="health-overview-section"><h2>测量与报告</h2><div class="health-overview-list">${[{ title: "主动测量", detail: "测量与最近结果", icon: "status", action: "go:HLT-03" }, { title: "健康报告", detail: "14晚报告与月度回顾", icon: "report", action: "go:TOD-09" }].map(item => `<button class="health-overview-row health-overview-tool" data-action="${item.action}"><span class="health-overview-icon" aria-hidden="true">${domainIcon(item.icon)}</span><span class="health-overview-label"><strong>${item.title}</strong><small>${item.detail}</small></span><span class="health-overview-chevron">${healthChevron()}</span></button>`).join("")}</div></section><p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+  }
+  function healthDatedEmptyPage(item) {
+    const context = state.healthDetailContext;
+    const bound = isHardwareActive();
+    const title = context.metric === "quality" ? "数据说明" : HEALTH_OVERVIEW_ITEMS.find(entry => entry.key === context.metric)?.title || item.name;
+    return `<article class="health-overview health-dated-empty"><header class="health-overview-header"><button data-action="previous" aria-label="返回">${healthChevron("left")}</button><h1>${esc(title)}</h1><span></span></header><p class="health-dated-label">${esc(healthDateLabel(context.date))}</p><div class="health-empty-symbol" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></div><h2>${bound ? "这一天还没有记录" : "连接戒指后开始记录"}</h2><p>${bound ? "可以换个日期看看，已有记录不会受影响。" : "连接后，可以查看睡眠和日常身体记录。"}</p>${buttons([[bound ? "查看最近记录" : "连接 Halo Ring", bound ? "health-date:latest" : "go:DEV-01", "primary"], ["返回健康数据", "go:HLT-00", "secondary"]])}</article>`;
+  }
   function health(item) {
+    if (item.id === "HLT-00") return healthOverviewPage();
     if (!isHardwareActive()) return unboundHealthDetail(item);
     const map = {
-      "HLT-00": () => { const canInterpret = state.dataLifecycle === "interpretable"; const data = currentDataLifecycle(); const unavailable = `${notice(data.headline, data.summary, state.dataLifecycle === "limited" ? "warm" : "sage")}${lifecycle(state.dataLifecycle, "健康数据进度")}<section class="health-metric-list">${setting("睡眠", "有可用记录后显示", "go:TOD-05", "等待数据")}${setting("心率", "有可用记录后显示", "go:HLT-01", "等待数据")}${setting("活动", "仍可手动记录感受", "go:TOD-02", "暂无趋势")}${setting("主动测量", "需要时可单独测量", "go:HLT-03", "开始")}</section>`; const available = `<section class="health-overview-head"><div><span>今天的数据</span><strong>6 项都已更新</strong></div>${miniSparkline([55,59,57,66,64,70,68], "sage", "最近 7 天有效记录变化")}</section><details class="visual-disclosure"><summary><span class="data-symbol ${esc(state.dataLifecycle)}" aria-hidden="true"><img src="${HALO_SYMBOL}" alt=""></span><div><strong>数据完整，可以查看</strong><small>睡眠与夜间信号已同步</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${lifecycle(state.dataLifecycle, "Body Weather 数据进度")}${quality("Halo Ring", "睡眠与夜间信号可用", "刚刚同步")}</div></details><section class="health-metric-list">${setting("24 小时心率", "看看今天怎么变化", "go:HLT-01", "72")}${setting("夜间呼吸率", "看看最近几晚", "go:HLT-02", "15.2")}${setting("活动与消耗", "今天已经动了多少", "go:TOD-07", "今日")}${setting("主动测量", "心率 / HRV 等", "go:HLT-03", "开始")}${setting("血氧", "昨晚的变化", "go:HLT-05", "98%")}${setting("皮肤温度", "和你的平时比", "go:HLT-06", "+0.2°")}</section>`; return `${head(item, "HEALTH DATA")}<div class="stack">${canInterpret ? available : unavailable}${setting("我的报告", "14 晚报告与月度回顾", "go:TOD-09")}<p class="health-boundary">连续变化比单个数字更有参考价值。本页不替代医疗诊断。</p></div>`; },
-      "HLT-01": () => healthDetail(item, {
-        eyebrow: "24H HEART RATE",
-        statusLabel: "今日心率",
-        conclusion: "今天的心率随活动起落，休息后回到平时范围",
-        summary: "走动时升高，坐下休息后回落。先看一整天的变化，不必盯着某一个数字。",
-        why: "活动时最高 128 次/分，休息后回到 72 次/分；没有看到持续偏离你常见范围的时段。",
-        data: `${metrics([["当前", "72 bpm", "5 分钟前"], ["静息", "61 bpm", "日间"], ["今日范围", "42-128", "次/分"]])}${rows([["夜间平均", "58 次/分"], ["日间静息", "61 次/分"], ["个人常见范围", "56-76 次/分"]])}`,
-        dataTitle: "今天的几个数字",
-        trend: chartCard(`最近 ${state.trendPeriod} 天同一时段`, "和往常差不多"),
-        lifecycleTitle: "心率数据状态",
-        lifecycleOverride: { needed: "完成当天主要清醒时段的有效佩戴，才能形成连续趋势。", next: "继续日常佩戴；运动和静息时段会分开解释。" },
-        source: "Halo Ring",
-        quality: "全天记录完整 91%",
-        updated: "08:42",
-        actionTitle: "现在没有特别要做的事",
-        actionBody: "照常活动即可。如果持续心慌、胸闷或明显不适，请停止活动并及时寻求专业帮助。",
-        actions: [["记录此刻感受", "go:TOD-02", "primary"], ["查看数据质量", "go:TOD-11", "secondary"]],
-      }),
-      "HLT-02": () => healthDetail(item, {
-        eyebrow: "RESPIRATION",
-        statusLabel: "昨夜呼吸",
-        conclusion: "昨晚呼吸率大多在你的常见范围内",
-        summary: "夜间平均 15.2 次/分，短时波动没有持续。单晚数据不能判断睡眠呼吸问题。",
-        why: "有效记录覆盖 6 小时 18 分，大多数时段在 14.4–16.6 次/分之间。",
-        data: metrics([["夜间平均", "15.2", "次/分"], ["夜间范围", "14.4-16.6", "次/分"], ["有效时段", "6h 18m", "覆盖 92%"]]),
-        dataTitle: "昨晚的几个数字",
-        trend: chartCard(`最近 ${state.trendPeriod} 晚呼吸率`, "大多在你的常见范围内"),
-        trendTitle: "和最近几晚比",
-        lifecycleTitle: "夜间呼吸率数据状态",
-        source: "Halo Ring",
-        quality: "昨晚记录完整 92%",
-        updated: "07:22",
-        actionTitle: "继续戴着睡，看看是不是连续变化",
-        actionBody: "鼻塞、饮酒、运动和房间环境都可能让单晚数字变化。连续几晚的趋势更有参考价值。",
-        actions: [["查看睡眠详情", "go:TOD-05", "primary"], ["查看数据质量", "go:TOD-11", "secondary"]],
-      }),
+      "HLT-01": () => heartDetailPage(),
+      "HLT-02": () => respirationDetailPage(),
       "HLT-03": () => renderMeasurementStart(item),
       "HLT-04": () => renderMeasurementResult(item),
-      "HLT-05": () => healthDetail(item, {
-        eyebrow: "BLOOD OXYGEN",
-        statusLabel: "昨夜血氧",
-        conclusion: "昨晚大多数血氧记录和往常接近",
-        summary: "有效记录覆盖 88%。最低的一次是 94%，单个低点不代表整晚状态。",
-        why: "夜间平均 98%，大多数记录没有明显变化；翻身和手部活动较多的时段没有纳入。",
-        data: metrics([["夜间平均", "98%", "有效时段"], ["最低记录", "94%", "单次值"], ["有效覆盖", "88%", "已剔除体动"]]),
-        dataTitle: "昨晚的几个数字",
-        trend: chartCard(`最近 ${state.trendPeriod} 晚血氧`, "多数夜晚变化不大"),
-        trendTitle: "和最近几晚比",
-        lifecycleTitle: "血氧数据状态",
-        source: "Halo Ring · 当前可用",
-        quality: "昨晚记录完整 88%",
-        updated: "07:22",
-        actionTitle: "看连续趋势，别被一个低点吓到",
-        actionBody: "这些记录用于日常观察，不能诊断睡眠呼吸暂停。如果持续不适，请及时寻求专业帮助。",
-        actions: [["查看夜间呼吸", "go:HLT-02", "primary"], ["查看数据质量", "go:TOD-11", "secondary"]],
-      }),
-      "HLT-06": () => healthDetail(item, {
-        eyebrow: "SKIN TEMPERATURE",
-        statusLabel: "昨夜皮肤温度",
-        conclusion: "昨晚皮肤温度和你的平时水平接近",
-        summary: "相对平时高 0.2°C，仍在最近 7 晚的变化范围内。这里显示的不是体温计读数。",
-        why: "昨晚相对变化为 +0.2°C，最近 7 晚在 -0.3°C 到 +0.4°C 之间，没有连续往同一方向变化。",
-        data: metrics([["相对基线", "+0.2°C", "夜间皮肤温度"], ["7 夜范围", "-0.3~+0.4", "相对变化"], ["有效时长", "6h 36m", "覆盖 90%"]]),
-        dataTitle: "昨晚的几个数字",
-        trend: chartCard(`最近 ${state.trendPeriod} 晚皮肤温度`, "仍在你的常见变化范围内", "gold"),
-        trendTitle: "和最近几晚比",
-        lifecycleTitle: "皮肤温度数据状态",
-        source: "Halo Ring · 当前可用",
-        quality: "昨晚记录完整 90%",
-        updated: "07:22",
-        actionTitle: "今天不需要因为这个数字改变安排",
-        actionBody: "房间温度和佩戴松紧都会影响皮肤温度。身体不舒服时，请以体温计和专业意见为准。",
-        actions: [["记录此刻感受", "go:TOD-02", "primary"], ["查看数据质量", "go:TOD-11", "secondary"]],
-      }),
+      "HLT-05": () => oxygenDetailPage(),
+      "HLT-06": () => temperatureDetailPage(),
     };
     return map[item.id]?.() || generic(item);
   }
 
+  const nightPlaylist = window.createHaloNightPlaylist({ state, active: isHardwareActive, content: currentNightContent });
+  const nightWake = window.createHaloNightWake({ state, active: isHardwareActive, screen, esc, go, render, write: writeNotificationProgress, track: trackPrototypeEvent });
+  const nightSound = window.createHaloNightSound({ state, active: isHardwareActive, screen, esc, go, render, write: writeNotificationProgress });
+  const nightMorning = window.createHaloNightMorning({ state, active: isHardwareActive, esc, symbol: HALO_SYMBOL_IVORY, closedReceipt: nightWake.closedReceipt, pendingSnooze: nightWake.pendingSnooze });
+  const nightHistoryPage = window.createHaloNightHistory({ state, playlist: nightPlaylist, screen, esc, render, go, write: writeNotificationProgress, pendingArchive: () => finishNightSession.failedKey === nightCompletionKey() && nightSessionDue() });
+  const nightSupport = window.createHaloNightSupport({ state, active: isHardwareActive, playlist: nightPlaylist, esc, pendingSnooze: nightWake.pendingSnooze, go, capture: capturePageView, persist: persistAppProgress });
+  const nightFade = window.createHaloNightFade({ state, active: isHardwareActive, playlist: nightPlaylist, esc, screen, write: writeNotificationProgress, render, go, capture: capturePageView, persist: persistAppProgress });
+  const nightHome = window.createHaloNightCombo({ state, playlist: nightPlaylist, active: isHardwareActive, position: nightPosition, esc, symbol: HALO_SYMBOL_IVORY, icon: domainIcon, chevron: healthChevron, render, go, write: writeNotificationProgress, screen, track: trackPrototypeEvent, finish: () => handleAction("night-end"), supportEntry: nightSupport.entry, pendingSnooze: nightWake.pendingSnooze });
   function night(item) {
+    if (item.id === "NIG-01") return nightHome.body();
+    if (item.id === "NIG-02") return nightHome.detail();
+    if (item.id === "NIG-03") return nightHome.library();
+    if (item.id === "NIG-04") return nightHome.player();
+    if (item.id === "NIG-05") return nightHome.editor();
+    if (item.id === "NIG-06") return nightWake.page();
     if (!isHardwareActive() && ["NIG-01", "NIG-02", "NIG-03", "NIG-05"].includes(item.id)) return unboundNight(item);
-    if (!isHardwareActive() && ["NIG-06", "NIG-07", "NIG-08", "NIG-11", "NIG-12"].includes(item.id)) return `${head(item, "NIGHT SETTINGS")}${notice("先使用公共内容放松一下", "当前未激活硬件，不启用入睡检测或浅睡窗口。播放与历史记录仍可使用。", "sage")}${buttons([["选择公共内容", "go:NIG-01", "primary"]])}`;
+    if (!isHardwareActive() && ["NIG-06", "NIG-07"].includes(item.id)) return `${head(item, "NIGHT SETTINGS")}${notice("先使用公共内容放松一下", "当前未激活硬件，不启用入睡检测或浅睡窗口。播放与历史记录仍可使用。", "sage")}${buttons([["选择公共内容", "go:NIG-01", "primary"]])}`;
     const selected = currentNightContent();
     const wake = state.wakeSettings;
     const wakeLabel = wake.enabled && state.toggles.notification ? `最晚 ${wake.time} · ${wake.sound}` : wake.enabled ? "通知已关闭，请检查唤醒权限" : "已关闭";
@@ -1691,18 +4047,12 @@
     const position = nightPosition();
     const playerContent = playing ? { duration: playing.duration } : selected;
     const content = {
-      "NIG-01": () => `${head(item, "TONIGHT", '<button class="head-action" data-action="go:NIG-10" aria-label="播放历史">⌁</button>')}<div class="night-hero visual-night-hero"><div class="night-orbit"><span class="night-symbol-track" aria-hidden="true"></span><img src="${HALO_SYMBOL_IVORY}" alt=""><strong>CALM · 安静</strong></div><h2>${esc(currentNightCopy().title)}</h2><p>${esc(selected.title)}</p><div class="night-facts"><span><i>${selected.duration}</i>分钟</span><span><i>${domainIcon("sleep")}</i>${selected.format}</span><span><i>${domainIcon("time")}</i>${esc(wakeLabel)}</span></div></div>${buttons([["开始播放", "night-start", "primary"], ["换一段", "go:NIG-03", "secondary"]])}${playing && playing.status !== "ended" ? setting("继续正在听的内容", playing.title, "go:NIG-04") : ""}${setting("了解这段内容", `${selected.duration} 分钟 · ${selected.sound}`, "go:NIG-02")}${setting("今晚播放顺序", selected.title, "go:NIG-05")}${setting("睡着后自动渐弱", state.toggles.sleepFade ? "信号不可用时按计时执行" : "保持当前音量，直到结束", "go:NIG-12", state.toggles.sleepFade ? "已开启" : "已关闭")}${setting("明早怎么叫醒", wakeLabel, "go:NIG-06")}`,
-      "NIG-02": () => `${head(item, "CONTENT")}<div class="stack">${card(selected.title, currentNightCopy().detailIntro, `${selected.duration} MIN · ${selected.format}`)}${rows([["怎么听", selected.format], ["多长", `${selected.duration} 分钟`], ["适合什么时候", selected.fit], ["声音", selected.sound]])}${notice("这段内容能做什么", "用于日常放松，不用于治疗失眠或焦虑。")}${buttons([["查看播放演示", "night-preview", "secondary"], ["今晚就听这段", "night-start", "primary"]])}</div>`,
-      "NIG-03": () => `${head(item, "CHOOSE ANOTHER")}<div class="stack">${choice("nightChoice", "scan", "安静身体扫描", "12 分钟 · 引导较少")}${choice("nightChoice", "breath", "呼吸慢下来", "8 分钟 · 呼吸节律")}${choice("nightChoice", "sound", "夜间白噪音", "30 分钟 · 无引导声音")}${buttons([["使用这个", "go:NIG-01", "primary"]])}</div>`,
-      "NIG-04": () => playing && playing.status !== "ended" ? `${head(item, "NOW PLAYING")}<div class="player-orbit visual-player"><button data-action="toggle-player" aria-label="${state.playing ? "暂停" : "继续播放"}">${state.playing ? "Ⅱ" : "▶"}</button>${waveform(state.playing)}</div><div class="player-meta"><span class="eyebrow">${state.playing ? "正在播放" : "已暂停"} · ${Math.floor(position / 60)}:${String(position % 60).padStart(2, "0")} / ${playerContent.duration}:00</span><h2>${esc(playing.title)}</h2>${playing.appendNoise ? `<p id="night-current-part">${position >= playing.primaryDuration * 60 ? "接续白噪音 · 20分钟" : `第一段 ${playing.primaryDuration}分钟，接白噪音20分钟`}</p>` : ""}<p>${playing.fadeEnabled ? "自动渐弱已开启" : "自动渐弱已关闭"}</p></div><div class="progress" style="margin:18px 0"><i style="width:${Math.round(position / (playerContent.duration * 60) * 100)}%"></i></div>${notice("播放交互演示", "本地原型记录进度和操作，不输出真实音频，也不会设置系统闹钟。")}${buttons([[state.playing ? "暂停" : "继续播放", "toggle-player", "primary"], ["结束本次播放", "night-end", "secondary"]])}` : `${head(item, "NOW PLAYING")}${notice("还没有正在播放的内容", "选一段内容后，再开始播放。")}${buttons([["选择内容", "go:NIG-01", "primary"]])}`,
-      "NIG-05": () => `${head(item, "TONIGHT SEQUENCE")}<div class="stack">${rows([["先播放", `${selected.title} · ${selected.duration} 分钟`], ["接下来", state.toggles.nightTail ? "无引导白噪音 · 20 分钟" : "播放结束后停止"]])}${toggle("nightTail", "结束后继续白噪音", "第一段结束后接20分钟白噪音；关闭后只播放第一段")}${buttons([["调整第一段", "go:NIG-03", "secondary"], ["按这个顺序播放", "night-start", "primary"]])}</div>`,
-      "NIG-06": () => `${head(item, "WAKE WINDOW")}<div class="stack"><label class="field-label">最晚唤醒时间<input id="wake-time" class="field" type="time" value="${esc(state.wakeDraft.time)}"></label><label class="field-label">浅睡窗口<select id="wake-window" class="field">${["30", "20"].map((v) => `<option value="${v}" ${state.wakeDraft.window === v ? "selected" : ""}>前 ${v} 分钟</option>`).join("")}</select></label>${setting("唤醒声音", "选择声音", "go:NIG-07", state.wakeDraft.sound)}${toggle("wake", "智能唤醒", "设置一个唤醒窗口，并保留最晚时间")}${!state.toggles.notification ? notice("通知权限已关闭", "原型不会创建真实闹钟；正式 App 需开启必要权限后确认是否设置成功。", "warm") : ""}${state.wakeSaved ? notice("唤醒设置已保存", `已保存 ${wake.time}、前 ${wake.window} 分钟窗口和${wake.sound}。本地原型不会实际响铃。`, "sage") : ""}${buttons([["保存设置", "wake-save", "primary"]])}</div>`,
-      "NIG-07": () => `${head(item, "WAKE SOUND")}<div class="stack">${["晨雾", "微光", "清泉", "柔和铃音"].map((sound) => `<button class="choice-row ${state.wakeDraft.sound === sound ? "selected" : ""}" data-action="sound:${sound}"><span><strong>${sound}</strong><p>选择这个声音</p></span><i></i></button>`).join("")}${notice("声音选择演示", "当前原型不输出音频。")}${buttons([["使用所选声音", "wake-sound-confirm", "primary"]])}</div>`,
-      "NIG-08": () => !wake.enabled || !state.toggles.notification ? `${head(item, "WAKE PREVIEW")}${notice("当前不会发出唤醒提醒", "唤醒设置已保留，请检查开关与通知权限。", "warm")}${buttons([["检查唤醒设置", "go:NIG-06", "primary"]])}` : `<div class="gated" style="padding-top:80px"><span class="eyebrow">WAKE PREVIEW</span><h1 style="font-size:58px;margin:14px 0">${esc(state.snoozeUntil || wake.time)}</h1><p class="caption">唤醒界面演示 · ${state.snoozeUntil ? "已延后 5 分钟" : `最晚 ${wake.time}`}</p></div>${buttons([["关闭闹钟", "go:NIG-09", "primary"], ["再睡 5 分钟", "wake-snooze", "secondary"]])}`,
-      "NIG-09": () => `${head(item, "GOOD MORNING")}<div class="stack">${notice("早上好", "有新的同步记录时，今日页面会更新；没有数据时不生成健康结论。", "sage")}${buttons([["看看今天的状态", "go:TOD-01", "primary"], ["回看播放记录", "go:NIG-10", "secondary"]])}</div>`,
-      "NIG-10": () => `${head(item, "RECENT NIGHTS")}<div class="stack">${state.nightHistory.length ? state.nightHistory.map((entry) => card(entry.title, `${experienceTime(entry.endedAt)} · 听了 ${Math.floor(entry.positionSeconds / 60)} 分 ${entry.positionSeconds % 60} 秒`, entry.review?.saved ? "已复盘" : "播放已结束", `night-history:${entry.id}`)).join("") : notice("还没有播放记录", "结束一次播放后，会按本次内容与时间保存在这里。", "sage")}${buttons([["选择今晚内容", "go:NIG-01", "secondary"]])}</div>`,
-      "NIG-11": () => `${head(item, "NIGHT SUPPORT")}<div class="stack">${haloStatus(state.deviceStatus, "hero", "status-detail")}${notice("连接变化不会删除已保存记录", `当前唤醒设置：${wakeLabel}。渐弱${state.toggles.sleepFade ? "已开启" : "已关闭"}。`, "sage")}${notice("原型能力边界", "锁屏播放、后台音频和系统闹钟需在原生 App 中单独验证。")}${buttons([["继续今晚", "go:NIG-04", "primary"], ["查看连接状态", "go:DEV-10", "secondary"]])}</div>`,
-      "NIG-12": () => `${head(item, "SMART SLEEP LINK")}<div class="stack">${toggle("sleepFade", "检测到可能入睡后渐弱", "开启后，信号不可用时按手机计时；关闭后保持音量直到播放结束")}${setting("浅睡窗口唤醒", wakeLabel, "go:NIG-06")}${notice("设置分别生效", "关闭渐弱不会开启或关闭闹钟；修改唤醒时间后，请在唤醒页保存。", "sage")}</div>`,
+      "NIG-07": () => nightSound.page(),
+      "NIG-08": () => nightWake.alarm(),
+      "NIG-09": () => nightMorning.page(),
+      "NIG-10": () => nightHistoryPage.page(),
+      "NIG-11": () => nightSupport.page(),
+      "NIG-12": () => nightFade.page(),
     };
     return `<div class="night-screen">${content[item.id]?.() || generic(item)}</div>`;
   }
@@ -1714,7 +4064,18 @@
     return state.conversations.find((entry) => entry.id === id && entry.status !== "deleted")?.messages.map((message) => ({ ...message })) || [];
   }
   function haloHeaderActions() {
-    return `<button class="head-action halo-head-icon" data-action="go:HAL-02">${domainIcon("time")}</button><button class="head-action" data-action="go:HAL-08">•••</button>`;
+    return `<button class="hal-header-control" data-action="halo-new-conversation" aria-label="新对话" title="新对话">${haloUiIcon("new")}</button><button class="hal-header-control" data-action="go:HAL-02" aria-label="最近对话">历史</button><button class="hal-header-control" data-action="go:HAL-08" aria-label="Halo 设置" title="Halo 设置">${haloUiIcon("more")}</button>`;
+  }
+  function haloUiIcon(name) {
+    const paths = {
+      new: '<path d="M12 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 3l5 5M10 14l1-5 7-7 5 5-7 7-6 1Z"/>',
+      more: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
+      arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+      send: '<path d="M12 19V5m-6 6 6-6 6 6"/>',
+      plus: '<path d="M12 5v14M5 12h14"/>',
+      close: '<path d="m6 6 12 12M18 6 6 18"/>',
+    };
+    return `<svg class="hal-ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.arrow}</svg>`;
   }
   function haloRecentConversation() {
     if (state.chat.length || !["active", "paused"].includes(state.conversationStatus)) return "";
@@ -1722,42 +4083,78 @@
   }
   function haloJourneyNudge() {
     const resumableConversation = ["active", "paused"].includes(state.conversationStatus);
-    if (state.chat.length || resumableConversation || state.journeyPaused || state.journeyDecision === "unsuitable" || state.journeyProgress <= 0 || state.journeyProgress >= 7) return "";
+    if (state.chat.length || resumableConversation || !["active", "deferred"].includes(state.journeyRecords[state.journeyTheme].status) || state.journeyProgress <= 0 || state.journeyProgress >= 7) return "";
     const step = currentJourneyStep();
-    return `<button class="halo-journey-nudge" data-action="go:HAL-06"><span class="journey-nudge-icon" aria-hidden="true">${domainIcon("activity")}</span><span><small>${state.journeyDecision === "deferred" ? "今天已先放下" : `今天的小练习 · 第 ${state.journeyProgress + 1} / 7 天`}</small><strong>${esc(step.title)}</strong></span><i>${state.journeyDecision === "deferred" ? "查看" : "继续"}</i></button>`;
+    const doneToday = state.journeyRecords[state.journeyTheme].days.includes(experienceDay());
+    return `<button class="halo-journey-nudge" data-action="go:HAL-06"><span class="journey-nudge-icon" aria-hidden="true">${domainIcon("activity")}</span><span><small>${doneToday ? `今天已完成 · ${state.journeyProgress} / 7 天` : state.journeyDecision === "deferred" ? "暂时放下的小计划" : `今天的小练习 · 第 ${state.journeyProgress + 1} / 7 天`}</small><strong>${esc(step.title)}</strong></span><i>${doneToday || state.journeyDecision === "deferred" ? "查看" : "继续"}</i></button>`;
   }
   function haloToolsMenu() {
     if (!state.haloToolsOpen) return "";
     return `<div id="halo-tools" class="halo-tool-menu" role="group" aria-label="对话工具"><button data-action="halo-open-feeling"><span aria-hidden="true">${domainIcon("heart")}</span><strong>记录感受</strong></button><button data-action="halo-open-journey"><span aria-hidden="true">${domainIcon("activity")}</span><strong>我的小计划</strong></button></div>`;
   }
-  function haloComposer(placeholder = "和 Halo 说说") {
-    return `${haloToolsMenu()}<div class="composer halo-composer"><button class="composer-tool" data-action="halo-tools-toggle" aria-label="打开对话工具" aria-expanded="${state.haloToolsOpen}" aria-controls="halo-tools">＋</button><label class="sr-only" for="chat-input">发给 Halo 的消息</label><input id="chat-input" class="field" placeholder="${esc(placeholder)}"><button class="composer-send" data-action="send-chat">↑</button></div>`;
+  function haloComposer(placeholder = "和 Halo 说说…") {
+    const locked = ["paused", "archived"].includes(state.conversationStatus);
+    return `${haloToolsMenu()}<div class="composer halo-composer"><button class="composer-tool" data-action="halo-tools-toggle" aria-label="${state.haloToolsOpen ? "收起" : "打开"}对话工具" aria-expanded="${state.haloToolsOpen}" aria-controls="halo-tools">${haloUiIcon(state.haloToolsOpen ? "close" : "plus")}</button><label class="sr-only" for="chat-input">发给 Halo 的消息</label><textarea id="chat-input" class="field" rows="1" maxlength="2000" enterkeyhint="send" placeholder="${locked ? "先继续这次对话，再发送消息" : esc(placeholder)}">${esc(state.haloDraft || "")}</textarea><button class="composer-send" data-action="send-chat" aria-label="发送消息" ${!String(state.haloDraft || "").trim() || locked ? "disabled" : ""}>${haloUiIcon("send")}</button></div>`;
+  }
+  function updateHaloComposer() {
+    const input = document.getElementById("chat-input");
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(112, Math.max(52, input.scrollHeight))}px`;
+    const send = screen.querySelector('[data-action="send-chat"]');
+    if (send) send.disabled = !input.value.trim() || ["paused", "archived"].includes(state.conversationStatus);
+  }
+  function haloVisibleSource() {
+    const source = currentHaloSource() || {};
+    const kind = source.kind || "none";
+    if (kind === "body" && hasBodyContext()) return { kind, label: "今天的身体状态", title: "今天的状态" };
+    if (kind === "feeling" && (source.text || source.recordId)) return { kind, label: `用户记录 · ${String(source.text || "此刻感受").split(" · ")[0].slice(0, 24)}`, title: "这份感受" };
+    if (kind === "rhythm") return { kind, label: `用户记录 · ${Number(source.date?.slice(5, 7))}月${Number(source.date?.slice(8, 10))}日`, title: "这一天的感受" };
+    if (kind === "correction" && activeWeatherCorrection()) return { kind, label: "用户反馈 · 我的纠正", title: "你补充的感受" };
+    if (kind === "inspiration") return { kind, label: "今日灵感 · 文化参考", title: "今日灵感" };
+    return null;
+  }
+  function haloSourceChip() {
+    const source = haloVisibleSource();
+    if (!source) return "";
+    return `<div class="hal-source-chip" data-source-kind="${esc(source.kind)}"><button data-action="halo-source-details" aria-label="查看参考来源：${esc(source.label)}">${esc(source.label)}</button><button class="hal-source-remove" data-action="halo-remove-source" aria-label="移除本次参考来源">${haloUiIcon("close")}</button></div>`;
+  }
+  function haloHomePage() {
+    const hasChat = state.chat.length > 0;
+    const source = haloVisibleSource();
+    const locked = ["paused", "archived"].includes(state.conversationStatus);
+    const prompts = source?.kind === "inspiration"
+      ? ["今天的颜色怎么穿？", "怎么把它用在今天？", "先听我说一会儿"]
+      : source?.kind === "feeling" || source?.kind === "correction"
+      ? ["陪我梳理这份感受", "想找一段睡前放松", "先听我说一会儿"]
+      : source?.kind === "body" ? ["帮我读懂今天的状态", "想找一段睡前放松", "先听我说一会儿"]
+      : source?.kind === "rhythm" ? ["帮我梳理这一天的感受", "想找一段睡前放松", "先听我说一会儿"]
+      : ["陪我梳理今天的安排", "想找一段睡前放松", "先听我说一会儿"];
+    const suggestions = `<div class="hal-starters">${prompts.map(text => `<button data-action="ask:${esc(text)}"><span>${esc(text)}</span>${haloUiIcon("arrow")}</button>`).join("")}</div>`;
+    const greeting = `<section class="hal-empty"><img class="hal-welcome-ip" src="${HALO_IP_DEFAULT}" alt="Halo 日常小花团" width="140" height="140"><h2>想聊点什么？</h2><p>${source && source.kind !== "body" ? "你带来的内容已在这里，可以接着说。" : "说说今天，或从一个小问题开始。"}</p>${haloSourceChip()}${suggestions}${haloJourneyNudge()}</section>`;
+    const messages = `<div class="hal-thread-heading"><img src="${HALO_IP_DEFAULT}" alt="" width="32" height="32"><span>${source ? `正在聊：${esc(source.title)}` : "这次对话"}</span></div>${haloSourceChip()}<div id="chat-messages" class="hal-messages" role="log" aria-label="对话消息">${state.chat.map(message => message.role === "user" ? `<div class="message user">${esc(message.text)}</div>` : `<article class="hal-reply"><img class="hal-reply-avatar" src="${HALO_IP_DEFAULT}" alt="Halo" width="30" height="30"><div class="hal-reply-content"><div class="message halo">${esc(message.text)}</div>${message.action?.route === "NIG-01" && !message.safety ? `<button class="hal-reply-action" data-action="go:NIG-01"><span>${esc(message.action.label || "去选一段放松内容")}</span>${haloUiIcon("arrow")}</button>` : ""}${message.safety ? haloSafetySupport() : ""}</div></article>`).join("")}</div>`;
+    const quota = !isHardwareActive() ? `今天还可聊 ${Math.max(0, 10 - ensureHaloQuota().used)} 条` : !hasBodyContext() ? "暂不参考身体状态" : "";
+    return `<section class="hal-chat-page ${hasChat ? "is-conversation" : "is-empty"}" aria-label="Halo 对话"><header class="hal-chat-header"><h1>Halo</h1><div class="hal-header-actions">${haloHeaderActions()}</div></header><div class="hal-chat-scroll">${hasChat ? messages : greeting}</div><footer class="hal-chat-footer">${locked ? `<div class="hal-conversation-state"><span>${state.conversationStatus === "paused" ? "这次对话已暂停" : "这次对话已归档"}</span><button data-action="halo-resume-active">继续对话</button></div>` : ""}<div class="hal-composer-meta"><span>${quota}</span><button data-action="halo-usage">使用说明</button></div>${haloComposer()}<p class="hal-ai-note">AI 回答仅供参考</p></footer></section>`;
   }
   function haloMemoryPage(item) {
-    const correctionBlock = state.aiCorrection.status === "saved"
-      ? `<section class="memory-correction-card"><span>今天的用户纠正</span><strong>${esc(state.aiCorrection.reasonLabel)}</strong><p>原解释已停止作为你的实际感受，也不会自动成为跨会话记忆。</p>${state.aiCorrection.memoryReview ? `<div class="memory-check-result"><i aria-hidden="true">✓</i><div><b>相关记忆已检查</b><small>没有把“今天更容易累”保存成已确认事实；现有偏好记忆不会参与这次身体判断。</small></div></div>` : `<button class="secondary" data-action="ai-correction-check-memory">检查有没有相关记忆</button>`}<button class="text-button" data-action="ai-correction-reset">撤销这次纠正</button></section>`
+    const correction = activeWeatherCorrection();
+    const history = [...state.aiCorrectionHistory, ...(!correction && state.aiCorrection.status !== "none" ? [state.aiCorrection] : [])];
+    const correctionBlock = correction
+      ? `<section class="memory-correction-card"><span>${esc(correction.date)} · 用户反馈</span><strong>${esc(correction.reasonLabel)}</strong><p>这次反馈没有自动加入记忆。下面是当前原型里保存的记忆，你可以逐条查看、纠正或删除。</p><button class="text-button" data-action="ai-correction-reset">撤销这次反馈</button></section>`
       : "";
-    const memories = !state.haloMemories.length
-      ? notice("还没有 Halo 记忆", "新的内容只有在你确认后，才会跨会话使用。", "sage")
-      : `${state.haloMemories.map((memory) => `<section class="card"><span class="section-label">${memory.confirmed ? "已确认记忆" : "记忆提案"}</span><h3>${esc(memory.text)}</h3><p>${memory.confirmed ? "由你确认，可以单独纠正或删除。" : "确认前不用于跨会话建议。"}</p>${buttons([...(memory.confirmed ? [] : [["确认这条记忆", `halo-memory-confirm:${memory.id}`, "primary"]]), ["纠正", `halo-memory-edit:${memory.id}`, "secondary"], ["删除这条", `halo-memory-delete:${memory.id}`, "danger-button"]])}</section>`).join("")}${buttons([["清空全部记忆", "danger:清空 Halo 记忆:这会删除已确认的跨会话偏好，不会删除原始健康记录。:确认清空", "danger-button"]])}`;
-    return `${head(item, "MEMORY")}<div class="stack">${toggle("memory", "允许 Halo 使用已确认记忆", "只有你确认过的内容会跨会话使用")}${correctionBlock}${memories}</div>`;
+    const correctionHistory = history.length ? `<details class="card"><summary>以往的纠正与未完成草稿 · ${history.length}</summary><p>仅供回看，不作为今天的感受。不会改动戒指记录或过去的聊天原文。</p>${history.slice().reverse().map(entry => `<section class="memory-correction-card"><span>${esc(entry.date || (Number.isFinite(Date.parse(entry.savedAt)) ? beijingDateKey(new Date(entry.savedAt)) : "原记录未关联日期"))} · ${entry.status === "draft" ? "未保存草稿" : entry.status === "withdrawn" ? "已撤销" : "历史反馈"}</span><strong>${esc(entry.reasonLabel || AI_CORRECTION_REASONS[entry.reason] || "补充感受")}</strong>${entry.note ? `<p>${esc(entry.note)}</p>` : ""}</section>`).join("")}</details>` : "";
+    return haloMemory.page(correctionBlock + correctionHistory);
   }
   function halo(item) {
-    const haloCopy = currentHaloCopy();
-    const haloPresence = (opening, subtitle) => `<section class="halo-presence${state.chat.length ? " has-chat" : ""}" data-copy-variant="${esc(haloCopy.copyVariant)}"><div class="halo-ip-portrait"><img src="${HALO_IP_DEFAULT}" width="1254" height="1254" alt="Halo 日常小花团"></div><div class="halo-presence-copy"><span>HALO</span><strong>${esc(opening)}</strong><small>${esc(subtitle)}</small></div></section>`;
-    if (item.id === "HAL-01" && !isHardwareActive()) {
-      const used = ensureHaloQuota().used;
-      return `${head(item, "YOUR HALO", haloHeaderActions())}${haloPresence(haloCopy.unboundOpening, haloCopy.unboundSubtitle)}<div class="stack halo-conversation">${notice("今天还可发送 " + Math.max(0, 10 - used) + " 条消息", "每天北京时间 00:00 恢复为 10 条。Halo 可以陪你梳理想法，但不会判断身体状态或生成个性化报告。", "sage")}${haloRecentConversation()}${state.chat.length ? `<button class="context-pill" data-action="go:HAL-07">本次不参考身体状态　设置 ›</button>` : `<div class="suggestions"><button data-action="ask:陪我梳理一下今天的安排">陪我梳理今天的安排</button><button data-action="ask:给我一个睡前放松练习">给我一个睡前放松练习</button><button data-action="ask:先听我说一会儿">先听我说一会儿</button></div>`}${haloJourneyNudge()}<div id="chat-messages" class="stack">${state.chat.map((message) => `<div class="message ${message.role}">${esc(message.text)}</div>${message.safety ? haloSafetySupport() : ""}`).join("")}</div>${haloComposer("和 Halo 说说")}${buttons([["绑定 Halo Ring，参考身体状态", "go:DEV-01", "secondary"]])}</div>`;
-    }
+    if (item.id === "HAL-01") return haloHomePage();
     const map = {
-      "HAL-01": () => `${head(item, "YOUR HALO", haloHeaderActions())}${haloPresence(haloCopy.boundOpening, hasBodyContext() ? haloCopy.boundSubtitle : haloCopy.unboundSubtitle)}<div class="stack halo-conversation">${haloRecentConversation()}${haloContextPanel()}${haloJourneyNudge()}<div id="chat-messages" class="stack">${state.chat.map((m)=>`<div class="message ${m.role}">${esc(m.text)}</div>${m.safety ? haloSafetySupport() : ""}`).join("")}</div>${haloComposer()}</div>`,
-      "HAL-02": () => { const labels = { active: "可继续", paused: "已暂停", archived: "已归档" }; const conversations = state.conversations.filter((entry) => entry.status !== "deleted" && entry.title.includes(state.conversationQuery)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); return `${head(item, "CONVERSATIONS")}<div class="stack"><label class="field-label">搜索会话<input id="conversation-search" class="field" placeholder="搜索会话" value="${esc(state.conversationQuery)}"></label>${conversations.map((entry) => card(entry.title, `${experienceTime(entry.updatedAt)} · ${labels[entry.status] || "可继续"}`, entry.id === state.activeConversationId ? "当前会话" : "会话", `open-conversation:${entry.id}`)).join("") || notice("这里还没有会话", "发送消息后会保存到这里。删除的会话不会重新出现。", "sage")}${buttons([["开始新对话", "halo-new-conversation", "primary"]])}${conversations.some((entry) => entry.id === state.activeConversationId) ? buttons([[state.conversationStatus === "paused" ? "继续当前会话" : "暂停当前会话", state.conversationStatus === "paused" ? "conversation-state:active" : "conversation-state:paused", "secondary"], ["归档当前会话", "conversation-state:archived", "secondary"], ["删除当前会话", "conversation-state:deleted", "danger-button"]]) : ""}</div>`; },
+      "HAL-02": () => haloHistory.page(),
       "HAL-03": () => haloMemoryPage(item),
-      "HAL-04": () => `${head(item, "PROACTIVE SUPPORT")}<div class="stack">${toggle("proactive", "允许 Halo 主动陪伴", "默认关闭，可分别开启早晨与睡前")}${toggle("morningPrompt", "早晨状态提示", "只在有明确状态变化时出现")}${toggle("nightPrompt", "睡前轻提醒", "帮助进入今晚页面，不强制打开 App")}<label class="field-label">静默开始<input id="halo-quiet-start" class="field" type="time" value="${esc(state.haloQuietHours.start)}"></label><label class="field-label">静默结束<input id="halo-quiet-end" class="field" type="time" value="${esc(state.haloQuietHours.end)}"></label>${notice("设置已自动保存", `${state.haloQuietHours.start} 至${state.haloQuietHours.end <= state.haloQuietHours.start ? "次日 " : ""}${state.haloQuietHours.end} 不发送主动陪伴提醒。闹钟与必要服务通知分别管理。`)}${!state.toggles.notification ? notice("通知权限已关闭", "当前不会发送主动陪伴通知；开启前请先检查系统权限。", "warm") : ""}</div>`,
-      "HAL-05": () => `${head(item, "FEELINGS")}<div class="stack"><p class="caption">此刻更接近哪些感受？</p><div class="suggestions">${["平静", "疲惫", "紧张", "低落", "有力量"].map((feeling) => `<button class="${state.haloFeeling === feeling ? "active" : ""}" data-action="halo-feeling:${feeling}">${feeling}</button>`).join("")}</div><label class="field-label">身体感受<textarea id="halo-feeling-note" class="field" placeholder="例如：肩颈有些紧，呼吸偏浅">${esc(state.haloFeelingNote)}</textarea></label>${state.haloFeelingRecords.length ? notice("最近一次用户记录", `${experienceTime(state.haloFeelingRecords.at(-1).occurredAt)} · ${state.haloFeelingRecords.at(-1).text}`, "sage") : ""}${buttons([["保存并带入对话", "save-halo-feeling", "primary"], ["返回对话", "go:HAL-01", "secondary"]])}<p class="caption">草稿会保留；点击保存后才加入用户记录。</p></div>`,
-      "HAL-06": () => journeyPage(item),
-      "HAL-07": () => `${head(item, "DATA & PRIVACY")}<div class="stack">${toggle("haloBody", "允许参考今天的身体状态", "仅在数据可以解释时带入；关闭后会立即从本次对话移除")}${toggle("memory", "允许使用已确认记忆", "可单条删除或全部清空")}${rows([["本次参考", hasBodyContext() ? "Body Weather · 08:42" : "未参考身体状态"], ["云端保存", "必要会话摘要"], ["完整健康明细", "优先保存在手机本地"]])}${!hasBodyContext() ? notice(state.dataLifecycle === "interpretable" ? "身体状态已从本次对话移除" : "目前没有可带入的身体状态", state.dataLifecycle === "interpretable" ? "后续回复不会使用 Body Weather；重新开启前不会自动恢复。" : "数据可以解释前，Halo 不会显示或使用健康值与趋势。", "sage") : ""}${state.haloDataDeletionStatus === "submitted" ? notice("Halo 数据删除申请已提交", "处理进度会在这里更新；戒指健康记录不会随这次申请删除。", "sage") : buttons([[hasBodyContext() ? "不再参考本次身体状态" : "重新允许参考身体状态", hasBodyContext() ? "remove-halo-context" : "restore-halo-context", "secondary", state.dataLifecycle !== "interpretable"], ["删除 Halo 数据", "danger:删除 Halo 数据:将提交云端会话摘要与记忆删除请求，不会自动删除戒指健康记录。:提交删除", "danger-button"]])}</div>`,
-      "HAL-08": () => `${head(item, "HALO SETTINGS")}<div class="stack">${setting("表达偏好", "语气与回复长短", "halo-preferences")}${setting("需要紧急帮助", "查看现实求助方式", "halo-safety-help")}${setting("最近会话", "继续、暂停、归档与删除", "go:HAL-02")}${setting("记录此刻感受", "作为用户记录带入 Halo", "go:HAL-05")}${setting("我的小计划", "查看进度或继续下一步", "go:HAL-06")}${toggle("haloVoice", "语音回复", "默认关闭")}${toggle("inspiration", "今日灵感", "首页展示每日固定的文化灵感，可随时关闭")}${setting("今日灵感个性化", "未填写生日时使用通用内容", "info:inspiration", "通用")}${setting("主动陪伴", "早晨、睡前与静默时间", "go:HAL-04")}${setting("Halo 记忆", "查看、纠正与删除", "go:HAL-03")}${setting("数据与隐私", "来源、权限与撤回", "go:HAL-07")}${setting("人工帮助", "安全问题与服务支持", "go:HELP-03")}</div>`,
+      "HAL-04": () => haloProactive.page(),
+      "HAL-05": () => haloFeelingEditor.page(),
+      "HAL-06": () => haloJourney.page(),
+      "HAL-07": () => haloPrivacyControls.page(),
+      "HAL-08": () => haloSettingsHub.page(),
     };
     return map[item.id]?.() || generic(item);
   }
@@ -1772,11 +4169,20 @@
       : record).filter(record => record && typeof record.id === "string" && typeof record.label === "string");
     state.subjectiveMarkers = [...new Set(state.subjectiveRecords.flatMap(record => record.labels || [record.label]))];
     state.recordDraft = { labels: [], note: "", ...(state.recordDraft || {}) };
-    state.recordDraft.labels = Array.isArray(state.recordDraft.labels) ? state.recordDraft.labels.filter(label => SUBJECTIVE_OPTIONS.includes(label)) : [];
+    state.recordDraft.labels = Array.isArray(state.recordDraft.labels) ? state.recordDraft.labels.filter(label => RECORD_OPTIONS.includes(label)) : [];
     state.recordDraft.note = String(state.recordDraft.note || "");
+    state.recordEditorMode = state.recordEditorMode === "edit" && state.recordEditDraft?.id ? "edit" : "new";
+    if (state.recordEditDraft?.id) {
+      const original = state.subjectiveRecords.find(record => record.id === state.recordEditDraft.id);
+      const allowed = [...(original?.category === "activity" ? ACTIVITY_FEELINGS : RECORD_OPTIONS), ...(original?.labels || (original ? [original.label] : []))];
+      state.recordEditDraft.labels = Array.isArray(state.recordEditDraft.labels) ? state.recordEditDraft.labels.filter(label => allowed.includes(label)) : [];
+      state.recordEditDraft.note = String(state.recordEditDraft.note || "");
+    } else state.recordEditDraft = null;
     state.rhythmRecords = state.rhythmRecords && typeof state.rhythmRecords === "object" ? state.rhythmRecords : {};
+    if (!["cycle", "record-only"].includes(state.rhythmMode)) state.rhythmMode = "record-only";
+    if (state.rhythmSettingsSaved === true && rhythmSettingsValid() && !state.rhythmSettingsConfirmedAt) state.rhythmSettingsConfirmedAt = new Date().toISOString();
     state.rhythmSettingsDraft = { ...state.rhythmSettings, ...(state.rhythmSettingsDraft || {}) };
-    state.selectedRhythmDate = state.selectedRhythmDate || beijingDateKey();
+    state.selectedRhythmDate = validHealthDate(state.selectedRhythmDate) ? state.selectedRhythmDate : beijingDateKey();
     state.rhythmMonth = state.rhythmMonth || state.selectedRhythmDate.slice(0, 7);
     state.tabStacks = state.tabStacks && typeof state.tabStacks === "object" ? state.tabStacks : {};
     state.pageViews = state.pageViews && typeof state.pageViews === "object" ? state.pageViews : {};
@@ -1786,17 +4192,15 @@
   }
   function rhythmSettingsValid(settings = state.rhythmSettings) {
     const { startDate, cycleLength, duration } = settings || {};
-    return /^\d{4}-\d{2}-\d{2}$/.test(startDate || "") && startDate <= beijingDateKey() && Number(cycleLength) >= 20 && Number(cycleLength) <= 45 && Number(duration) >= 2 && Number(duration) <= 10;
+    return validHealthDate(startDate) && Number.isInteger(Number(cycleLength)) && Number(cycleLength) >= 20 && Number(cycleLength) <= 45 && Number.isInteger(Number(duration)) && Number(duration) >= 2 && Number(duration) <= 10;
   }
+  function rhythmHasConfirmedCycle() { const stamp = Date.parse(state.rhythmSettingsConfirmedAt || ""); const own = !state.rhythmSettingsEditor?.activeOwner || state.rhythmSettingsEditor.activeOwner === String(state.authPhone || state.authForm?.phone || "legacy-session"); return own && !state.rhythmDeleted && rhythmSettingsValid() && (state.rhythmSettingsSaved === true || Number.isFinite(stamp) && stamp <= Date.now()); }
   function rhythmDay() {
-    if (!rhythmSettingsValid() || state.rhythmDeleted) return null;
+    if (state.rhythmMode !== "cycle" || state.rhythmStatus !== "ready" || !rhythmSettingsValid() || state.rhythmDeleted) return null;
     const elapsed = Math.floor((Date.parse(beijingDateKey() + "T12:00:00+08:00") - Date.parse(state.rhythmSettings.startDate + "T12:00:00+08:00")) / 86400000);
     return elapsed + 1;
   }
-  function rhythmContextSummary() {
-    const record = state.rhythmRecords[state.selectedRhythmDate];
-    return `${state.rhythmDeleted ? "暂无节律记录" : `最近一次开始日期：${state.rhythmSettings.startDate || "未填写"}`}。${record ? `${record.date} 用户记录：${record.feeling}${record.note ? `；${record.note}` : ""}` : "所选日期还没有填写感受"}。${hasBodyContext() ? "设备数据单独作为参考，不能证明周期导致了变化。" : "当前没有可解释的身体数据，不生成健康趋势或因果判断。"}`;
-  }
+  let rhythmContextPreview = null;
   function rhythmCalendar() {
     const [year, month] = state.rhythmMonth.split("-").map(Number);
     const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -1804,19 +4208,20 @@
     const cells = [...Array(offset)].map(() => '<span aria-hidden="true"></span>');
     for (let day = 1; day <= days; day++) {
       const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      cells.push(`<button class="${state.rhythmRecords[date] ? "active" : ""} ${date === beijingDateKey() ? "today" : ""}" data-action="rhythm-date:${date}" ${date > beijingDateKey() ? "disabled" : ""} aria-label="${date}，记录感受">${day}</button>`);
+      cells.push(`<button class="${state.rhythmRecords[date] ? "active" : ""} ${date === beijingDateKey() ? "today" : ""}" data-action="rhythm-date:${date}" ${date > beijingDateKey() ? "disabled" : ""} aria-label="${date}，${state.rhythmRecords[date] ? "已有记录，查看或修改" : "记录感受"}">${day}</button>`);
     }
     return `<div class="calendar-heading">${buttons([["上月", "rhythm-month:-1", "text-button"], [state.rhythmMonth, "", "text-button", true], ["下月", "rhythm-month:1", "text-button", state.rhythmMonth >= beijingDateKey().slice(0,7)]])}</div><div class="calendar">${["一","二","三","四","五","六","日"].map(day => `<small>${day}</small>`).join("")}${cells.join("")}</div>`;
   }
   function rhythmSettingsForm(item, setup = false) {
-    return `${head(item, setup ? "RHYTHM SETUP" : "RHYTHM SETTINGS")}<div class="stack">${setup ? notice("从你愿意记录的部分开始", "填写日期和常见周期，也可以先跳过。", "rose") : ""}<label class="field-label">最近一次开始日<input id="rhythm-start-date" class="field" type="date" max="${beijingDateKey()}" value="${esc(state.rhythmSettingsDraft.startDate || "")}"></label><label class="field-label">平均周期（天）<input id="rhythm-cycle-length" class="field" type="number" min="20" max="45" value="${esc(state.rhythmSettingsDraft.cycleLength)}"></label><label class="field-label">平均持续（天）<input id="rhythm-duration" class="field" type="number" min="2" max="10" value="${esc(state.rhythmSettingsDraft.duration)}"></label>${toggle("rhythmNotice", "节律轻提醒", "提醒记录，不判断疾病或避孕安全期")}${state.rhythmSettingsSaved ? notice("设置已保存", "将按你填写的日期展示记录。", "sage") : ""}${buttons([[setup ? "保存并继续" : "保存设置", setup ? "rhythm-setup-save" : "rhythm-settings-save", "primary", !rhythmSettingsValid(state.rhythmSettingsDraft)], ...(setup ? [["暂时跳过", "rhythm-setup-skip", "text-button"]] : [])])}<p class="caption">修改先保留为草稿，点击保存后才会更新记录日期。</p>${setup ? "" : setting("暂停与删除", "管理节律展示和记录", "go:RHY-05")}</div>`;
+    if (!setup && state.rhythmMode === "record-only") return `${head(item, "RHYTHM SETTINGS")}<div class="stack">${notice("当前：只记录感受", "无需填写经期日期，可以持续记录睡眠、情绪和身体感受。以后想加入周期日期时再设置，已有感受会保留。", "rose")}${toggle("rhythmNotice", "记录轻提醒", "是否提醒由你选择")}${buttons([["返回感受日历", "go:RHY-01", "primary"], ["添加周期日期（可选）", "go:RHY-00", "secondary"]])}${setting("管理记录", "按日期修改、删除，或管理全部节律数据", "go:RHY-05")}</div>`;
+    return `${head(item, setup ? "RHYTHM SETUP" : "RHYTHM SETTINGS")}<div class="stack">${notice("从你愿意记录的部分开始", "日期是可选的。不想记录经期时，可以一直只记录感受。", "rose")}<label class="field-label">最近一次开始日<input id="rhythm-start-date" class="field" type="date" max="${beijingDateKey()}" value="${esc(state.rhythmSettingsDraft.startDate || "")}"></label><label class="field-label">平均周期（天）<input id="rhythm-cycle-length" class="field" type="number" min="20" max="45" value="${esc(state.rhythmSettingsDraft.cycleLength)}"></label><label class="field-label">平均持续（天）<input id="rhythm-duration" class="field" type="number" min="2" max="10" value="${esc(state.rhythmSettingsDraft.duration)}"></label>${toggle("rhythmNotice", "节律轻提醒", "提醒记录，不判断疾病或避孕安全期")}${state.rhythmSettingsSaved && !rhythmSettingsStore.inspect().dirty ? notice("设置已保存", "将按你填写的日期展示记录。", "sage") : ""}${buttons([[setup ? "保存并使用周期日期" : "保存设置", setup ? "rhythm-setup-save" : "rhythm-settings-save", "primary", !rhythmSettingsValid(state.rhythmSettingsDraft)], ["不填日期，只记录感受", setup ? "rhythm-setup-skip" : "rhythm-record-only", "secondary"]])}<p class="caption">修改先保留为草稿，点击保存后才会更新记录日期。切换为只记录感受会保留已有记录和已保存的周期设置。</p>${setup ? "" : setting("管理记录", "暂停周期展示或删除记录", "go:RHY-05")}</div>`;
   }
   function rhythmStatePage(item) {
     const states = {
-      empty: ["还没有节律记录", "添加开始日期后，才会显示阶段和回看内容。", [["添加节律记录", "go:RHY-00", "primary"], ["暂时跳过", "rhythm-state:paused", "secondary"]]],
-      conflict: ["日期需要核对", "最近一次开始日期与已有记录重叠。请确认正确日期后再继续。", [["修改日期", "go:RHY-04", "primary"], ["稍后处理", "go:MY-01", "secondary"]]],
-      paused: ["节律展示已暂停", "已记录的日期和感受仍会保留；重新开启前不显示阶段解释。", [["重新开启", "rhythm-state:ready", "primary"], ["管理记录", "go:RHY-05", "secondary"]]],
-      insufficient: ["记录还不足以显示阶段", "还需要最近一次开始日期和常见周期长度。补充后会重新计算。", [["补充记录", "go:RHY-04", "primary"], ["先返回", "go:MY-01", "secondary"]]],
+      empty: ["从感受开始记录", "不填经期日期，也能持续记录和回看。", [["只记录感受", "rhythm-record-only", "primary"], ["添加周期日期（可选）", "go:RHY-00", "secondary"]]],
+      conflict: ["日期需要核对", "最近一次开始日期与已有记录重叠。请确认正确日期后再继续。", [["修改日期", "go:RHY-00", "primary"], ["先只记录感受", "rhythm-record-only", "secondary"]]],
+      paused: ["节律展示已暂停", "已记录的日期和感受仍会保留；重新开启前不显示阶段解释。", [["继续只记录感受", "rhythm-record-only", "primary"], ["恢复周期展示", "rhythm-state:ready", "secondary"], ["管理记录", "go:RHY-05", "text-button"]]],
+      insufficient: ["记录还不足以显示阶段", "还需要最近一次开始日期和常见周期长度。补充后会重新计算。", [["继续只记录感受", "rhythm-record-only", "primary"], ["补充周期日期", "go:RHY-00", "secondary"]]],
       error: ["暂时无法加载节律记录", "已保存的数据不会丢失。请检查网络后再试。", [["重新加载", "rhythm-state:ready", "primary"], ["稍后再看", "go:MY-01", "secondary"]]],
     };
     const current = states[state.rhythmStatus];
@@ -1824,109 +4229,384 @@
     return `${head(item, "RHYTHM")}<div class="stack">${notice(current[0], current[1], state.rhythmStatus === "conflict" ? "warm" : "sage")}${buttons(current[2])}</div>`;
   }
   function rhythm(item) {
-    if (item.id === "RHY-00") return rhythmSettingsForm(item, true);
-    if (item.id === "RHY-04") return rhythmSettingsForm(item);
+    if (item.id === "RHY-01") return rhythmHome.body();
+    if (item.id === "RHY-03") return rhythmEditor.body(rhythmRecordStore.inspect(), rhythmEditorProblem, rhythmEditorDraftStatus);
+    if (item.id === "RHY-02") return window.renderHaloRhythmGuide({ state, esc, record: rhythmVisibleRecord(), cycle: state.rhythmMode === "cycle" && state.rhythmStatus === "ready" && rhythmHasConfirmedCycle(), icon: domainIcon });
+    if (item.id === "RHY-00") return rhythmSetupPage.body();
+    if (item.id === "RHY-04") return rhythmSettingsPage.body(rhythmSettingsStore.inspect(), rhythmSettingsFeedback);
+    if (item.id === "RHY-05") return rhythmManagementPage.body(rhythmManagementStore.inspect(), rhythmManagementFeedback);
     const statusPage = item.id === "RHY-01" ? rhythmStatePage(item) : "";
     if (statusPage) return statusPage;
     const map = {
-      "RHY-01": () => `${head(item, "YOUR RHYTHM", `<button class="head-action" data-action="go:RHY-04" aria-label="打开节律设置">•••</button>`)}<div class="stack"><section class="rhythm-hero"><span>${rhythmDay() ? `本次记录第 ${rhythmDay()} 天` : "等待你填写日期"}</span><h2>先记下感受，再慢慢看规律</h2><small>${rhythmSettingsValid() ? `开始于 ${esc(state.rhythmSettings.startDate)} · 常见周期 ${esc(state.rhythmSettings.cycleLength)} 天` : "没有日期时，不推测你处在哪个阶段"}</small></section>${rhythmCalendar()}${buttons([["记录今天的感受", `rhythm-date:${beijingDateKey()}`, "primary"], ["这和节律有什么关系？", "go:RHY-02", "secondary"], ["和 Halo 聊聊最近的变化", "go:RHY-06", "text-button"]])}<p class="health-boundary">日期用于回看，不预测排卵、避孕安全期或疾病。</p></div>`,
-      "RHY-02": () => `${head(item, "STAGE EXPLANATION")}<div class="stack">${notice("这些变化不一定会发生", "睡眠、情绪和身体感受可能与节律同时变化，也可能来自压力、作息或其他原因。", "rose")}${card("睡眠", "有些人会更晚入睡，或半夜更容易醒。", "可能出现")}${card("情绪", "有些人会更容易觉得烦躁、紧张或低落。", "可能出现")}${card("活动", "如果比平时更累，可以减一点强度，不必硬撑。", "按感受调整")}${buttons([["带着这些记录问 Halo", "go:RHY-06", "primary"]])}</div>`,
-      "RHY-03": () => `${head(item, "DAY & FEELING")}<div class="stack"><p class="caption">${esc(state.selectedRhythmDate)} · 用户记录</p><div class="suggestions">${["睡得少","情绪敏感","身体轻松","有精神"].map(feeling => `<button class="${state.rhythmFeeling === feeling ? "active" : ""}" data-action="rhythm-feeling:${feeling}">${feeling}</button>`).join("")}</div><label class="field-label">补充感受（选填）<textarea id="rhythm-note" class="field" maxlength="500">${esc(state.rhythmNote || "")}</textarea></label>${state.rhythmRecords[state.selectedRhythmDate] ? notice("这天已有记录", "保存将更新这一天，不会修改其他日期。", "sage") : ""}${buttons([["保存", "rhythm-feeling-save", "primary", !state.rhythmFeeling]])}</div>`,
-      "RHY-05": () => `${head(item, "PAUSE OR DELETE")}<div class="stack">${state.rhythmDeleted ? notice("节律数据已删除", "节律页不再显示你填写的日期和感受记录；Body Weather 的设备数据没有改变。", "sage") : `${notice("暂停节律展示", "首页和节律页不再显示阶段解释，已记录数据保留。", "rose")}${buttons([["暂停展示", "rhythm-state:paused", "secondary"]])}${notice("删除节律数据", "将删除你填写的日期和感受记录。Body Weather 原始健康数据不受影响。", "danger")}${buttons([["删除节律数据", "danger:删除节律数据:日期、周期参数和感受记录会被删除，无法恢复。:确认删除", "danger-button"]])}`}</div>`,
-      "RHY-06": () => `${head(item, "WITH HALO")}<div class="stack">${notice("只带入你确认的记录", rhythmContextSummary(), "rose")}${buttons([["带入这些记录", "halo-rhythm-context", "primary"], ["这次不带入", "go:RHY-01", "secondary"]])}</div>`,
+      "RHY-06": () => {
+        rhythmContextPreview = createHaloSource("rhythm");
+        const view = rhythmHandoff.inspect(rhythmContextPreview);
+        if (!rhythmContextPreview && (state.healthDeletionStatus && state.healthDeletionStatus !== "ready" || state.accountDeletionStatus && state.accountDeletionStatus !== "ready")) return rhythmHaloPage.blocked(view.error);
+        return rhythmHaloPage.body({ source: rhythmContextPreview, record: rhythmVisibleRecord(), date: state.selectedRhythmDate, canConfirm: view.canConfirm, error: rhythmHandoffFeedback || (rhythmContextPreview ? view.error : "") });
+      },
     };
     return map[item.id]?.() || generic(item);
   }
 
   function feedbackPage(item) {
-    const ticket = state.feedbackTickets.find((entry) => entry.id === state.activeFeedbackTicketId);
-    if (ticket) return `${head(item, "FEEDBACK")}<div class="stack">${notice("反馈已记录", "已保存在当前原型，尚未发送给客服。联系企业微信客服时，可由你决定提供哪些内容。", "sage")}${rows([["记录编号", ticket.id], ["问题类型", ticket.type], ["创建时间", new Date(ticket.createdAt).toLocaleString("zh-CN")], ["当前状态", "待联系客服"], ["设备日志", ticket.logsAllowed ? "允许附加 · 当前未采集" : "不附加"]])}<section class="card"><h3>你描述的问题</h3><p style="white-space:pre-wrap">${esc(ticket.text)}</p></section>${buttons([["联系企业微信客服", "support-handoff", "primary"], ["再反馈一个问题", "feedback-new", "secondary"], ["查看其他反馈", "feedback-list", "text-button"]])}</div>`;
-    return `${head(item, "FEEDBACK")}<div class="stack"><label class="field-label">问题类型<select id="feedback-type" class="field">${["设备连接", "数据与解释", "夜间体验", "Halo", "其他"].map((type) => `<option ${state.feedbackDraft.type === type ? "selected" : ""}>${type}</option>`).join("")}</select></label><label class="field-label">问题描述<textarea id="feedback-text" class="field" placeholder="请描述遇到的问题">${esc(state.feedbackDraft.text)}</textarea></label>${toggle("logConsent", "允许附加设备日志", "不包含 Halo 对话正文；原型不采集真实日志")}${buttons([["记录反馈", "feedback-submit", "primary"]])}${state.feedbackTickets.length ? `<section><h3>我的反馈记录</h3>${state.feedbackTickets.map((entry) => setting(entry.type, `${new Date(entry.createdAt).toLocaleDateString("zh-CN")} · 待联系客服`, `feedback-view:${entry.id}`)).join("")}</section>` : ""}</div>`;
+    return feedbackEditor.page();
   }
   function myHome(item) {
-    const copy = membershipCopy();
-    const memberEntry = state.membershipHardwareState === "unbound-retained" ? `${currentMemberAssetSnapshot().level} · 已有资产保留；重新激活后恢复未来成长` : isHardwareActive() ? "等级、成长、任务、徽章与权益" : "Halo Member · 激活硬件后开始记录成长";
-    const channelState = window.HALO_COMMERCIAL_EXTENSION?.state?.channelIdentity || "inactive";
-    const advisorEntry = {
-      inactive: ["申请体验顾问", "了解要求并提交申请", "go:CHN-01"],
-      application: ["查看申请进度", "体验顾问申请正在审核", "go:CHN-11"],
-      "needs-info": ["补充申请资料", "还需要一项资料", "go:CHN-12"],
-      approved: ["完成身份开通", "申请已通过，待确认服务协议与收款资料", "go:CHN-15"],
-      "activation-pending": ["体验顾问身份待生效", "资料已提交，查看当前状态", "go:CHN-16"],
-      active: ["经营中心", "服务订单、收益、学习与工具", "go:CHN-19"],
-      paused: ["经营已暂停", "可查看历史订单、账本与服务事项", "go:CHN-22"],
-      terminated: ["体验顾问合作已结束", "查看历史结算与待处理事项", "go:CHN-22"],
-    }[channelState] || ["申请体验顾问", "了解要求并提交申请", "go:CHN-01"];
-    const pointsBalance = currentMemberAssetSnapshot().points;
-    const quickActions = `${setting("我的 Halo 硬件", copy.device, "go:DEV-10")}${setting("会员中心", memberEntry, "go:MEM-01")}${setting("Halo Points", `${pointsBalance.toLocaleString()} 可用`, "go:PTS-01")}${setting("Halo Select", "商品、订单与售后", "go:SEL-01")}${setting("Halo Studio", "预约与最近体验", "go:STU-08")}${setting(advisorEntry[0], advisorEntry[1], advisorEntry[2])}`;
-    const accountActions = `${setting("个人资料", "昵称、头像与生日", "go:ACC-01")}${setting("账号与安全", "登录设备与注销", "go:ACC-02")}${setting("数据与隐私", "权限、导出与删除", "go:SET-01")}${setting("通知与睡眠目标", "夜间、报告与提醒", "go:SET-02")}${setting("通用设置", "语言、显示与 Halo 语气", "go:SET-03")}`;
-    const serviceActions = `${setting("会员说明", "等级、成长与权益", "info:membership-rights")}${setting("会员推荐", "邀请与奖励进度", "go:REF-01")}${setting("服务与订单来源", "Select、推荐与体验顾问", "commerce-entry")}${setting("使用帮助", "FAQ、反馈与客服", "go:HELP-01")}${setting("关于与协议", "版本、主体与健康边界", "go:LEGAL-02")}`;
-    return `${head(item, "ACCOUNT")}<div class="stack"><section class="halo-identity"><div class="halo-avatar">H</div><div><strong>你好，${esc(state.profile.nickname || "Halo 用户")}</strong><span>${isHardwareActive() ? state.dataLifecycle === "none" ? "戒指已激活 · 等待首晚记录" : "戒指已激活" : "Halo Member · 会员模式"}</span></div></section>${membershipPanel()}<section class="me-quick-grid">${quickActions}</section><details class="visual-disclosure me-section"><summary><span class="record-glyph" aria-hidden="true">⌁</span><div><strong>账号与偏好</strong><small>资料、安全、隐私与通知</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${accountActions}</div></details><details class="visual-disclosure me-section"><summary><span class="record-glyph" aria-hidden="true">i</span><div><strong>更多服务与说明</strong><small>推荐、帮助与协议</small></div><i aria-hidden="true">＋</i></summary><div class="visual-disclosure-body">${serviceActions}</div></details></div>`;
+    const assets = currentMemberAssetSnapshot();
+    const commerce = window.HALO_COMMERCIAL_EXTENSION;
+    const next = commerce?.channelJoinNext?.();
+    const advisor = !next || next.stage === "new" ? ["成为体验顾问", "了解申请条件", "CHN-01"] : [next.stage === "active" ? "经营中心" : `体验顾问 · ${next.label}`, next.stage === "active" ? "体验顾问" : next.title, next.route];
+    const device = myHomeDevice();
+    const growth = state.membershipHardwareState === "unbound-retained" ? "等级保留，成长暂停" : isHardwareActive() ? "查看成长进度" : "激活后开启成长";
+    const pointsPaused = assets.pending > 0;
+    const records = studioHomeRecords();
+    const recent = records.find(entry => entry.status.rank < 8) || records[0];
+    const row = (icon, label, action, detail = "", meta = "") => `<button type="button" class="my-home-row" data-action="${esc(action)}"><span class="my-home-icon">${myHomeIcon(icon)}</span><span class="my-home-row-copy"><strong>${esc(label)}</strong>${detail ? `<small>${esc(detail)}</small>` : ""}</span>${meta ? `<span class="my-home-row-meta">${esc(meta)}</span>` : ""}${myHomeIcon("chevron")}</button>`;
+    return `<section class="my-home" aria-label="我的"><header class="my-home-header"><h1>我的</h1><button type="button" data-action="go:HELP-03" aria-label="联系客服">${myHomeIcon("support")}<span>客服</span></button></header>
+      <button type="button" class="my-home-profile" data-action="go:ACC-01"><span class="my-home-avatar" aria-hidden="true">H</span><span><strong>${esc(state.profile.nickname || "Halo 用户")}</strong><small>个人资料</small></span>${myHomeIcon("chevron")}</button>
+      <button type="button" class="my-home-device" data-action="${device.action || `go:${device.route}`}"><img src="${HALO_SYMBOL}" alt=""><span><strong>我的 Halo Ring</strong><small>${esc(device.label)}</small></span>${myHomeIcon("chevron")}</button>
+      <section class="my-home-member" aria-label="会员账户"><button type="button" class="my-home-member-heading" data-action="go:MEM-01"><span><strong>${esc(assets.level)}</strong><small>${growth}</small></span><span class="my-home-member-more">会员中心${myHomeIcon("chevron")}</span></button><div class="my-home-member-actions"><button type="button" data-action="go:MEM-04">${myHomeIcon("task")}<span>会员任务</span></button><button type="button" class="my-home-points" data-action="go:PTS-01" aria-label="Halo Points，可用 ${esc((assets.points === null ? "—" : assets.points.toLocaleString()))}${pointsPaused ? '，使用暂时暂停' : ''}"><strong>${esc((assets.points === null ? "—" : assets.points.toLocaleString()))}</strong><span>Points</span>${pointsPaused ? '<small>使用暂时暂停</small>' : ''}</button><button type="button" data-action="go:MEM-07">${myHomeIcon("gift")}<span>会员权益</span></button></div></section>
+      <section class="my-home-section" aria-label="我的券包"><div class="my-home-list">${row("ticket", "优惠券与兑换券", "go:MY-02", "折扣、满减与体验兑换")}</div></section>
+      <section class="my-home-section" aria-labelledby="my-orders-heading"><h2 id="my-orders-heading">订单与体验</h2><div class="my-home-list">${row("bag", "我的订单", "go:SEL-10", "", "全部订单")}${row("calendar", "Halo Studio", "go:STU-08", "预约与体验", recent?.status.label || "暂无预约")}</div></section>
+      <section class="my-home-section" aria-labelledby="my-services-heading"><h2 id="my-services-heading">更多服务</h2><div class="my-home-list">${row("bag", "Halo Select", "go:SEL-01", "选购好物")}${row("people", "邀请朋友", "go:REF-01", "推荐与奖励")}${row("advisor", advisor[0], `go:${advisor[2]}`, advisor[1])}</div></section>
+      <section class="my-home-section" aria-labelledby="my-settings-heading"><h2 id="my-settings-heading">设置与帮助</h2><div class="my-home-list">${row("shield", "账号与安全", "go:ACC-02")}${row("lock", "数据与隐私", "go:SET-01")}${row("bell", "通知与睡眠目标", "go:SET-02")}${row("settings", "通用设置", "go:SET-03")}${row("help", "使用帮助", "go:HELP-01")}${row("info", "关于与协议", "go:LEGAL-02")}</div></section>
+      <nav class="my-home-notes" aria-label="服务说明"><button type="button" data-action="info:membership-rights">会员说明</button><span aria-hidden="true">·</span><button type="button" data-action="commerce-entry">服务说明</button></nav></section>`;
+  }
+  function myHomeDevice() {
+    if (initialSync?.resumeSummary()) return initialSync.resumeSummary();
+    if (deviceBinding.resumeRoute()) return { label: state.deviceBinding.status === "success" ? "连接已完成，继续设置" : "查看戒指连接进度", route: "DEV-03" };
+    if (!isHardwareActive() && state.devicePaired) return { label: "还需完成激活", route: "DEV-05" };
+    if (state.membershipHardwareState === "never-bound") return { label: "尚未连接 Halo Ring", route: "DEV-01" };
+    if (state.membershipHardwareState === "unbound-retained") return { label: "设备已解绑", route: "DEV-01" };
+    if (!state.toggles.bluetooth) return { label: "蓝牙未开启", route: "DEV-10" };
+    const labels = { connected: "已连接", connecting: "正在连接", syncing: "正在同步", disconnected: "暂未连接", low: "电量偏低", action: "连接需要处理" };
+    return { label: labels[state.deviceStatus] || "查看设备状态", route: "DEV-10" };
+  }
+  function myHomeIcon(name) {
+    const paths = {
+      chevron: '<path d="m9 5 7 7-7 7"/>',
+      support: '<path d="M4 14V9a8 8 0 0 1 16 0v5M20 16v2a3 3 0 0 1-3 3h-3"/><rect x="2" y="10" width="4" height="7" rx="1.5"/><rect x="18" y="10" width="4" height="7" rx="1.5"/>',
+      task: '<path d="M8 4H5a1 1 0 0 0-1 1v16h16V5a1 1 0 0 0-1-1h-3M8 2h8v4H8Z"/><path d="m8 13 3 3 5-6"/>',
+      gift: '<path d="M3 10h18v11H3ZM2 6h20v4H2Zm10 0v15"/><path d="M12 6H8a2.5 2.5 0 1 1 2.4-3.2L12 6Zm0 0h4a2.5 2.5 0 1 0-2.4-3.2L12 6Z"/>',
+      ticket: '<path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Z"/><path d="M15 5v3m0 3v2m0 3v3"/>',
+      bag: '<path d="M4 7h16l1 14H3L4 7Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2M8 11a4 4 0 0 0 8 0"/>',
+      calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18m-13 5h5"/>',
+      people: '<circle cx="9" cy="7" r="4"/><path d="M2 21v-3a7 7 0 0 1 14 0v3H2Zm15-18a4 4 0 0 1 0 8m2 4a6 6 0 0 1 3 5"/>',
+      advisor: '<circle cx="10" cy="6" r="4"/><path d="M13 21H3v-3a7 7 0 0 1 11-5m4 8-4-4a2.5 2.5 0 0 1 4-3 2.5 2.5 0 0 1 4 3l-4 4Z"/>',
+      shield: '<path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6l9-4Z"/><path d="m8 11 3 3 5-5"/>',
+      lock: '<rect x="4" y="10" width="16" height="12" rx="2"/><path d="M7 10V6a5 5 0 0 1 10 0v4m-5 5v3"/>',
+      bell: '<path d="M6 8a6 6 0 0 1 12 0v7l3 3H3l3-3V8Zm3 13h6M12 2V1"/>',
+      settings: '<path d="M7 3h10l5 9-5 9H7l-5-9 5-9Z"/><circle cx="12" cy="12" r="3"/>',
+      help: '<circle cx="12" cy="12" r="10"/><path d="M9 8a3 3 0 1 1 5 2.2c-1.6 1-2 1.2-2 3M12 17h.01"/>',
+      info: '<circle cx="12" cy="12" r="10"/><path d="M12 10v7m0-11h.01"/>',
+    };
+    return `<svg class="my-home-svg ${name === "chevron" ? "my-home-chevron" : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.info}</svg>`;
+  }
+  function profileEditorPage() {
+    const draft = profileEditorDraft();
+    const errors = profileEditorErrors();
+    const field = (key, label, attributes, unit = "") => `<div class="profile-editor-field"><div class="profile-editor-label"><label for="profile-${key}">${label}</label>${key === "nickname" ? '<small>必填</small>' : key === "birthday" ? '<small id="profile-age"></small>' : ''}</div><div class="profile-editor-control"><input id="profile-${key}" ${attributes} value="${esc(draft[key])}" aria-describedby="profile-error-${key}" aria-invalid="false">${unit ? `<span class="profile-editor-unit">${unit}</span>` : ''}${key === "birthday" ? `<span class="profile-editor-date-hint" aria-hidden="true" ${draft.birthday ? 'hidden' : ''}>选择出生日期</span>` : ''}</div><p class="profile-editor-error" id="profile-error-${key}" aria-live="polite">${state.profileEditor.touched[key] ? esc(errors[key] || '') : ''}</p></div>`;
+    return `<section class="profile-editor" aria-labelledby="profile-editor-title"><header class="profile-editor-header"><button type="button" data-action="profile-back" aria-label="返回上一页">${myHomeIcon("chevron")}</button><h1 id="profile-editor-title">个人资料</h1><span aria-hidden="true"></span></header><form id="profile-editor-form" novalidate><div class="profile-editor-scroll">${basicProfileEditor.resumeEntry()}${field("nickname", "昵称", 'type="text" autocomplete="nickname" placeholder="填写昵称" required')}<section class="profile-editor-body" aria-labelledby="profile-body-title"><div class="profile-editor-group-title"><h2 id="profile-body-title">身体信息</h2><span>选填</span></div><button type="button" class="profile-purpose-link" data-action="profile-purpose">为什么需要这些信息？</button>${field("birthday", "出生日期", `type="date" max="${beijingDateKey()}" autocomplete="bday" data-empty="${!draft.birthday}"`)}<div class="profile-editor-measures">${field("height", "身高", 'type="text" inputmode="decimal" placeholder="填写身高"', 'cm')}${field("weight", "体重", 'type="text" inputmode="decimal" placeholder="填写体重"', 'kg')}</div></section><section class="profile-editor-benefit"><div><strong id="profile-benefit-label">生日权益提醒</strong><p id="profile-benefit-help">关闭提醒也不会影响已有权益</p></div><button type="button" id="profile-birthday-benefit" data-action="profile-birthday-benefit" role="switch" aria-checked="${Boolean(draft.birthdayBenefit)}" aria-labelledby="profile-benefit-label" aria-describedby="profile-benefit-help"><span aria-hidden="true"></span></button></section></div><footer class="profile-editor-footer"><p id="profile-editor-status" role="status" aria-live="polite"></p><button id="profile-save-btn" type="submit" class="primary">保存</button><button id="profile-discard-btn" type="button" data-action="profile-discard" hidden>撤销修改</button></footer></form></section>`;
+  }
+  function updateProfileEditorControls() {
+    if (state.current !== "ACC-01" || !document.getElementById("profile-editor-form")) return;
+    const draft = profileEditorDraft();
+    const errors = profileEditorErrors();
+    const dirty = profileEditorDirty();
+    for (const key of ["nickname", "birthday", "height", "weight"]) {
+      const input = document.getElementById(`profile-${key}`);
+      const error = state.profileEditor.touched[key] || dirty || String(draft[key] || "").trim() ? errors[key] || "" : "";
+      input.setAttribute("aria-invalid", String(Boolean(error)));
+      input.closest(".profile-editor-control").classList.toggle("invalid", Boolean(error));
+      document.getElementById(`profile-error-${key}`).textContent = error;
+    }
+    document.getElementById("profile-birthday").dataset.empty = String(!draft.birthday);
+    screen.querySelector(".profile-editor-date-hint").hidden = Boolean(draft.birthday);
+    const today = beijingDateKey();
+    document.getElementById("profile-age").textContent = draft.birthday && !errors.birthday ? `${Number(today.slice(0, 4)) - Number(draft.birthday.slice(0, 4)) - (today.slice(5) < draft.birthday.slice(5) ? 1 : 0)} 岁` : "";
+    document.getElementById("profile-birthday-benefit").setAttribute("aria-checked", String(Boolean(draft.birthdayBenefit)));
+    const invalid = Object.values(errors).some(Boolean);
+    const save = document.getElementById("profile-save-btn");
+    save.disabled = invalid || !dirty && profileEditorHasSaved();
+    save.setAttribute("aria-disabled", String(save.disabled));
+    save.textContent = !dirty && profileEditorHasSaved() ? "已保存" : "保存";
+    document.getElementById("profile-discard-btn").hidden = !dirty;
+    document.getElementById("profile-editor-status").textContent = dirty ? profileDraftRestored ? "已恢复上次未保存的修改" : invalid ? "请检查标出的内容" : "修改尚未保存" : "";
   }
   function me(item) {
+    if (item.id === "SET-01") return dataPrivacy.page();
+    if (item.id === "SET-02") return notificationSettings.page();
     if (item.id === "MY-01") return myHome(item);
+    if (item.id === "ACC-01") return profileEditorPage();
     const map = {
-      "MY-01": () => { const copy = membershipCopy(); const memberEntry = state.membershipHardwareState === "unbound-retained" ? `${currentMemberAssetSnapshot().level} · 已有资产保留；重新激活后恢复未来成长` : isHardwareActive() ? "等级、成长、任务、徽章与权益" : "Halo Member · 激活硬件后开始记录成长"; const channelState = window.HALO_COMMERCIAL_EXTENSION?.state?.channelIdentity || "inactive"; const channelActive = channelState === "active"; const channelPending = channelState === "activation-pending"; return `${head(item, "ACCOUNT")}<div class="stack"><section class="halo-identity"><div class="halo-avatar">H</div><div><strong>你好，${esc(state.profile.nickname || "Halo 用户")}</strong><span>${isHardwareActive() ? state.dataLifecycle === "none" ? "戒指已激活 · 等待首晚记录" : "戒指已激活" : "Halo Member · 会员模式"}</span></div></section>${membershipPanel()}${setting("个人资料", "昵称、头像与生日", "go:ACC-01")}${setting("我的 Halo 硬件", `${copy.device} · 查看连接与设备状态`, "go:DEV-10")}${setting("会员说明", "等级、成长、Halo Points 与权益说明", "info:membership-rights")}${setting("会员中心", memberEntry, "go:MEM-01")}${setting("Halo Points", "余额、临期提醒、明细与兑换", "go:PTS-01")}${setting("Halo Select", "精选商品、购物车、订单与售后", "go:SEL-01")}${setting("会员推荐", "邀请朋友并查看奖励进度", "go:REF-01")}${setting(channelActive ? "经营中心" : channelPending ? "体验顾问身份待生效" : "申请体验顾问", channelActive ? "服务订单、收益、学习与工具" : channelPending ? "查看资料与身份状态" : "了解要求并提交申请", channelActive ? "go:CHN-19" : channelPending ? "go:CHN-16" : "go:CHN-01")}${setting("商城、推荐与体验顾问说明", "了解三类服务与订单来源", "commerce-entry")}${setting("Halo Studio", "预约、体验码与最近体验", "go:STU-08")}${setting("账号与安全", "登录设备与便捷注销", "go:ACC-02")}${setting("数据与隐私", "权限、本地记录与云摘要", "go:SET-01")}${setting("通知、夜间与睡眠目标", "工作日/休息日目标、睡前与报告提醒", "go:SET-02")}${setting("通用设置", "语言、显示、桌面小组件与 Halo 语气", "go:SET-03")}${setting("使用帮助", "FAQ、反馈与企业微信客服", "go:HELP-01")}${setting("关于与协议", "版本、主体与健康边界", "go:LEGAL-02")}</div>`; },
-      "ACC-01": () => { const valid = state.profile.nickname.trim().length >= 2 && state.profile.birthday && Number(state.profile.height) >= 100 && Number(state.profile.height) <= 230 && Number(state.profile.weight) >= 25 && Number(state.profile.weight) <= 250; return `${head(item, "PROFILE")}<div class="stack"><label class="field-label">昵称<input id="profile-nickname" class="field" value="${esc(state.profile.nickname)}"></label><label class="field-label">生日<input id="profile-birthday" class="field" type="date" value="${esc(state.profile.birthday)}"></label><label class="field-label">身高（厘米）<input id="profile-height" class="field" type="number" min="100" max="230" inputmode="decimal" value="${esc(state.profile.height)}"></label><label class="field-label">体重（公斤）<input id="profile-weight" class="field" type="number" min="25" max="250" inputmode="decimal" value="${esc(state.profile.weight)}"></label>${notice("这些信息用在哪里", "生日、身高与体重只用于活动消耗、个人常见范围和节律解释的个性化计算。你可以稍后修改；Halo 不公开这些资料。")}${toggle("birthdayBenefit", "生日关怀", "单独同意后，生日可收到 Halo Points 或优惠权益提示")}${state.profileSaved ? notice("个人资料已保存", "新的资料会用于之后的个性化计算。", "sage") : ""}${buttons([[state.profileSaved ? "已保存" : "保存资料", state.profileSaved ? "" : "profile-save", "primary", state.profileSaved || !valid]])}</div>`; },
-      "SET-01": () => `${head(item, "DATA & PRIVACY")}<div class="stack">${rows([["完整健康明细", "优先保存在手机本地"], ["云端", "必要摘要与同步状态"], ["数据来源", "Halo Ring + 已授权系统能力"]])}${setting("权限管理", "蓝牙、通知与健康数据", "go:PERM-01")}${toggle("location", "最后位置线索", "位置需要单独授权；关闭后不再记录新的手机位置线索")}${state.toggles.location ? notice("位置权限已开启", "仅在戒指与 App 连接时记录手机位置、时间和戒指电量；不是实时定位。", "sage") : notice("位置权限未开启", "不影响连接、同步、Body Weather 或夜间体验。")}${setting("Halo 数据与隐私", "对话来源、记忆与撤回", "go:HAL-07")}${setting("导出当前原型记录", "本地 JSON · 未加密 · 不含真实设备档案", "export:open")}${state.healthDeletionStatus === "submitted" ? notice("健康记录删除申请已提交", "处理进度会在这里更新；账号和设备绑定不会自动解除。", "sage") : buttons([["删除健康记录", "danger:删除健康记录:将提交本地与云端健康记录删除流程，账号和设备绑定不会自动解除。:继续删除", "danger-button"]])}${notice("戒指内原始记录", "清空戒指缓存请前往“我的戒指 > 高级设备操作”，避免同名操作重复。")}</div>`,
-      "SET-02": () => `${head(item, "SLEEP & NOTIFICATIONS")}<div class="stack">${sleepGoalPanel()}${!state.toggles.notification ? notice("系统通知已关闭", "以下提醒偏好会保留，但暂时无法发出通知。", "warm") + buttons([["开启通知权限", "go:PERM-01", "secondary"]]) : ""}<span class="settings-group-label">提醒设置</span>${toggle("nightPrompt", "睡前轻提醒", "只作为通知，不强制打开 App")}${toggle("morningPrompt", "早晨状态提示", "睡眠结束后提醒；没有结束记录时，在首次打开 App 时更新")}${toggle("lowBattery", "低电量提醒", "避免影响夜间记录")}${toggle("syncAlert", "同步异常", "仅在需要处理时提醒")}${toggle("reportReady", "报告生成", "14 晚与 Studio 报告")}${toggle("wake", "Halo 闹钟", "系统关键提醒")}</div>`,
-      "SET-03": () => `${head(item, "GENERAL")}<div class="stack">${setting("语言", "简体中文", "toast:语言设置已打开")}${toggle("reduceMotion", "降低动态效果", "减少呼吸动画和页面转场")}${setting("桌面小组件", "Body Weather、戒指连接状态与今晚建议", "widget-preview")}${setting("Halo 表达偏好", "更安静、更温柔、更清楚", "go:HAL-08")}${setting("单位", "公制 · 摄氏度", "toast:单位设置已打开")}</div>`,
-      "HELP-01": () => { const items = [["超级符号为什么会变化","连接、同步、低电量与需要处理","status-detail"],["数据为什么还不能解释","查看五种数据状态和当前进度","info:data-quality"],["戒指无法连接","蓝牙与绑定排查","go:DEV-01"],["固件更新没有完成","保持距离与重试方式","go:DEV-11"],["夜间播放与唤醒","锁屏播放、手机计时与系统权限","go:NIG-11"],["健康解释边界","哪些内容不是诊断","go:LEGAL-02"],["问题反馈与记录","查看已记录问题，或添加新反馈","go:HELP-02"],["人工客服","将离开 App","go:HELP-03"]].filter(([title,body]) => `${title}${body}`.includes(state.helpQuery)); return `${head(item, "HELP")}<div class="stack"><input id="help-search" class="field" placeholder="搜索问题" value="${esc(state.helpQuery)}">${items.map(([title,body,action]) => setting(title,body,action)).join("") || notice("没有找到相关问题", "换一个关键词，或直接联系人工客服。", "sage")}</div>`; },
+      "MY-01": () => { const copy = membershipCopy(); const memberEntry = state.membershipHardwareState === "unbound-retained" ? `${currentMemberAssetSnapshot().level} · 已有资产保留；重新激活后恢复未来成长` : isHardwareActive() ? "等级、成长、任务、徽章与权益" : "Halo Member · 激活硬件后开始记录成长"; const channelState = window.HALO_COMMERCIAL_EXTENSION?.state?.channelIdentity || "inactive"; const channelActive = channelState === "active"; const channelPending = channelState === "activation-pending"; return `${head(item, "ACCOUNT")}<div class="stack"><section class="halo-identity"><div class="halo-avatar">H</div><div><strong>你好，${esc(state.profile.nickname || "Halo 用户")}</strong><span>${isHardwareActive() ? state.dataLifecycle === "none" ? "戒指已激活 · 等待首晚记录" : "戒指已激活" : "Halo Member · 会员模式"}</span></div></section>${membershipPanel()}${setting("个人资料", "昵称、头像与生日", "go:ACC-01")}${setting("我的 Halo 硬件", `${copy.device} · 查看连接与设备状态`, "go:DEV-10")}${setting("会员说明", "等级、成长、Halo Points 与权益说明", "info:membership-rights")}${setting("会员中心", memberEntry, "go:MEM-01")}${setting("Halo Points", "余额、临期提醒、明细与兑换", "go:PTS-01")}${setting("Halo Select", "精选商品、购物车、订单与售后", "go:SEL-01")}${setting("会员推荐", "邀请朋友并查看奖励进度", "go:REF-01")}${setting(channelActive ? "经营中心" : channelPending ? "体验顾问身份待生效" : "申请体验顾问", channelActive ? "服务订单、收益、学习与工具" : channelPending ? "查看资料与身份状态" : "了解要求并提交申请", channelActive ? "go:CHN-19" : channelPending ? "go:CHN-16" : "go:CHN-01")}${setting("商城、推荐与体验顾问说明", "了解三类服务", "commerce-entry")}${setting("Halo Studio", "预约、体验码与最近体验", "go:STU-08")}${setting("账号与安全", "登录设备与便捷注销", "go:ACC-02")}${setting("数据与隐私", "权限、本地记录与云摘要", "go:SET-01")}${setting("通知、夜间与睡眠目标", "工作日/休息日目标、睡前与报告提醒", "go:SET-02")}${setting("通用设置", "语言、显示、桌面小组件与 Halo 语气", "go:SET-03")}${setting("使用帮助", "FAQ、反馈与企业微信客服", "go:HELP-01")}${setting("关于与协议", "版本、主体与健康边界", "go:LEGAL-02")}</div>`; },
+      "SET-03": () => generalSettingsPage(),
+      "HELP-01": () => helpCenter.page(),
       "HELP-02": () => feedbackPage(item),
-      "HELP-03": () => `${head(item, "HUMAN SUPPORT")}<div class="stack">${notice("通过企业微信联系客服", "客服可以协助处理会员、订单、设备、权益和售后问题。", "sage")}${rows([["联系时不会发送", "健康数据、Halo 对话和其他敏感信息"], ["后续补充信息", "由你在对话中决定是否提供"]])}${buttons([["联系企业微信客服", "support-handoff", "primary"], ["返回帮助中心", "go:HELP-01", "secondary"]])}</div>`,
-      "LEGAL-02": () => `${head(item, "ABOUT")}<div class="stack">${rows([["App 版本", "1.0.0 (140)"], ["设备固件", "1.0.8"], ["运营主体", "Halo Ring"]])}${setting("用户协议", "阅读原型摘要 · 正式版本待审定", "legal-read:agreement")}${setting("隐私政策", "了解数据保存与删除", "legal-read:privacy")}${setting("健康与 AI 边界", "了解状态与建议的适用范围", "legal-read:ai")}${notice("健康管理参考", "Halo Ring 与 App 提供的状态和建议不替代医疗诊断。")}</div>`,
-      "ACC-02": () => `${head(item, "ACCOUNT SECURITY")}<div class="stack">${rows([["手机号", (state.authPhone || "13800000000").replace(/^(\d{3})\d{4}(\d{4})$/, "$1 **** $2")], ["登录设备", state.signedIn ? "本机 iPhone" : "已退出"]])}${buttons([["退出登录", "logout", "secondary"], ["注销账号", "go:ACC-03", "danger-button"]])}</div>`,
-      "ACC-03": () => accountDeletionPage(item),
+      "HELP-03": () => supportContact.page(),
+      "LEGAL-02": () => aboutLegal.page(),
+      "ACC-02": () => accountSecurity.page(),
+      "ACC-03": () => accountDeletion.page(),
     };
     return map[item.id]?.() || generic(item);
   }
 
+  const STUDIO_HOME_FILTERS = ["全部", "瑜伽", "普拉提", "冥想"];
+  const STUDIO_HOME_MEDIA = {
+    "yoga-evening": "assets/studio-yoga-v1.png",
+    "pilates-morning": "assets/studio-pilates-v1.png",
+  };
+  function studioHomeIcon(name) {
+    const paths = {
+      back: '<path d="m14 5-7 7 7 7"/>',
+      clock: '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
+      arrow: '<path d="m9 5 7 7-7 7"/>',
+      scan: '<path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3M5 12h14"/>',
+      calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h1m6 0h1m-8 3h1"/>',
+      pin: '<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+      close: '<path d="m6 6 12 12M6 18 18 6"/>',
+      people: '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-17a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v3"/>',
+      person: '<circle cx="12" cy="7" r="3.5"/><path d="M4 21v-2a8 6 0 0 1 16 0v2Z"/>',
+      refund: '<path d="m2 9 3 3 3-3M5 12a8 8 0 1 1 2 5m5-11v6l3 2"/>',
+      report: '<path d="M6 3h8l5 5v13H6Zm8 0v6h5M9 13h7m-7 4h5"/>',
+      ticket: '<path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Zm9 0v3m0 3v2m0 3v3"/>',
+    };
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.arrow}</svg>`;
+  }
+  function studioHomeRecordState(id, record) {
+    if (studioReservation.unresolved(record)) return { label: record.refundRequest.status === "unknown" ? "取消结果待确认" : "取消处理中", cta: "查看进度", route: "STU-18", rank: 3 };
+    if (!STUDIO_EVENTS[id]) return { label: "历史体验", cta: "查看说明", route: "", rank: 9 };
+    if (studioPayment.unresolved(record)) return { label: record.paymentRequest.status === "unknown" ? "支付结果待确认" : "支付处理中", cta: "查看支付进度", route: "STU-17", rank: 1 };
+    if (record.refundStatus === "submitted") return { label: "取消处理中", cta: "查看进度", route: "STU-18", rank: 3 };
+    if (["refunded", "cancelled"].includes(record.refundStatus)) return { label: record.refundStatus === "refunded" ? "已退款" : "已取消", cta: "查看预约", route: "STU-18", rank: 8 };
+    if (record.deletionStatus && record.deletionStatus !== "ready") return { label: "个人记录已删除", cta: record.booked ? "查看预约记录" : "查看说明", route: record.booked ? "STU-18" : "", rank: 9 };
+    if (!record.booked && record.bookingRequest?.status === "submitting") return { label: "预约提交中", cta: "查看进度", route: "STU-16", rank: 6 };
+    if (record.booked && !record.paid) return { label: "待付款", cta: studioPayment.unavailable(id) ? "查看预约" : "继续支付", route: studioPayment.unavailable(id) ? "STU-18" : "STU-17", rank: 1 };
+    if (record.sessionStarted && !record.sessionDone) return { label: "体验进行中", cta: "继续体验", route: "STU-04", rank: 0 };
+    if (record.booked && !record.sessionDone) return { label: "已预约", cta: "查看预约", route: "STU-18", rank: 2 };
+    if (record.sessionDone) {
+      const report = studioReport.summary(record, id);
+      if (report.kind === "generated") return { label: report.title, cta: "查看报告", route: "STU-05", rank: 5 };
+      if (["waiting", "checking", "failed", "unknown", "review"].includes(report.kind)) return { label: report.title, cta: "查看进度", route: "STU-12", rank: 4 };
+    }
+    if (!record.sessionDone) return { label: "预约尚未完成", cta: "继续预约", route: "STU-16", rank: 6 };
+    return { label: "体验已完成", cta: "查看记录", route: "STU-15", rank: 7 };
+  }
+  function studioHomeRecords() {
+    return Object.entries(state.studioRecords || {})
+      .filter(([, record]) => record && (record.booked || record.bookingId || record.sessionStarted || record.sessionDone || record.bookingRequest))
+      .map(([id, record]) => ({ id, record, event: record.eventSnapshot || STUDIO_EVENTS[id] || { title: "历史活动", date: "", place: "" }, status: studioHomeRecordState(id, record) }))
+      .sort((a, b) => a.status.rank - b.status.rank || (a.status.rank <= 2 ? 1 : -1) * ((Date.parse(a.event.startsAt) || 0) - (Date.parse(b.event.startsAt) || 0)));
+  }
+  function studioHomeRecordCard(entry, featured = false) {
+    const { id, event, status } = entry;
+    return `<button type="button" class="studio-record-link ${featured ? "is-featured" : ""}" data-action="studio-home-open:${esc(id)}"><span class="studio-record-status">${esc(status.label)}</span><strong>${esc(event.title)}</strong><span class="studio-record-meta">${esc([event.date, event.place].filter(Boolean).join(" · "))}</span><span class="studio-record-next">${esc(status.cta)}${studioHomeIcon("arrow")}</span></button>`;
+  }
+  function showStudioHomeRecords() {
+    return go("STU-07");
+  }
+  function studioHomePage() {
+    const filter = STUDIO_HOME_FILTERS.includes(state.studioHomeFilter) ? state.studioHomeFilter : "全部";
+    const records = studioHomeRecords();
+    const current = records.find(entry => entry.status.rank < 8);
+    const events = Object.keys(STUDIO_EVENTS).map(id => [id, selectedStudioEvent(id)]).filter(([, event]) => event.seats > 0 && Date.parse(event.startsAt) > Date.now() && (filter === "全部" || event.category === filter));
+    const cards = events.map(([id, event]) => `<button type="button" class="studio-event-link" data-action="studio-select:${esc(id)}" aria-label="查看${esc(event.title)}详情">${STUDIO_HOME_MEDIA[id] ? `<img src="${STUDIO_HOME_MEDIA[id]}" alt="${esc(event.category)}场地示意图" width="1774" height="887" loading="eager">` : ""}<span class="studio-event-title"><strong>${esc(event.title)}</strong><b>${event.price ? `¥${esc(event.price)}` : "免费"}</b></span><span class="studio-event-time">${esc(event.date)} · ${esc(event.duration)}分钟</span><span class="studio-event-bottom"><span>${studioHomeIcon("pin")}${esc(event.place)}</span><span>查看详情${studioHomeIcon("arrow")}</span></span></button>`).join("");
+    const emptyTitle = filter === "全部" ? "暂时没有可预约的活动" : `暂时没有可预约的${esc(filter)}体验`;
+    return `<div class="studio-home"><header class="studio-home-header"><button type="button" class="studio-icon-control" data-action="previous" aria-label="返回上一页">${studioHomeIcon("back")}</button><h1>Halo Studio</h1><button type="button" class="studio-scan-control" data-action="go:STU-01" aria-label="扫码或输入体验码">${studioHomeIcon("scan")}<span>扫码</span></button></header><button type="button" class="studio-my-entry" data-action="studio-home-records">${studioHomeIcon("calendar")}<strong>我的体验</strong><span>${records.length ? `${records.length} 条预约与记录` : "预约与记录"}</span>${studioHomeIcon("arrow")}</button>${current ? `<section class="studio-home-current" aria-label="继续我的体验">${studioHomeRecordCard(current, true)}</section>` : ""}<section class="studio-home-events" aria-labelledby="studio-events-title"><h2 id="studio-events-title">选一场喜欢的体验</h2><div class="studio-category-filter" role="group" aria-label="按活动类型筛选">${STUDIO_HOME_FILTERS.map(value => `<button type="button" aria-pressed="${filter === value}" data-action="studio-home-filter:${value}">${value}</button>`).join("")}</div><div id="studio-home-results" aria-live="polite">${cards || `<div class="studio-home-empty"><h3>${emptyTitle}</h3><p>${filter === "全部" ? "已预约的活动仍可在“我的体验”查看。" : "换个类型看看，已预约的活动不会受影响。"}</p>${filter === "全部" ? "" : '<button type="button" class="secondary" data-action="studio-home-filter:全部">查看全部活动</button>'}</div>`}</div></section></div>`;
+  }
+  const STUDIO_DETAIL_COPY = {
+    "yoga-evening": "跟着主理人完成一组舒展练习，在呼吸与动作之间慢下来。",
+    "pilates-morning": "跟着主理人练习核心控制，感受动作与呼吸的配合。",
+    "breath-night": "用一段呼吸与冥想练习，把注意力带回当下。",
+  };
+  function studioDetailState() {
+    const id = state.selectedStudioEventId;
+    if (!Object.prototype.hasOwnProperty.call(STUDIO_EVENTS, id)) return { label: "暂时无法打开这场活动", cta: "看看其他活动", route: "STU-08", note: "已有预约与记录仍然保留。" };
+    const record = state.studioRecords?.[id] || {};
+    const unavailable = studioBookingUnavailable(id);
+    if (!record.booked && record.bookingRequest?.status === "submitting") return { label: "预约提交中", cta: "查看进度", route: "STU-16", note: "提交进度已保存，不会重复预约。" };
+    if (record.booked || record.sessionStarted || record.sessionDone || ["submitted", "refunded", "cancelled"].includes(record.refundStatus) || record.deletionStatus && record.deletionStatus !== "ready") {
+      const status = studioHomeRecordState(id, record);
+      if (record.booked && !record.paid && record.refundStatus === "none" && unavailable && unavailable !== "本场已满") return { label: "待付款预约", cta: "查看我的预约", route: "STU-18", note: "当前不能继续新预约，请查看原预约或咨询。" };
+      return { ...status, cta: status.cta === "查看预约" ? "查看我的预约" : status.cta, route: status.route || "HELP-03", note: ["cancelled", "refunded"].includes(record.refundStatus) ? "原预约记录保留，可查看其他活动。" : "查看本次进度，不会重复预约。" };
+    }
+    if (unavailable) return { label: unavailable, cta: unavailable, route: "", disabled: true, note: "可以看看其他活动，或咨询活动安排。" };
+    return { label: `还可预约 ${selectedStudioEvent().seats} 位`, cta: record.bookingId ? "继续预约" : "预约本次体验", route: "STU-16", note: "下一步确认预约信息，暂不扣款" };
+  }
+  function studioDetailPage() {
+    const id = state.selectedStudioEventId;
+    const status = studioDetailState();
+    const header = `<header class="studio-detail-header"><button type="button" class="studio-icon-control" data-action="previous" aria-label="返回上一页">${studioHomeIcon("back")}</button><span>活动详情</span><button type="button" data-action="go:HELP-03">咨询</button></header>`;
+    if (!Object.prototype.hasOwnProperty.call(STUDIO_EVENTS, id)) return `<div class="studio-detail">${header}<div class="studio-home-empty"><h1>暂时无法打开这场活动</h1><p>${esc(status.note)}</p><button type="button" class="primary" data-action="go:STU-08">看看其他活动</button></div></div>`;
+    const event = { ...selectedStudioEvent(id), host: selectedStudioEvent(id).host || "待确认" };
+    const record = state.studioRecords?.[id] || {};
+    const hours = Number.isFinite(event.cancellationHours) && event.cancellationHours >= 0 ? event.cancellationHours : null;
+    const cutoff = hours !== null && Number.isFinite(Date.parse(event.startsAt)) ? experienceTime(Date.parse(event.startsAt) - hours * 3600000) : "";
+    const cancellation = hours === null ? "取消条件请咨询确认" : `开始前${hours}小时可自助取消`;
+    const bookedAmount = record.booked && Number.isFinite(record.dueAmount) && record.dueAmount >= 0;
+    const price = bookedAmount ? record.dueAmount : event.price;
+    const showOther = status.disabled || ["submitted", "refunded", "cancelled"].includes(record.refundStatus);
+    const info = (key, icon, title, hint, body) => `<details class="studio-detail-info" data-studio-info="${key}"><summary>${studioHomeIcon(icon)}<span>${title}${hint ? `<small>${esc(hint)}</small>` : ""}</span>${studioHomeIcon("arrow")}</summary><div>${body}</div></details>`;
+    return `<article class="studio-detail" data-status-key="${esc(JSON.stringify(status))}"><div class="studio-detail-scroll" tabindex="0" aria-label="活动内容与预约说明">${header}${STUDIO_HOME_MEDIA[id] ? `<img class="studio-detail-image" src="${STUDIO_HOME_MEDIA[id]}" alt="${esc(event.category)}场地示意图" width="1774" height="887">` : ""}<h1>${esc(event.title)}</h1><p class="studio-detail-intro">${esc(event.description || STUDIO_DETAIL_COPY[id])}</p><ul class="studio-detail-facts"><li>${studioHomeIcon("calendar")}<span>${esc(event.date)} · ${esc(event.duration)}分钟</span></li><li>${studioHomeIcon("pin")}<span>${esc(event.place)}</span></li><li>${studioHomeIcon("people")}<span class="studio-detail-status">${esc(status.label)}</span></li></ul><div class="studio-detail-host">${studioHomeIcon("person")}<span>本场主理人</span><strong>${esc(event.host)}</strong></div><section class="studio-detail-preparation"><h2>参加前准备</h2><p>穿方便活动的衣服。所需用品与到场安排，可提前咨询。</p></section>${info("cancel", "refund", "取消与退款", cancellation, `<p>${hours === null ? "请在预约前咨询取消条件。" : `本场自助取消截止：${esc(cutoff || "时间待确认")}（北京时间）。超过期限或活动已开始，请联系客服核对可处理方式。`}</p><p>在 App 预约的活动，可从预约详情申请取消并查看退款进度；其他渠道的预约，请联系原预约方处理。</p><button type="button" data-action="go:HELP-03">咨询取消事宜</button>`)}${info("location", "pin", "地点与到场", "", `<p>${esc(event.place)}。完整地址与到场方式请在出发前咨询确认。</p><button type="button" data-action="go:HELP-03">咨询到场安排</button>`)}${info("report", "report", "关于个人报告", "", `<p>没有 Halo Ring 也能参加。想记录本次身体状态，可在到场准备时选择使用戒指记录。</p><p>报告需要你的同意和足够的有效记录，并非每次都会生成。个人报告只对你展示，不提供给活动机构；它用于回看个人状态，不代表活动效果或医疗结论。</p>`)}${!record.booked && !record.sessionStarted && !record.sessionDone ? `<button type="button" class="studio-detail-channel" data-action="go:STU-01">${studioHomeIcon("scan")}<span>在其他渠道预约？扫码核验</span>${studioHomeIcon("arrow")}</button>` : ""}${showOther ? `<button type="button" class="studio-detail-alternative" data-action="go:STU-08">看看其他活动${studioHomeIcon("arrow")}</button>` : ""}</div><footer class="studio-detail-footer"><div class="studio-detail-price"><strong>${Number.isFinite(price) && price >= 0 ? price ? `¥${esc(price)}` : "免费" : "待确认"}</strong><span>${bookedAmount ? "预约金额" : "每位"}</span></div><button type="button" class="primary" data-action="studio-detail-continue" aria-describedby="studio-detail-action-note" ${status.disabled ? "disabled" : ""}>${esc(status.cta)}</button><p id="studio-detail-action-note">${esc(status.note)}</p></footer></article>`;
+  }
+  let studioBookingReviewOutcome = "success";
+  const studioBookingTimers = new Map();
+  function studioBookingQuote(id = state.selectedStudioEventId) {
+    const known = Object.prototype.hasOwnProperty.call(STUDIO_EVENTS, id);
+    const event = known ? selectedStudioEvent(id) : null;
+    const record = state.studioRecords?.[id] || {};
+    const selected = Boolean(event?.price > 0 && record.useVoucher);
+    const selectedId = record.selectedVoucherId || record.bookingRequest?.quote?.voucherId || "";
+    const voucher = window.HALO_COMMERCIAL_EXTENSION?.getStudioVoucher?.(id, selected ? selectedId : "", record.bookingRequest?.id || "");
+    const invalidVoucher = selected && !voucher?.eligible;
+    const discount = selected && !invalidVoucher ? event.price : 0;
+    const amount = event && !invalidVoucher ? event.price - discount : null;
+    const quote = { eventId: id, eventSnapshot: event ? { ...event } : null, voucherId: selected ? selectedId || voucher?.id || "" : "", useVoucher: selected, amount };
+    const unavailable = studioBookingUnavailable(id);
+    return { ...quote, key: JSON.stringify({ ...quote, unavailable }), voucher, discount, invalidVoucher, unavailable, known };
+  }
+  function studioBookingPage() {
+    const id = state.selectedStudioEventId;
+    const quote = studioBookingQuote(id);
+    const header = `<header class="studio-detail-header"><button type="button" class="studio-icon-control" data-action="previous" aria-label="返回上一页">${studioHomeIcon("back")}</button><h1>确认预约</h1><button type="button" data-action="go:HELP-03">咨询</button></header>`;
+    if (!quote.known) return `<div class="studio-booking studio-detail">${header}<div class="studio-home-empty"><h2>暂时无法打开这场活动</h2><p>已有预约与记录仍然保留。</p><button class="primary" data-action="go:STU-08">看看其他活动</button></div></div>`;
+    const event = quote.eventSnapshot, record = studioRecord(id), request = record.bookingRequest;
+    const pending = !record.booked && request?.status === "submitting";
+    const existing = Boolean(record.booked || record.sessionDone || record.sessionStarted || ["submitted", "cancelled", "refunded"].includes(record.refundStatus));
+    const status = existing ? studioDetailState() : null;
+    const amount = existing ? Number.isFinite(record.dueAmount) ? record.dueAmount : null : quote.amount;
+    const discount = existing ? Number(record.voucherDiscount) || (record.voucherId ? event.price : 0) : quote.discount;
+    const base = existing ? Number.isFinite(record.baseAmount) ? record.baseAmount : amount === null ? null : amount + discount : event.price;
+    const money = value => Number.isFinite(value) ? `¥${value.toLocaleString("zh-CN", { maximumFractionDigits: 2 })}` : "待确认";
+    const hours = Number.isFinite(event.cancellationHours) ? event.cancellationHours : null;
+    const cutoff = hours !== null && Number.isFinite(Date.parse(event.startsAt)) ? experienceTime(Date.parse(event.startsAt) - hours * 3600000) : "";
+    const problem = !existing && (quote.unavailable || quote.invalidVoucher && "所选体验券当前不可用，请重新选择。" || record.bookingError);
+    const cta = existing ? status.cta : pending ? "正在提交预约…" : quote.unavailable || (quote.invalidVoucher ? "请重新选择体验券" : record.bookingError ? "重新提交预约" : amount === 0 ? "确认预约" : "提交预约，去付款");
+    const note = existing ? "已有预约记录，不会重复提交。" : pending ? "可以离开，返回后继续查看进度。" : quote.unavailable || quote.invalidVoucher ? "请先处理页面提示，再继续预约。" : amount === 0 ? "确认后完成预约，无需付款" : "下一步进入付款页，当前不会扣款";
+    const voucherBody = existing ? `<p>${record.voucherId ? "本次已使用体验券，选择已保存在原预约中。" : "本次未使用体验券。"}</p>` : event.price === 0 ? `<p>本场免费，无需使用体验券。</p>` : quote.voucher?.eligible || record.useVoucher ? `<button type="button" class="studio-booking-voucher" role="checkbox" aria-checked="${Boolean(record.useVoucher)}" data-action="studio-voucher-toggle" ${pending ? "disabled" : ""}>${studioHomeIcon("ticket")}<span><strong>${esc(quote.voucher?.title || "所选体验券")}</strong><small>${quote.invalidVoucher ? "当前不可用 · 点击取消选择" : `${record.useVoucher ? "已选择" : "本场可用"} · 抵扣 ${money(event.price)}`}</small></span><i aria-hidden="true">${record.useVoucher ? "✓" : ""}</i></button>` : `<p>${quote.voucher ? "现有体验券不适用于这场活动。" : "暂无本场可用的体验券。"}</p>`;
+    return `<article class="studio-booking studio-detail" data-quote-key="${esc(quote.key)}"><div class="studio-detail-scroll" tabindex="0" aria-label="预约信息与费用">${header}<div class="studio-booking-event">${STUDIO_HOME_MEDIA[id] ? `<img src="${STUDIO_HOME_MEDIA[id]}" width="80" height="80" alt="${esc(event.category)}场地示意图">` : ""}<div><h2>${esc(event.title)}</h2><p>${esc(event.date)}</p><p>${esc(event.place)} · ${esc(event.duration)}分钟</p></div></div><div class="studio-booking-person"><span>参与人数</span><strong>1 位</strong></div>${existing ? `<div class="studio-booking-status" role="status"><strong>${esc(status.label)}</strong><p>本页展示原预约信息。如需处理取消或退款，请查看原预约。</p></div>` : ""}<section class="studio-booking-section"><h2>体验券</h2>${voucherBody}</section><section class="studio-booking-section studio-booking-cost"><h2>费用明细</h2><dl><div><dt>活动费用</dt><dd>${money(base)}</dd></div><div><dt>体验券抵扣</dt><dd>−${money(discount)}</dd></div><div class="studio-booking-total"><dt>${existing ? "原预约金额" : "本次应付"}</dt><dd>${money(amount)}</dd></div></dl></section><details class="studio-detail-info" data-studio-info="booking-cancel"><summary><span>取消与退款<small>${hours === null ? "取消条件请咨询确认" : `开始前${hours}小时可自助取消`}</small></span>${studioHomeIcon("arrow")}</summary><div><p>${cutoff ? `本场自助取消截止：${esc(cutoff)}（北京时间）。超过期限请咨询客服。` : "请在提交预约前咨询取消条件。"}</p><p>预约成功后，可从预约详情申请取消并查看处理进度。其他渠道预约请联系原预约方。</p><button type="button" data-action="go:HELP-03">咨询取消事宜</button></div></details><p class="studio-booking-payment-note">${existing ? "金额与使用的体验券以原预约记录为准。" : amount === 0 ? "本次无需付款，提交后请查看预约结果。" : "付费活动完成付款后，预约才会确认。"}</p>${problem ? `<div class="studio-booking-error" role="alert"><strong>${esc(problem)}</strong><p>没有新增预约或扣款，已选场次仍保留。</p>${quote.unavailable ? '<button type="button" data-action="go:STU-08">看看其他活动</button>' : ""}</div>` : ""}</div><footer class="studio-detail-footer"><div class="studio-detail-price"><span>${existing ? "原预约金额" : "应付"}</span><strong>${money(amount)}</strong></div><button class="primary" type="button" data-action="studio-book" aria-describedby="studio-booking-note" ${!existing && (pending || quote.unavailable || quote.invalidVoucher) ? "disabled" : ""}>${esc(cta)}</button><p id="studio-booking-note" role="status">${esc(note)}</p></footer></article>`;
+  }
+  function submitStudioBooking() {
+    if (!state.signedIn) return go("AUTH-01");
+    const id = state.selectedStudioEventId, quote = studioBookingQuote(id);
+    if (!quote.known) return showInfoModal(quote.unavailable, "没有新增预约或扣款。", "看看其他活动", "go:STU-08");
+    const record = studioRecord(id);
+    if (record.booked || record.sessionStarted || record.sessionDone || ["submitted", "cancelled", "refunded"].includes(record.refundStatus)) return go(studioDetailState().route || "STU-18");
+    if (record.bookingRequest?.status === "submitting") return;
+    const rendered = screen.querySelector(".studio-booking[data-quote-key]");
+    const error = quote.unavailable || (quote.invalidVoucher ? "所选体验券当前不可用，请重新选择。" : rendered && rendered.dataset.quoteKey !== quote.key ? "预约信息有更新，请核对金额后再次提交。" : "");
+    if (error) { record.bookingError = error; render(); screen.querySelector(".studio-booking-error")?.scrollIntoView({ block: "nearest" }); return; }
+    const requestId = record.bookingRequest?.id || `SB-${id}-${Date.now()}`;
+    record.bookingError = "";
+    record.bookingRequest = { id: requestId, status: "submitting", readyAt: Date.now() + 900, outcome: studioBookingReviewOutcome, quote: { ...quote, voucher: undefined }, submittedAt: new Date().toISOString() };
+    persistAppProgress();
+    trackPrototypeEvent("studio_booking_submitted", { event_id: id, request_id: requestId });
+    render();
+  }
+  function finishStudioBooking(id, requestId) {
+    if (navigator.locks?.request) return navigator.locks.request("halo-points-redemption", () => finishStudioBookingLocked(id, requestId));
+    return finishStudioBookingLocked(id, requestId);
+  }
+  function finishStudioBookingLocked(id, requestId) {
+    const record = state.studioRecords?.[id], request = record?.bookingRequest;
+    if (!state.signedIn || request?.status !== "submitting" || request.id !== requestId) return;
+    const originalBooking = JSON.parse(JSON.stringify(record));
+    const current = studioBookingQuote(id), quote = request.quote;
+    let error = current.unavailable || (current.invalidVoucher ? "所选体验券当前不可用，请重新选择。" : current.key !== quote.key ? "预约信息有更新，请核对后重新提交。" : request.outcome === "fail" ? "预约暂未完成，请重试。" : "");
+    if (!error && quote.useVoucher) {
+      try { if (!window.HALO_COMMERCIAL_EXTENSION?.consumeStudioVoucher?.(id, requestId, quote.voucherId)) error = "体验券未能使用，请重试或取消选择。"; }
+      catch { error = "体验券使用状态待确认，请重试。"; }
+    }
+    if (error) { request.status = "failed"; record.bookingError = error; }
+    else {
+      Object.assign(record, { eventSnapshot: { ...quote.eventSnapshot }, bookingId: requestId, accountRef: String(state.authPhone || state.authForm?.phone || "local-demo"), registrationId: state.memberCreatedAt, localRefundContract: { version: "demo-full-before-cutoff-v1", bookingId: requestId, amount: quote.amount }, dueAmount: quote.amount, baseAmount: quote.eventSnapshot.price, voucherDiscount: quote.useVoucher ? quote.eventSnapshot.price : 0, voucherId: quote.voucherId, useVoucher: quote.useVoucher, booked: true, source: "app", paid: quote.amount === 0, paidAmount: 0 });
+      request.status = "complete"; record.bookingError = "";
+    }
+    persistAppProgress();
+    if (!error) {
+      let saved = null; try { saved = JSON.parse(localStorage.getItem(APP_PROGRESS_KEY))?.studioRecords?.[id]; } catch {}
+      if (!saved?.booked || saved.bookingRequest?.id !== requestId || saved.bookingRequest?.status !== "complete") {
+        Object.assign(record, originalBooking);
+        record.bookingError = "预约结果暂未保存，请重新查询原预约。已处理的体验券不会重复核销。";
+        if (record.bookingRequest) record.bookingRequest.status = "failed";
+        render(); return;
+      }
+      trackPrototypeEvent("studio_booking_completed", { event_id: id, booking_id: requestId });
+    }
+    if (state.selectedStudioEventId === id) syncStudioAliases();
+    if (!error && state.current === "STU-16" && state.selectedStudioEventId === id) return go(record.paid ? "STU-18" : "STU-17");
+    render();
+    if (error && state.current === "STU-16" && state.selectedStudioEventId === id) screen.querySelector(".studio-booking-error")?.scrollIntoView({ block: "nearest" });
+  }
+  function resumeStudioBookings() {
+    if (!state.signedIn) return;
+    for (const [id, record] of Object.entries(state.studioRecords || {})) {
+      const request = record.bookingRequest;
+      if (request?.status !== "submitting" || !request.quote || !Number.isFinite(request.readyAt) || studioBookingTimers.has(id)) continue;
+      studioBookingTimers.set(id, setTimeout(() => { studioBookingTimers.delete(id); finishStudioBooking(id, request.id); }, Math.max(0, Math.min(900, request.readyAt - Date.now()))));
+    }
+  }
+  function studioBookingReviewControls(item) {
+    return item.id === "STU-16" ? `<section class="review-block"><h3>确认预约 · 本地审阅</h3><p>提交延迟 0.9 秒用于检查反馈与恢复，不是座位锁定期限；不调用真实预约或支付服务。</p><button data-action="studio-booking-review:success">提交成功</button><button data-action="studio-booking-review:fail">模拟提交失败</button><p>当前：${studioBookingReviewOutcome === "fail" ? "失败" : "成功"}；体验券仍读取已有资产，不自动赠券。</p></section>` : "";
+  }
   function studio(item) {
+    if (item.id === "STU-01") return studioCodeLookup.page();
+    if (item.id === "STU-02") return studioInstitution.page();
+    if (item.id === "STU-17") return studioPayment.page();
+    if (item.id === "STU-18") return studioReservation.page();
+    if (item.id === "STU-10") return studioPreparation.page();
+    if (item.id === "STU-03") return studioPreflight.page();
+    if (item.id === "STU-04") return studioSession.page();
+    if (item.id === "STU-12") return studioReport.page();
+    if (item.id === "STU-05") return studioPostReport.page();
+    if (item.id === "STU-06") return studioNextDay.page();
+    if (item.id === "STU-13") return studioBenefit.page();
+    if (item.id === "STU-14") return studioContact.page();
+    if (item.id === "STU-07") return studioHistory.page();
+    if (item.id === "STU-15") return studioRecordDetail.page();
+    if (item.id === "STU-11") return studioFeeling.page();
     syncStudioAliases();
     const event = selectedStudioEvent();
     const record = studioRecord();
     const voucher = window.HALO_COMMERCIAL_EXTENSION?.getStudioVoucher?.(state.selectedStudioEventId);
     const eventPrice = event.price ? `¥${event.price}` : "免费会员场";
     const amount = record.useVoucher && voucher?.eligible ? 0 : event.price;
-    const eventSummary = card(event.title, `${event.date} · ${event.place} · ${event.duration} 分钟`, `${event.category} · ${eventPrice}`);
-    const bookings = Object.entries(state.studioRecords).filter(([, entry]) => entry.booked && !entry.sessionDone && !["refunded", "cancelled"].includes(entry.refundStatus));
-    const history = Object.entries(state.studioRecords).filter(([, entry]) => entry.sessionDone && entry.deletionStatus !== "deleted");
-    const reportStates = {
-      waiting: ["报告正在整理", "活动已完成；你可以离开，稍后回到这次体验查看。", "刷新报告状态", "studio-report-refresh"],
-      generated: ["报告已生成", "这份报告只对本人开放。", "查看课后报告", "go:STU-05"],
-      insufficient: ["有效记录不足", "本次活动已经完成，但没有足够的有效身体记录，不生成个人报告。", "查看活动权益", "go:STU-13"],
-      failed: ["报告暂未生成", "已保存的参与记录仍在，可以重新整理。", "重新整理", "studio-report-retry"],
-      withdrawn: ["不生成本次个人报告", "你已关闭本次报告授权；参与记录和合法权益仍然保留。", "查看本次体验", "go:STU-15"],
-    };
-    const report = reportStates[record.reportStatus] || reportStates.waiting;
+    const eventSummary = card(event.title, `${event.date} · ${event.place} · ${event.duration} 分钟`, `${event.category} · ${record.booked ? "1 位" : eventPrice}`);
     const cancelled = ["refunded", "cancelled"].includes(record.refundStatus);
     const bookingLabel = cancelled ? "已取消" : record.refundStatus === "submitted" ? "取消处理中" : !record.booked ? "未预约" : !record.paid ? "待付款" : record.sessionDone ? "体验已完成" : "已确认";
-    const paymentLabel = record.refundStatus === "refunded" ? `已退回 ¥${record.paidAmount}` : record.refundStatus === "submitted" ? "退款处理中" : !record.paid ? "未支付" : record.voucherId ? "体验券已使用" : record.paidAmount ? `已支付 ¥${record.paidAmount}` : "无需支付";
+    const paymentLabel = studioPayment.unresolved(record) ? record.paymentRequest.status === "unknown" ? "支付结果待确认" : "支付处理中" : record.refundStatus === "refunded" ? `已退回 ¥${record.paidAmount}` : record.refundStatus === "submitted" ? "退款处理中" : !record.paid ? "未支付" : record.voucherId ? "体验券已使用" : record.paidAmount ? `已支付 ¥${record.paidAmount}` : "无需支付";
     const map = {
-      "STU-08": () => `${head(item, "HALO STUDIO")}<div class="stack"><section class="studio-cover"><span>HALO STUDIO</span><h2>把每次练习，留成一份自己的记录</h2><p>从瑜伽、普拉提和冥想开始。</p></section>${bookings.map(([id, entry]) => card(selectedStudioEvent(id).title, entry.sessionStarted ? "体验进行中 · 继续本次" : entry.paid ? "预约已确认" : "待付款 · 继续完成预约", "我的预约", `studio-booking:${id}`)).join("")}${card("暮色舒展瑜伽", "60 分钟 · 静安体验室 · ¥99", "官方精选", "studio-select:yoga-evening")}${card("晨间核心普拉提", "50 分钟 · 免费会员场", "官方精选", "studio-select:pilates-morning")}${buttons([["扫码或输入体验码", "go:STU-01", "secondary"], ["看看以前的体验", "go:STU-07", "secondary"]])}</div>`,
-      "STU-01": () => `${head(item, "EXPERIENCE CODE")}<div class="stack">${notice("体验码只确认本次活动", "不会改变商品订单来源，也不会复制机构订单信息。")}<label class="field-label">体验码<input id="studio-code" class="field" value="${esc(state.studioCode)}" autocomplete="off"></label>${state.studioCodeError ? notice("没有找到这个体验码", state.studioCodeError, "warm") : ""}${state.studioScannerOpen ? `${notice("扫码交互演示", "确认样例二维码后，仍需核对活动信息。", "sage")}${buttons([["识别样例二维码", "studio-scan-result", "primary"], ["关闭扫码", "studio-scan-close", "secondary"]])}` : buttons([["确认体验", "studio-code-confirm", "primary", !state.studioCode.trim()], ["扫码", "studio-scan-open", "secondary"]])}</div>`,
-      "STU-09": () => `${head(item, "EXPERIENCE")}<div class="stack">${eventSummary}${notice("演示活动场次", "以下场次用于本地流程验收，不代表真实开放预约。")}${rows([["主理人", event.host], ["剩余名额", `${event.seats} 个`], ["取消规则", "开始前24小时可取消；超过期限联系客服"]])}${notice("个人状态报告", "仅本人的有效戒指记录、活动确认和报告授权均满足时生成。机构看不到个人健康数据。", "sage")}${buttons([[record.booked ? "查看我的预约" : "预约本次体验", record.booked ? "go:STU-18" : "go:STU-16", "primary"], ["已有机构预约", "go:STU-02", "secondary"]])}</div>`,
-      "STU-02": () => `${head(item, "CONFIRM")}<div class="stack">${eventSummary}${notice("核对机构预约", "正式 App 需先由业务系统核验预约；这里演示核验通过后的参与流程，不复制机构支付凭证。")}${buttons([["模拟核验预约并继续", "studio-institution-confirm", "primary"]])}</div>`,
-      "STU-16": () => `${head(item, "BOOKING")}<div class="stack">${eventSummary}${voucher?.eligible && !record.booked ? setting("使用已兑换的体验券", voucher.title, "studio-voucher-toggle", record.useVoucher ? "已选择" : "未选择") : ""}${rows([["本次应付", `¥${record.booked ? record.dueAmount : amount}`], ["名额确认", amount ? "完成付款后确认" : "确认后预约"]])}${record.booked ? buttons([[record.paid ? "查看预约" : "继续支付", record.paid ? "go:STU-18" : "go:STU-17", "primary"]]) : buttons([[amount ? "锁定名额" : "确认预约", "studio-book", "primary"]])}</div>`,
-      "STU-17": () => `${head(item, "PAYMENT")}<div class="stack">${eventSummary}${rows([["活动订单", record.bookingId], ["订单金额", `¥${record.dueAmount || 0}`], ["支付状态", paymentLabel]])}${notice("模拟支付", "本地原型不发起扣款。支付结果和订单状态仅用于交互验收。")}${record.paid || cancelled ? buttons([["查看预约", "go:STU-18", "primary"]]) : buttons([[`模拟支付成功 ¥${record.dueAmount}`, "studio-pay", "primary"], ["暂不支付，保留订单", "go:STU-18", "secondary"]])}</div>`,
-      "STU-18": () => `${head(item, "MY BOOKING")}<div class="stack">${eventSummary}${rows([["预约编号", record.bookingId || "尚未预约"], ["预约状态", bookingLabel], ["支付状态", paymentLabel]])}${record.refundStatus === "submitted" ? `${notice("退款申请已保存", "你可以离开并稍后返回查看；此处仅演示处理结果。", "sage")}${buttons([["模拟退款完成", "studio-refund-refresh", "primary"], ["联系活动客服", "go:HELP-03", "secondary"]])}` : cancelled ? buttons([["返回 Studio", "go:STU-08", "primary"]]) : !record.paid ? buttons([["继续支付", "go:STU-17", "primary"], ["取消未付款预约", "studio-refund", "secondary"]]) : record.sessionDone ? buttons([["查看本次体验", "go:STU-15", "primary"]]) : buttons([[record.sessionStarted ? "继续本次体验" : "到场并继续", record.sessionStarted ? "go:STU-04" : "go:STU-10", "primary"], [record.paidAmount ? "取消并申请退款" : "取消预约", "studio-refund", "danger-button"]])}</div>`,
-      "STU-10": () => `${head(item, "CONSENT")}<div class="stack">${eventSummary}${isHardwareActive() ? choice("studioMode", "ring", "本人戒指记录", "满足授权与质量后生成个人报告") : notice("当前为基础参与", "不读取身体数据，不生成个人健康报告。", "sage")}${choice("studioMode", "basic", "基础参与", "不读取戒指数据，不生成个人报告")}${toggle("studioActivity", "参与本次活动", "建立本次参与记录，必需")}${record.mode === "ring" && isHardwareActive() ? toggle("studioHealth", "生成本人的状态报告", "只对本人开放，可随时撤回") : ""}${buttons([["继续", "go:STU-11", "primary", !record.activityConsent]])}</div>`,
-      "STU-11": () => `${head(item, "BEFORE")}<div class="stack">${eventSummary}${notice("只属于你", "感受只用于本人回看，不发给机构，也不会被写成活动效果。", "sage")}<label class="field-label">此刻更希望得到什么？<textarea id="studio-before-feeling" class="field" placeholder="可跳过">${esc(record.beforeDraft)}</textarea></label>${record.beforeFeeling ? notice("已保存的用户记录", record.beforeFeeling, "sage") : ""}${buttons([["保存并继续", "studio-feeling-save", "primary"], ["跳过，保留草稿", "go:STU-03", "secondary"]])}</div>`,
-      "STU-03": () => `${head(item, "PREFLIGHT")}<div class="stack">${eventSummary}${record.mode === "ring" && record.healthConsent ? rows([["本人戒指", isHardwareActive() ? "已绑定" : "未绑定"], ["当前连接", DEVICE_STATUS[state.deviceStatus]?.label || state.deviceStatus], ["数据阶段", currentDataLifecycle().label]]) : notice("基础参与", "不读取戒指数据，不生成个人健康报告。")}${notice("参与流程演示", "开始后会保存本次体验状态；离开或刷新可继续。")}${buttons([["开始本次体验", "studio-start", "primary"]])}</div>`,
-      "STU-04": () => `${head(item, "SESSION")}<div class="session-live"><div class="pulse"><i></i></div><h2>${record.sessionDone ? "本次体验已结束" : "本次体验进行中"}</h2><p>${esc(event.title)}</p><p>${record.startedAt ? `开始于 ${experienceTime(record.startedAt)}` : ""}</p></div>${notice("参与交互演示", "当前不采集真实设备数据；结束后可验证报告状态和记录归属。")}${buttons([[record.sessionDone ? "查看报告状态" : "结束本次体验", record.sessionDone ? "go:STU-12" : "studio-complete", "primary"]])}`,
-      "STU-12": () => `${head(item, "REPORT STATUS")}<div class="stack">${eventSummary}${!record.sessionDone ? `${notice("体验还未完成", "完成本次体验后，才会核对报告与权益。")}${buttons([["查看预约", record.booked ? "go:STU-18" : "go:STU-09", "primary"]])}` : `${notice(studioCanReport(record) ? report[0] : "本次不生成个人报告", studioCanReport(record) ? report[1] : "基础参与、撤回授权或有效记录不足时，不展示身体数值与结论。", "sage")}${buttons([[studioCanReport(record) ? report[2] : "查看活动权益", studioCanReport(record) ? report[3] : "go:STU-13", "primary"]])}`}</div>`,
-      "STU-05": () => `${head(item, "POST REPORT")}<div class="stack">${eventSummary}${notice("个人报告样例", "以下展示合格记录的报告布局，不是本次交互实际采集的健康结果。", "sage")}${chartCard("活动前后记录", "仅用于本人回看，不证明课程效果")}${record.beforeFeeling ? notice("活动前的用户记录", record.beforeFeeling) : notice("没有活动前的用户记录", "未填写的感受不会由 Halo 补写。")}${buttons([["明天再一起看", "go:STU-06", "primary"], ["本次授权与记录", "go:STU-15", "secondary"]])}</div>`,
-      "STU-06": () => new Date(new Date(record.completedAt).getTime() + 8 * 3600000).toISOString().slice(0, 10) >= experienceDay() ? `${head(item, "NEXT DAY")}${eventSummary}${notice("明天再一起看", "本次活动还没有次日记录。完成下一晚睡眠同步后，再回来看看。", "sage")}${buttons([["回到本次报告", "go:STU-05", "primary"]])}` : `${head(item, "NEXT DAY")}<div class="stack">${eventSummary}${notice("把活动和第二天分开看", "活动记录不会改写已经生成的 Body Weather，也不会把同期变化当作课程效果。", "sage")}${rows([["活动", event.title], ["今日身体状态", hasBodyContext() ? currentBodyWeather().label : "当前没有可解释记录"]])}${buttons([["查看活动权益", "go:STU-13", "primary"]])}</div>`,
-      "STU-13": () => `${head(item, "BENEFIT")}<div class="stack">${eventSummary}${metrics([["有效活动奖励", "100", "Halo Points"], ["活动成长", "40", "HALO 成长值"]])}${rows([["获得条件", "已核验完成的活动，按会员规则发放"], ["本次状态", record.benefitStatus === "posted" ? "已记入会员账本" : !record.sessionDone ? "尚未完成活动" : !record.hardwareEligibleAtCompletion ? "完成时未激活硬件，不累计活动成长奖励" : "等待完成核验"]])}${notice("完成后核对", "同一活动不会重复发放，达到本月上限后不再累计。", "sage")}${buttons([[record.benefitStatus === "posted" ? "查看账本" : "核对到账状态", record.benefitStatus === "posted" ? "go:PTS-02" : "studio-benefit-refresh", "primary", !record.sessionDone || !studioConfirmed(record) || !record.hardwareEligibleAtCompletion], ["查看本次体验", "go:STU-15", "secondary"]])}</div>`,
-      "STU-14": () => `${head(item, "CONTACT")}<div class="stack">${eventSummary}${toggle("studioContact", "允许发送本次活动服务消息", "只适用于本次活动；消息由 Halo 转发，不开放联系方式")}${toggle("studioMarketing", "接收该机构后续活动消息", "单独选择，拒绝不影响报告与权益")}${notice("本次选择已保存", "其他活动不会沿用这里的联系授权。")}</div>`,
-      "STU-07": () => `${head(item, "HISTORY")}<div class="stack">${history.length ? history.map(([id, entry]) => card(selectedStudioEvent(id).title, `${experienceTime(entry.completedAt)} · ${entry.mode === "ring" ? "本人戒指记录" : "基础参与"}`, entry.reportStatus === "generated" ? "报告已生成" : "查看记录", `studio-history:${id}`)).join("") : notice("还没有完成的体验", "完成活动后，这里会按活动保留记录。", "sage")}${buttons([["看看可预约活动", "go:STU-08", "primary"]])}</div>`,
-      "STU-15": () => `${head(item, "EXPERIENCE DETAIL")}<div class="stack">${eventSummary}${rows([["预约状态", bookingLabel], ["参与方式", record.mode === "ring" ? "本人戒指记录" : "基础参与"], ["报告状态", record.deletionStatus !== "ready" ? "已停止展示" : studioCanReport(record) && record.reportStatus === "generated" ? "已生成" : record.sessionDone ? "本次没有可查看的报告" : "体验尚未完成"], ["活动权益", record.benefitStatus === "posted" ? "已发放，可在账本查看" : "未发放"]])}${record.beforeFeeling && record.deletionStatus === "ready" ? notice("你的活动前记录", record.beforeFeeling, "sage") : ""}${record.reportStatus === "generated" && studioCanReport(record) ? buttons([["查看本次报告", "go:STU-05", "primary"]]) : ""}${setting("联系与授权设置", "只管理本次活动", "go:STU-14")}${setting("参与与报告授权", "撤回后停止展示个人报告", "go:STU-10")}${record.deletionStatus !== "ready" ? notice("本次记录已从本地删除", "个人感受和报告不再展示；必要交易履约信息单独保留。", "sage") : record.sessionDone ? buttons([["删除本次体验记录", "danger:删除本次体验记录:只删除当前活动的个人体验内容，不影响其他活动；必要交易履约记录单独保留。:确认删除", "danger-button"]]) : ""}</div>`,
+      "STU-08": studioHomePage,
+      "STU-09": studioDetailPage,
+      "STU-16": studioBookingPage,
     };
     return map[item.id]?.() || generic(item);
   }
 
   function pageBody(item) {
+    // This page audits durable assets; do not invoke the commercial render path,
+    // which intentionally persists and resumes its own interactive flows.
+    if (item.id === "ACC-03") return accountDeletion.page();
+    if (item.id === "HLT-04") return renderMeasurementResult(item);
+    if (item.id === "HLT-03") return measurementCenter.page();
+    if (item.id === "TOD-11") return dataQuality.body();
+    if (item.id === "HLT-01") return heartDetailPage();
+    if (item.id === "HLT-02") return respirationDetailPage();
+    if (item.id === "HLT-05") return oxygenDetailPage();
+    if (item.id === "HLT-06") return temperatureDetailPage();
+    if (item.id === "TOD-05") return sleepDetailPage();
+    if (item.id === "TOD-06") return energyDetailPage();
+    if (item.id === "TOD-07") return activityDetailPage();
+    const healthContext = state.healthDetailContext;
+    if (healthContext?.route === item.id && (!isHardwareActive() || healthContext.date !== state.healthDemoRecordDate)) return healthDatedEmptyPage(item);
+    if (healthContext?.route === item.id && healthContext.date !== beijingDateKey()) {
+      const entry = HEALTH_OVERVIEW_ITEMS.find(candidate => candidate.key === healthContext.metric);
+      const reading = entry ? healthOverviewReading(entry, healthContext.date) : null;
+      return `<article class="health-overview health-dated-record"><header class="health-overview-header"><button data-action="previous" aria-label="返回">${healthChevron("left")}</button><h1>${esc(entry?.title || "数据说明")}</h1><span></span></header><p class="health-dated-label">${esc(healthDateLabel(healthContext.date))}的记录</p>${reading ? `<section class="health-overview-guide"><strong>${esc(reading.value)}${reading.unit ? ` ${esc(reading.unit)}` : ""}</strong><p>${esc(reading.detail)}</p></section>` : notice("Halo Ring", state.dataLifecycle === "none" ? "这一天暂无记录。" : state.dataLifecycle === "limited" ? "夜间记录有缺口，保留已同步片段。" : "已保存这一天同步的记录。", "sage")}${buttons([["返回健康数据", "go:HLT-00", "primary"], ["查看今天", "health-date:today", "secondary"]])}<p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+    }
     const commercialBody = window.HALO_COMMERCIAL_EXTENSION?.render(item, {
+      applicationContext: () => ({ signedIn: state.signedIn, accountRef: state.authPhone || state.authForm?.phone || "", key: state.authForm?.login?.id || state.agreementAcceptance?.acceptedAt || (state.signedIn ? "legacy-session" : ""), page: state.current }),
+      go,
       hardwareActive: isHardwareActive(),
       membershipState: state.membershipHardwareState,
       newMember: Boolean(state.newMember),
@@ -1971,6 +4651,7 @@
     return `<section class="review-controls"><p>BODY WEATHER STATES</p><h3>身体天气审阅状态</h3><small>切换结果只用于评审四种天气与五种数据阶段，不会出现在设备界面。</small><div class="review-control-group"><strong>天气状态</strong><div>${optionButtons(weatherOptions, "body-weather", state.bodyWeather)}</div></div><div class="review-control-group"><strong>数据状态</strong><div>${optionButtons(lifecycleOptions, "lifecycle", state.dataLifecycle)}</div></div></section>`;
   }
   function measurementReviewControls(item) {
+    if (state.measurementType === "oxygen") return oxygenMeasurement?.reviewControls(item) || "";
     if (item.id !== "HLT-04") return "";
     const options = [["ready", "测量中"], ["complete", "已完成"], ["failed", "未获得数据"]];
     return `<section class="review-controls"><p>MEASUREMENT STATES</p><h3>主动测量审阅状态</h3><small>仅供产品、UI、开发与 QA 检查成功和失败状态，不会出现在设备界面。</small><div class="review-control-group"><div>${options.map(([value, label]) => `<button class="${state.measurementStatus === value ? "active" : ""}" data-action="measurement-state:${value}">${label}</button>`).join("")}</div></div></section>`;
@@ -1985,16 +4666,51 @@
     const items = [["优先级", item.priority], ["路由 / 形态", item.route], ["页面任务", item.function], ["显示数据", item.data], ["主要交互", item.interaction], ["业务逻辑", item.logic], ["异常与降级", item.exception], ["SDK / 系统能力", item.sdk], ["自研规则", item.rules], ["责任", item.owner]];
     document.getElementById("inspect-data").innerHTML = items.map(([key, value]) => `<div><dt>${esc(key)}</dt><dd>${esc(value || "按当前规格实现")}</dd></div>`).join("");
     const reviewControls = document.getElementById("review-controls");
-    if (reviewControls) reviewControls.innerHTML = `${membershipReviewControls()}${bodyWeatherReviewControls(item)}${measurementReviewControls(item)}${rhythmReviewControls(item)}${window.HALO_COMMERCIAL_EXTENSION?.reviewControls(item) || ""}`;
+    // Oxygen capability fixtures are explicitly review-only; never shown as app settings.
+    if (reviewControls) reviewControls.innerHTML = item.id === "SYS-01" ? startup.reviewControls() : `${healthReports.reviewControls(item)}${authReviewControls(item)}${connectionIntroReviewControls(item)}${deviceScan.reviewControls(item)}${deviceBinding.reviewControls(item)}${deviceHome?.reviewControls(item) || ""}${deviceInfo?.reviewControls(item) || ""}${deviceMaintenance?.reviewControls(item) || ""}${activitySyncReviewControls(item)}${membershipReviewControls()}${bodyWeatherReviewControls(item)}${measurementReviewControls(item)}${rhythmReviewControls(item)}${studioCodeLookup.reviewControls(item)}${studioInstitution.reviewControls(item)}${studioBookingReviewControls(item)}${studioPayment.reviewControls(item)}${studioReservation.reviewControls(item)}${studioPreparation.reviewControls(item)}${studioFeeling.reviewControls(item)}${studioPreflight.reviewControls(item)}${studioSession.reviewControls(item)}${studioReport.reviewControls(item)}${studioBenefit.reviewControls(item)}${window.HALO_COMMERCIAL_EXTENSION?.reviewControls(item) || ""}`;
   }
   function renderTabs(item) {
     const prefix = item.id.split("-")[0];
+    const shoppingPage = prefix === "SEL";
+    const recordPage = item.id === "TOD-02";
+    screen.closest(".device-shell").classList.toggle("shopping-subpage", shoppingPage);
+    screen.closest(".device-shell").classList.toggle("record-subpage", recordPage);
     const active = ["TOD", "HLT"].includes(prefix) ? "TOD-01" : prefix === "NIG" ? "NIG-01" : prefix === "HAL" ? "HAL-01" : prefix === "RHY" ? "RHY-01" : ["MY", "ACC", "SET", "HELP", "DEV", "STU", "MEM", "PTS", "REF", "SEL", "CHN"].includes(prefix) && !["DEV-01", "DEV-02", "DEV-03", "DEV-04", "DEV-05"].includes(item.id) ? "MY-01" : "";
-    tabbar.style.visibility = ["SYS", "ONB", "AUTH", "LEGAL", "PERM"].includes(prefix) || ["DEV-01", "DEV-02", "DEV-03", "DEV-04", "DEV-05", "RHY-00"].includes(item.id) ? "hidden" : "visible";
+    tabbar.style.visibility = shoppingPage || recordPage || !state.signedIn || state.welcomeShopping && item.id === "SEL-03" || ["SYS", "ONB", "AUTH", "LEGAL", "PERM"].includes(prefix) || ["DEV-01", "DEV-02", "DEV-03", "DEV-04", "DEV-05", "RHY-00"].includes(item.id) ? "hidden" : "visible";
     tabbar.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.tab === active));
   }
   function render() {
+    const accountChanged = todayRhythmStorage?.accessError() || personalScope?.accessError();
+    if (accountChanged) {
+      modalRoot.innerHTML = ""; tabbar.hidden = true;
+      screen.innerHTML = `<section class="stack">${notice("请重新打开当前页面", accountChanged)}${buttons([["重新打开", "today-rhythm-reload", "primary"]])}</section>`;
+      return;
+    }
+    if (!generalSettingsSafe()) return;
+    if (haloSettingsHub?.blocksPersist()) { haloSettingsHub.canLeave(); return; }
+    if (haloPrivacyControls?.blocksPersist()) { haloPrivacyControls.canLeave(); return; }
+    if (haloJourney?.blocksPersist()) { haloJourney.canLeave(); return; }
+    studioInstitution?.prepare();
+    if (haloFeelingEditor?.blocksPersist()) { haloFeelingEditor.canLeave(); return; }
+    studioCodeLookup?.prepare();
+    if (haloProactive?.blocksPersist()) { haloProactive.canLeave(); return; }
+    studioRecordDetail?.prepare();
+    studioHistory?.prepare();
+    if (haloMemory?.blocksPersist()) { haloMemory.canLeave(); return; }
+    studioContact?.prepare();
+    rhythmCyclePage.prepare();
+    if (haloHistory?.blocksPersist()) { haloHistory.canLeave(); return; }
+    studioBenefit?.prepare();
+    studioTodayReminder?.prepare();
+    studioSession.prepare();
+    studioReport.prepare();
+    studioPreflight.prepare();
+    if (nightSessionDue() && finishNightSession.failedKey !== nightCompletionKey()) {
+      const completed = finishNightSession(false);
+      if (completed && state.current === "NIG-04") { go("NIG-10"); return; }
+    }
     capturePageView();
+    oxygenMeasurement?.prepare();
     const samePage = screen.dataset.page === state.current;
     const focused = document.activeElement;
     const focusId = samePage && screen.contains(focused) ? focused.id : "";
@@ -2007,51 +4723,589 @@
     }
     const item = pages.find((candidate) => candidate.id === state.current) || pages[0];
     if (!item) return;
+    if (modalRoot.querySelector(".rh-manage-confirm") && (item.id !== "RHY-05" || !rhythmManagementStore.inspect().canManage)) closeModal();
+    if (item.id === "RHY-05" && !samePage) { const result = rhythmManagementStore.open(); rhythmManagementFeedback = result.error || ""; }
+    if (item.id === "RHY-06" && !samePage) rhythmHandoffFeedback = "";
+    window.haloChannelStorage?.select({ applicationContext: () => ({ signedIn: state.signedIn, accountRef: state.authPhone || "", key: state.authForm?.login?.id || state.agreementAcceptance?.acceptedAt || (state.signedIn ? "legacy-session" : ""), page: state.current }) });
+    window.HALO_COMMERCIAL_EXTENSION?.observePage?.(item, { render });
+    deviceScan.prepare();
+    deviceBinding.prepare();
+    deviceWear.prepare();
+    deviceHome?.prepare();
+    initialSync?.prepare();
+    deviceInfo?.prepare();
+    deviceMaintenance?.prepare();
+    dataPrivacy?.prepare();
+    notificationSettings?.prepare();
+    haloFeelingEditor?.prepare();
+    haloJourney?.prepare();
+    haloPrivacyControls?.prepare();
+    haloSettingsHub?.prepare();
+    systemHealth?.prepare();
+    if (item.id === "ONB-01") { state.authReturnRoute = ""; state.welcomeShopping = false; }
+    if (item.id !== "HLT-00" && item.id !== state.healthDetailContext?.route) state.healthDetailContext = null;
     document.getElementById("stage-title").textContent = `${item.id} · ${item.name}`;
     renderNavigation();
     renderInspector(item);
+    if (item.id === "ACC-03") document.getElementById("review-controls")?.insertAdjacentHTML("beforeend", accountDeletion.reviewControls());
+    if (item.id === "PERM-01") document.getElementById("review-controls")?.insertAdjacentHTML("beforeend", `<section class="review-controls"><h3>系统回执演示</h3><small>只模拟系统设置，不访问真实手机权限。失败不改变已有状态。</small><div class="review-control-group"><button data-action="perm:review:success" class="${!permissionCheckFails ? "active" : ""}">正常返回</button><button data-action="perm:review:failed" class="${permissionCheckFails ? "active" : ""}">检查失败</button></div></section>`);
+    if (item.id === "PERM-01") document.getElementById("review-controls")?.insertAdjacentHTML("beforeend", systemHealth.reviewControls());
+    if (item.id === "HLT-05") document.getElementById("review-controls")?.insertAdjacentHTML("afterbegin", oxygenReviewControls(item));
+    if (item.id === "HLT-06") document.getElementById("review-controls")?.insertAdjacentHTML("afterbegin", temperatureReviewControls());
+    if (item.id === "SET-01") document.getElementById("review-controls")?.insertAdjacentHTML("afterbegin", dataPrivacy.reviewControls(item));
+    if (item.id === "SET-02") document.getElementById("review-controls")?.insertAdjacentHTML("afterbegin", notificationSettings.reviewControls(item));
+    if (item.id === "DEV-05" && !document.querySelector('[data-action^="initial-sync:review:"]')) document.getElementById("review-controls")?.insertAdjacentHTML("beforeend", initialSync.reviewControls(item));
     renderTabs(item);
+    if (item.id === "ACC-01" && !samePage) profileDraftRestored = profileEditorDirty();
+    disposeHeartTrend();
+    disposeRespirationTrend();
+    disposeOxygenTrend();
+    disposeOxygenDay();
+    disposeTemperatureTrend();
     screen.innerHTML = pageBody(item);
+    if (finishNightSession.failedKey === nightCompletionKey() && (item.id.startsWith("NIG-") || ["TOD-01", "TOD-08"].includes(item.id))) {
+      const panel = screen.querySelector(".night-home") || screen, header = panel.querySelector(":scope > header");
+      (header || panel).insertAdjacentHTML(header ? "afterend" : "afterbegin", `<section class="night-completion-error" role="alert"><p>播放已结束，收听记录还没能保存。进度仍在，请重试。</p><button type="button" data-action="night-reconcile-retry">重试保存记录</button></section>`);
+    }
+    disposeTemperatureTrend = item.id === "HLT-06" ? window.HALO_TEMPERATURE_TREND.mount(screen, { data: temperatureDataModel(), onSelect: date => selectTemperatureDate(date, true) }) : () => {};
+    disposeHeartTrend = item.id === "HLT-01" ? window.HALO_HEART_TREND.mount(screen, { data: heartDataModel(), selection: state.heartTrendSelection, onSelect: selection => { state.heartTrendSelection = selection; persistAppProgress(); } }) : () => {};
+    disposeRespirationTrend = item.id === "HLT-02" ? window.HALO_RESPIRATION_TREND.mount(screen, { data: respirationDataModel(), onSelect: date => selectRespirationDate(date, true) }) : () => {};
+    disposeOxygenTrend = item.id === "HLT-05" && state.oxygenMode === "night" ? window.HALO_OXYGEN_TREND.mount(screen, { data: oxygenDataModel(), onSelect: date => selectOxygenDate(date, true) }) : () => {};
+    disposeOxygenDay = item.id === "HLT-05" && state.oxygenMode === "day" ? window.HALO_OXYGEN_DAY.mount(screen, { data: oxygenDayModel(), onSelect: selection => { state.oxygenDaySelection = selection; history.replaceState({ ...history.state, oxygenDaySelection: selection }, "", location.href); persistAppProgress(); } }) : () => {};
+    if (item.id === "DEV-10" && !deviceHome) screen.querySelector(".stack")?.insertAdjacentHTML("afterbegin", deviceBinding.resumeEntry());
     screen.dataset.page = item.id;
-    state.lastVisitedRoute = item.id;
+    basicProfileEditor.mount(samePage);
+    if (item.id !== "SYS-01") state.lastVisitedRoute = item.id;
     document.documentElement.classList.toggle("reduce-motion", Boolean(state.toggles.reduceMotion));
-    const savedView = state.pageViews[item.id];
-    if (savedView) screen.querySelectorAll("details").forEach((el, index) => { el.open = (savedView.open || []).includes(index); });
+    const savedView = item.id === "HLT-05" && state.pageViews[item.id]?.oxygenMode !== state.oxygenMode ? null : ["STU-09", "STU-16", "STU-17", "STU-18", "STU-10", "STU-11", "STU-03", "STU-04"].includes(item.id) && state.pageViews[item.id]?.eventId !== state.selectedStudioEventId ? null : state.pageViews[item.id];
+    const matchingRhythmView = ["RHY-00", "RHY-04", "RHY-05"].includes(item.id) ? savedView?.rhythmOwner === String(state.authPhone || state.authForm?.phone || "legacy-session") : !["RHY-02", "RHY-06"].includes(item.id) || savedView?.rhythmDate === state.selectedRhythmDate && savedView?.rhythmOwner === String(state.authPhone || state.authForm?.phone || "legacy-session");
+    if (savedView && matchingRhythmView) screen.querySelectorAll("details").forEach((el, index) => {
+      if (item.id === "NIG-10") { el.open = savedView.nightHistoryOwner === String(state.authPhone || state.authForm?.phone || "") && (savedView.nightHistoryOpen || []).includes(el.dataset.historyId); return; }
+      // Activity sections have stable keys so reordering does not open a different section.
+      const key = item.id === "TOD-07" ? el.dataset.activitySection : "";
+      el.open = key ? savedView.activitySections ? Boolean(savedView.activitySections[key]) : (savedView.open || []).includes({ source: 0, record: 1 }[key]) : (savedView.open || []).includes(index);
+    });
     const playerButton = screen.querySelector('[data-action="toggle-player"]');
-    if (playerButton) playerButton.setAttribute("aria-label", state.playing ? "暂停播放" : "继续播放");
+    if (playerButton) playerButton.setAttribute("aria-label", (item.id === "NIG-04" ? state.nightSession?.status === "playing" : state.playing) ? "暂停播放" : "继续播放");
     const chatSendButton = screen.querySelector('[data-action="send-chat"]');
     if (chatSendButton) chatSendButton.setAttribute("aria-label", "发送消息");
-    screen.scrollTop = savedView?.top || 0;
+    if (item.id === "HAL-01") updateHaloComposer();
+    if (item.id === "ACC-01") updateProfileEditorControls();
+    if (item.id === "TOD-07") updateActivityRecordControls();
+    if (item.id === "HAL-01" && !samePage && state.chat.length) revealLatestHaloMessage();
+    (item.id === "RHY-03" ? screen.querySelector(".rh-editor-scroll") || screen : item.id === "RHY-00" ? screen.querySelector(".rh-setup-scroll") || screen : item.id === "RHY-04" ? screen.querySelector(".rh-settings-scroll") || screen : item.id === "RHY-06" ? screen.querySelector(".rh-halo-scroll") || screen : item.id === "TOD-02" ? screen.querySelector(".record-page-scroll") || screen : ["STU-01", "STU-02", "STU-09", "STU-16", "STU-17", "STU-18", "STU-10", "STU-11", "STU-03", "STU-04", "STU-12", "STU-05", "STU-06", "STU-07", "STU-13", "STU-14", "STU-15"].includes(item.id) ? screen.querySelector(".studio-detail-scroll") || screen : screen).scrollTop = matchingRhythmView ? savedView?.top || 0 : 0;
+    if (!samePage && state.healthDetailContext?.route === item.id && state.healthDetailContext.metric === "hrv") {
+      const hrvSection = screen.querySelector(".education-section") || screen.querySelector(".detail-section:nth-of-type(3)");
+      const explanation = hrvSection?.querySelector(".hrv-disclosure");
+      if (explanation) explanation.open = true;
+      if (hrvSection) screen.scrollTop += hrvSection.getBoundingClientRect().top - screen.getBoundingClientRect().top - 16;
+    }
     const restoreFocus = focusId ? document.getElementById(focusId) : focusAction ? [...screen.querySelectorAll("[data-action]")].find(el => el.dataset.action === focusAction) : null;
     if (restoreFocus && !restoreFocus.disabled) {
       restoreFocus.focus({ preventScroll: true });
       if (selection && restoreFocus.setSelectionRange) { try { restoreFocus.setSelectionRange(...selection); } catch {} }
     }
-    if (typeof paintShareCards === "function") paintShareCards();
+    healthReports.afterRender();
+    stateShare.afterRender();
+    dataQuality.afterRender();
+    rhythmHome.afterRender();
+    bodyWeatherRoute.afterRender();
+    if (item.id === "RHY-02" && !matchingRhythmView) screen.scrollTop = 0;
+    helpCenter?.afterRender();
+    supportContact?.afterRender();
+    aboutLegal?.afterRender();
+    accountSecurity?.afterRender();
+    accountDeletion?.afterRender();
+    feedbackEditor?.afterRender();
+    studioTodayReminder?.afterRender();
+    history.replaceState({ ...history.state, healthDate: item.id === "HLT-00" ? state.healthSelectedDate : null, healthContext: state.healthDetailContext, respirationWindowEnd: item.id === "HLT-02" ? respirationDataModel().windowEnd : null, temperatureWindowEnd: item.id === "HLT-06" ? temperatureDataModel().windowEnd : null, oxygenWindowEnd: item.id === "HLT-05" ? oxygenDataModel().windowEnd : null, oxygenMode: state.oxygenMode, oxygenDaySelection: state.oxygenDaySelection, ...nightReview.historyFields(item.id), ...nightHome.historyFields(item.id), ...healthReports.historyFields(item.id), ...stateShare.historyFields(item.id), ...dataQuality.historyFields(item.id), ...rhythmHome.historyFields(item.id), ...bodyWeatherRoute.historyFields(item.id) }, "", location.href);
     persistAppProgress();
+    resumeAuthRequest();
+    haloHistory?.afterRender();
+    haloMemory?.afterRender();
+    haloProactive?.afterRender();
+    haloFeelingEditor?.afterRender();
+    haloJourney?.afterRender();
+    haloPrivacyControls?.afterRender();
+    haloSettingsHub?.afterRender();
+    generalSettingsMounted = state.current === "SET-03";
+    resumeConnectionIntro();
+    resumeStudioBookings();
+    studioPayment.resume();
+    studioReservation.resume();
+    deviceScan.resume();
+    deviceBinding.resume();
+    deviceHome?.resume();
+    initialSync?.resume();
+    deviceInfo?.resume();
+    deviceMaintenance?.resume();
+    dataPrivacy?.resume();
+    resumeActivitySync();
+    healthReports.resume();
+    startup?.resume();
     requestAnimationFrame(() => nav.querySelector(".nav-item.active")?.scrollIntoView({ block: "nearest", inline: "nearest" }));
   }
   function revealLatestHaloMessage() {
     requestAnimationFrame(() => {
+      const chatScroll = document.querySelector(".hal-chat-scroll");
+      if (chatScroll) { chatScroll.scrollTop = chatScroll.scrollHeight; return; }
       const target = document.querySelector("#chat-messages .message:last-child") || document.querySelector(".halo-composer");
       const reducedMotion = Boolean(state.toggles.reduceMotion) || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       target?.scrollIntoView({ block: "nearest", behavior: reducedMotion ? "auto" : "smooth" });
     });
   }
 
-  function handleAction(action) {
-    if (!action) return;
-    if (action.startsWith("report-month:")) { state.selectedReportMonth = action.slice(13); state.trendPeriod = "30"; return go("TOD-04"); }
-    if (action === "monthly-review-start") {
-      if (!isHardwareActive() || state.dataLifecycle !== "interpretable") return flash("有可查看的月度报告后，才能完成回顾");
-      state.recordDraft.reportMonth = state.selectedReportMonth || "2026-08";
-      return go("TOD-02");
+  function handleAction(action, recordLockHeld = false) {
+    if (action === "today-rhythm-reload") { location.reload(); return; }
+    if (todayRhythmStorage?.accessError() || personalScope?.accessError()) { render(); return; }
+    if (action === "night-reconcile-retry") { finishNightSession.failedKey = ""; render(); return; }
+    if (!recordLockHeld && navigator.locks?.request && /^(record-save(?:-inline)?$|record-delete-confirm:|activity-record-save$|rhythm-feeling-save$|rhythm-delete-confirm:)/.test(action || "")) {
+      navigator.locks.request("halo-today-rhythm-records", () => handleAction(action, true)).catch(() => flash("这次没有保存成功，内容仍在，请重试。"));
+      return;
     }
+    if (haloSettingsHub?.handle(action)) return;
+    if (haloPrivacyControls?.handle(action)) return;
+    if (haloJourney?.handle(action)) return;
+    if (typeof action !== "string" || !action) return;
+    if (haloFeelingEditor?.handle(action)) return;
+    if (typeof action !== "string" || !action) return;
+    if (haloProactive?.handle(action)) return;
+    if (haloMemory?.handle(action)) return;
+    if (rhythmCyclePage.handle(action)) return;
+    if (haloHistory?.handle(action)) return;
+    if (accountDeletion?.handle(action)) return;
+    if (studioTodayReminder?.handle(action)) return;
+    if (nightHome.handle(action)) return;
+    if (nightFade.handle(action)) return;
+    if (nightWake.handle(action)) return;
+    if (nightSound.handle(action)) return;
+    if (accountSecurity?.handle(action)) return;
+    if (aboutLegal?.handle(action)) return;
+    if (action === "health-source:open") modalReturnFocus = screen.querySelector('[data-action="health-source:open"]');
+    if (systemHealth?.handle(action)) return;
+    if (supportContact?.handle(action)) return;
+    if (measurementCenter.handle(action)) return;
+    if (state.measurementType !== "oxygen" && (action === "measure-complete" || action === "measurement-reset" || action === "measurement-fail" || action?.startsWith("measurement-state:"))) return showInfoModal("主动测量能力待确认", "当前暂不能开始这项测量。已保存的记录仍可在主动测量中心查看。");
+    if (handlePermissionAction(action)) return;
+    if (feedbackEditor?.handle(action)) return;
+    if (helpCenter?.handle(action)) return;
+    if (action === "previous" && helpCenter?.back()) return;
+    if (action === "measurement-start:oxygen") { capturePageView(); return oxygenMeasurement.start(state.current); }
+    if (state.measurementType === "oxygen" && typeof action === "string") {
+      const mapped = { "measure-complete": "complete", "measurement-reset": "retry", "measurement-cancel": "cancel", "measurement-fail": "review-fail", "measurement-state:failed": "review-fail", "measurement-state:complete": "complete", "measurement-state:ready": "start" }[action];
+      if (mapped) return oxygenMeasurement.handle(`oxygen-measure:${mapped}`);
+      if (action.startsWith("measurement-state:")) return;
+    }
+    if (oxygenMeasurement?.handle(action)) return;
+    if (basicProfileEditor.handle(action)) return;
+    if (!action) return;
+    if (deviceMaintenance?.handle(action)) return;
+    if (dataPrivacy?.handle(action)) return;
+    if (notificationSettings?.handle(action)) return;
+    if (handleGeneralAction(action)) return;
+    if (nightReview.handle(action)) return;
+    if (nightHistoryPage.handle(action)) return;
+    if (healthReports.handle(action)) return;
+    if (stateShare.handle(action)) return;
+    if (dataQuality.handle(action)) return;
+    if (rhythmHome.handle(action)) return;
+    if (rhythmSetupPage.handle(action)) return;
+    // Compatibility actions on the old setup page must use its guarded flow.
+    if (state.current === "RHY-00" && ["rhythm-setup-skip", "rhythm-setup-save", "rhythm-settings-save", "rhythm-record-only", "previous"].includes(action)) return rhythmSetupPage.handle(["rhythm-setup-save", "rhythm-settings-save"].includes(action) ? "rh-setup:save" : "rh-setup:later");
+    if (handleRhythmSettings(action)) return;
+    if (handleRhythmManagement(action)) return;
+    if (action.startsWith("rh-guide:")) {
+      if (state.current !== "RHY-02") return;
+      if (action === "rh-guide:halo") {
+        if (!rhythmVisibleRecord()) { render(); return flash("这一天的记录暂不可用，请回到日历查看"); }
+        return go("RHY-06");
+      }
+      if (action === "rh-guide:calendar") return go("RHY-01");
+      return;
+    }
+    if (initialSync?.handle(action)) return;
+    if (deviceInfo?.handleAction(action)) return;
+    if (deviceHome?.handleAction(action)) return;
+    if (action.startsWith("bw-open:")) {
+      if (state.current !== "TOD-03" || !state.signedIn) return;
+      const metric = action.slice(8);
+      const route = { sleep: "TOD-05", energy: "TOD-06", activity: "TOD-07" }[metric];
+      if (!route) return;
+      const date = bodyWeatherPageState().hasRecords ? state.healthDemoRecordDate : beijingDateKey();
+      state.healthSelectedDate = date;
+      state.healthDetailContext = { date, metric, route };
+      delete state.pageViews[route];
+      const stack = state.tabStacks["TOD-01"] || (state.tabStacks["TOD-01"] = ["TOD-01"]);
+      if (stack.at(-1) !== "TOD-03") stack.push("TOD-03");
+      return go(route);
+    }
+    if (action === "bw-records" && ["TOD-03", "HLT-01", "HLT-02", "HLT-05"].includes(state.current)) return showBodyWeatherRecords();
+    if (action.startsWith("bw-trend-period:") && state.current === "TOD-03") {
+      const period = action.slice("bw-trend-period:".length);
+      const model = bodyWeatherTrendModel();
+      if (!model || !["7", "14", "30"].includes(period)) return;
+      state.bodyWeatherTrendView = { ...state.bodyWeatherTrendView, period };
+      state.bodyWeatherTrendView.date = bodyWeatherTrendModel().selected.date;
+      return render();
+    }
+    if (action.startsWith("bw-trend-step:") && state.current === "TOD-03") {
+      const model = bodyWeatherTrendModel();
+      const step = Number(action.slice("bw-trend-step:".length));
+      if (!model || ![-1, 1].includes(step)) return;
+      const index = model.daily.findIndex(day => day.date === model.selected.date);
+      const next = model.daily[index + step];
+      if (!next) return;
+      state.bodyWeatherTrendView = { ...state.bodyWeatherTrendView, date: next.date };
+      render();
+      if (document.getElementById(step < 0 ? "bw-trend-prev" : "bw-trend-next")?.disabled) document.getElementById("bw-trend-date")?.focus({ preventScroll: true });
+      return;
+    }
+    if (action.startsWith("bw-trend-day:") && state.current === "TOD-03") {
+      const date = action.slice("bw-trend-day:".length);
+      if (!bodyWeatherTrendModel()?.daily.some(day => day.date === date)) return;
+      state.bodyWeatherTrendView = { ...state.bodyWeatherTrendView, date };
+      return render();
+    }
+    if (action === "bw-feedback-note") {
+      const correction = activeWeatherCorrection();
+      if (!correction?.note) return showInfoModal("这次没有可查看的补充文字", "之前的反馈仍可在 Halo 记忆页回看。", "查看历史反馈", "go:HAL-03");
+      showInfoModal("你补充的感受", correction.note);
+      modalRoot.querySelector(".modal")?.classList.add("bw-feedback-note");
+      return;
+    }
+    if (action === "bw-help") return showInfoModal("关于身体天气", "先看这一份记录对应的日期，再结合自己的感受安排一天。\n\n记录不完整时，会保留已有内容，暂不判断状态。你也可以随时告诉 Halo：这和我的感受不一样。", "知道了");
+    if (action === "bw-pressure") return showInfoModal("了解压力变化", "这里用来回看一天里紧绷和放松的时段。\n\n现在还没有可查看的全天记录，不展示今日压力判断。你可以先记下自己的感受。", "记下感受", "record-new");
+    if (action === "bw-halo") {
+      if (state.current !== "TOD-03" || !state.signedIn) return;
+      if (activeWeatherCorrection()) setHaloSource("correction", null, true);
+      else setHaloSource(hasBodyContext() && bodyWeatherPageState().ready ? "body" : "none", null, true);
+      return go("HAL-01");
+    }
+    if (studioPayment.handle(action)) return;
+    if (studioReservation.handle(action)) return;
+    if (studioPreparation.handle(action)) return;
+    if (studioFeeling.handle(action)) return;
+    if (studioPreflight.handle(action)) return;
+    if (studioPostReport.handle(action)) return;
+    if (studioNextDay.handle(action)) return;
+    if (studioBenefit.handle(action)) return;
+    if (studioContact.handle(action)) return;
+    if (studioHistory.handle(action)) return;
+    if (studioRecordDetail.handle(action)) return;
+    if (studioCodeLookup.handle(action)) return;
+    if (studioInstitution.handle(action)) return;
+    if (studioReport.handle(action)) return;
+    if (studioSession.handle(action)) return;
+    const studioPrivateAction = ["studio-feeling-save", "studio-start", "studio-start-basic", "studio-complete", "studio-report-refresh", "studio-report-retry", "studio-benefit-refresh"].includes(action) || /^toggle:studio/.test(action);
+    if (studioPrivateAction && !studioSessionIdentityValid()) return go("STU-03");
+    if (studioPrivateAction && (!studioIdentityValid() || !studioConfirmed())) return go("STU-18");
+    if (["studio-feeling-save", "studio-start", "studio-start-basic"].includes(action)) {
+      const existing = state.studioRecords[state.selectedStudioEventId];
+      if (existing.sessionStarted || existing.sessionDone) { closeModal(); return go(existing.sessionDone ? "STU-15" : "STU-04"); }
+    }
+    if (["studio-report-refresh", "studio-report-retry"].includes(action) && state.studioRecords?.[state.selectedStudioEventId]?.reportReviewState === "needs-review") return showInfoModal("原报告需要核对", "重新开启许可不会自动恢复历史报告。请联系活动客服核对原记录。", "联系活动客服", "go:HELP-03");
+    if (["studio-refund", "studio-refund-refresh"].includes(action) && studioPayment.unresolved(state.studioRecords?.[state.selectedStudioEventId])) return showInfoModal("请先核对支付结果", "这笔支付还没有明确结果，请先查看进度或联系客服，避免重复处理。", "查看支付进度", "go:STU-17");
+    if (deviceBinding.handleAction(action)) return;
+    if (deviceWear.handle(action)) return;
+    if (deviceScan.handleAction(action)) return;
+    if (startup?.handleAction(action)) return;
+    if (action === "activity-sync") return startActivitySync();
+    if (action.startsWith("activity-sync-review:")) {
+      if (state.current !== "TOD-07" || state.activitySync.request?.status === "pending") return;
+      const outcome = action.slice(21);
+      if (!["success", "failed"].includes(outcome)) return;
+      activitySyncReviewOutcome = outcome;
+      return renderInspector(pages.find(item => item.id === state.current));
+    }
+    if (action.startsWith("activity-feeling:")) {
+      if (state.current !== "TOD-07" || !state.signedIn) return;
+      const feeling = action.slice(17);
+      if (!ACTIVITY_FEELINGS.includes(feeling)) return;
+      state.activityRecordDraft.id ||= `activity-record-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      state.activityRecordDraft.feeling = state.activityRecordDraft.feeling === feeling ? "" : feeling;
+      activityRecordError = "";
+      return render();
+    }
+    if (action === "activity-record-save") return saveActivityRecord();
+    if (action.startsWith("activity-records-scope:") && state.current === "TOD-07" && state.signedIn) {
+      const scope = action.slice("activity-records-scope:".length);
+      if (!["day", "all"].includes(scope)) return;
+      state.activityRecordsScope = scope;
+      return render();
+    }
+    if (action === "activity-records-all" && state.current === "TOD-07" && state.signedIn) return showActivityRecords();
+    if (action === "activity-open-energy") {
+      if (state.current !== "TOD-07" || !state.signedIn) return;
+      const date = activityRecordDate();
+      state.healthSelectedDate = date;
+      state.healthDetailContext = { date, metric: "energy", route: "TOD-06" };
+      delete state.pageViews["TOD-06"];
+      return go("TOD-06");
+    }
+    if (action.startsWith("activity-date:")) {
+      if (state.current !== "TOD-07" || !state.signedIn) return;
+      const operation = action.slice(14);
+      if (operation === "latest") return selectActivityDate(state.healthDemoRecordDate);
+      if (!["previous", "next"].includes(operation)) return;
+      const parsed = new Date(`${activityRecordDate()}T12:00:00Z`);
+      parsed.setUTCDate(parsed.getUTCDate() + (operation === "previous" ? -1 : 1));
+      return selectActivityDate(parsed.toISOString().slice(0, 10));
+    }
+    if (action.startsWith("oxygen-mode:")) {
+      const mode = action.slice("oxygen-mode:".length);
+      if (state.current !== "HLT-05" || !["day", "night"].includes(mode) || state.oxygenMode === mode) return;
+      state.oxygenMode = mode;
+      return render();
+    }
+    if (action.startsWith("oxygen-reading:")) {
+      if (state.current !== "HLT-05" || state.oxygenMode !== "day") return;
+      const point = oxygenDayModel().samples.find(sample => sample.id === action.slice("oxygen-reading:".length));
+      if (!point) return flash("这条记录已不可查看，请重新选择");
+      state.oxygenDaySelection = { date: oxygenRecordDate(), id: point.id };
+      persistAppProgress();
+      render();
+      return showInfoModal("血氧记录", `${point.value}%\n\n${healthDateLabel(oxygenRecordDate())} ${point.time} · ${point.kind === "manual" ? "主动测量" : "自动记录"}\n\n示例数据，不是实际设备采集。此读数对应以上时间，不代表此刻血氧，也不用于诊断。`, "返回记录");
+    }
+    if (action.startsWith("oxygen-open-record:")) {
+      const record = oxygenMeasurement?.records().find(record => record.id === action.slice("oxygen-open-record:".length));
+      if (record) return returnFromOxygenMeasurement(null, record);
+      return flash("这条记录已不可查看");
+    }
+    if (action.startsWith("temperature-date:")) {
+      if (state.current !== "HLT-06" || !state.signedIn) return;
+      const operation = action.slice("temperature-date:".length), date = temperatureRecordDate();
+      const target = operation === "today" ? beijingDateKey() : operation === "latest" ? temperatureDataModel().latest?.date : window.HALO_TEMPERATURE_TREND.shiftDate(date, operation === "previous" ? -1 : operation === "next" ? 1 : 0);
+      if (validHealthDate(target)) selectTemperatureDate(target);
+      return;
+    }
+    if (action.startsWith("temperature-review:")) {
+      if (state.current !== "HLT-06") return;
+      const scenario = action.slice("temperature-review:".length);
+      if (!TEMPERATURE_SCENARIOS.includes(scenario)) return;
+      state.temperatureReviewScenario = scenario; return render();
+    }
+    if (action === "temperature-open-sleep") {
+      if (state.current !== "HLT-06" || !temperatureAllowed() || !isHardwareActive()) return;
+      capturePageView();
+      const context = temperatureReturnContext();
+      go("TOD-05");
+      state.healthSelectedDate = context.date;
+      state.healthDetailContext = { route: "TOD-05", date: context.date, metric: "sleep" };
+      return render();
+    }
+    if (action === "temperature-baseline") return showInfoModal("什么是个人基线", "个人基线是用你在相似条件下的有效皮肤温度记录建立的参考水平。建立完成前，不计算相对变化。\n\n它与 Body Weather 的建立进度分开判断，这里不预设需要佩戴几晚。", "知道了");
+    if (action === "temperature-help") return showInfoModal("先关注自己的感受", "皮肤温度变化不能用来判断是否发热。如果感觉发热，请按体温计说明测量体温；持续不适或症状加重时，及时就医，不要只等待戒指的新记录。", "知道了");
+    if (action.startsWith("oxygen-date:")) {
+      if (state.current !== "HLT-05" || !state.signedIn) return;
+      const operation = action.slice("oxygen-date:".length);
+      if (operation === "today") return selectOxygenDate(beijingDateKey());
+      if (operation === "latest") return selectOxygenDate(oxygenDataModel().latest?.date || state.healthDemoRecordDate);
+      if (!["previous", "next"].includes(operation)) return;
+      return selectOxygenDate(window.HALO_OXYGEN_TREND.shiftDate(oxygenRecordDate(), operation === "previous" ? -1 : 1));
+    }
+    if (["oxygen-open-sleep", "oxygen-open-respiration"].includes(action)) {
+      if (state.current !== "HLT-05" || !state.signedIn || !isHardwareActive()) return;
+      capturePageView();
+      const date = oxygenRecordDate(), destination = action === "oxygen-open-sleep" ? "TOD-05" : "HLT-02";
+      state.oxygenRelatedReturn = { ...oxygenReturnContext(), destination };
+      state.healthSelectedDate = date;
+      state.healthDetailContext = { date, metric: destination === "TOD-05" ? "sleep" : "breath", route: destination };
+      if (destination === "HLT-02") state.respirationWindowEnd = date;
+      delete state.pageViews[destination];
+      return go(destination);
+    }
+    if (action === "oxygen-help") return showInfoModal("读数或身体感觉不对时", "先留意身体感受。若读数让你担心，可以咨询医生，按专业建议使用合适的血氧仪复测。\n\n明显呼吸困难、胸痛或嘴唇发紫时，立即寻求医疗帮助，不要等待戒指数字或下一次同步。\n\n戒指用于日常观察，不能诊断或排除睡眠呼吸暂停。", "知道了");
+    if (action.startsWith("oxygen-review:")) {
+      const scenario = action.slice("oxygen-review:".length);
+      if (state.current !== "HLT-05" || !OXYGEN_SCENARIOS.includes(scenario)) return;
+      state.oxygenReviewScenario = scenario;
+      return render();
+    }
+    if (action.startsWith("respiration-date:")) {
+      if (state.current !== "HLT-02" || !state.signedIn) return;
+      const operation = action.slice("respiration-date:".length);
+      if (operation === "today") return selectRespirationDate(beijingDateKey());
+      if (operation === "latest") return selectRespirationDate(respirationDataModel().latest?.date || state.healthDemoRecordDate);
+      if (!["previous", "next"].includes(operation)) return;
+      return selectRespirationDate(window.HALO_RESPIRATION_TREND.shiftDate(respirationRecordDate(), operation === "previous" ? -1 : 1));
+    }
+    if (action === "respiration-open-sleep") {
+      if (state.current !== "HLT-02" || !state.signedIn || !isHardwareActive()) return;
+      capturePageView();
+      state.respirationSleepReturn = respirationReturnContext();
+      const date = respirationRecordDate();
+      state.healthSelectedDate = date;
+      state.healthDetailContext = { date, metric: "sleep", route: "TOD-05" };
+      delete state.pageViews["TOD-05"];
+      return go("TOD-05");
+    }
+    if (action.startsWith("heart-date:")) {
+      if (state.current !== "HLT-01" || !state.signedIn) return;
+      const operation = action.slice("heart-date:".length);
+      if (operation === "latest") return selectHeartDate(state.healthDemoRecordDate);
+      if (!["previous", "next"].includes(operation)) return;
+      const parsed = new Date(`${heartRecordDate()}T12:00:00Z`);
+      parsed.setUTCDate(parsed.getUTCDate() + (operation === "previous" ? -1 : 1));
+      return selectHeartDate(parsed.toISOString().slice(0, 10));
+    }
+    if (action === "energy-open-sleep") {
+      if (state.current !== "TOD-06" || !state.signedIn || !energyDataState().hasReading) return;
+      const date = energyRecordDate();
+      state.healthSelectedDate = date;
+      state.healthDetailContext = { date, metric: "sleep", route: "TOD-05" };
+      delete state.pageViews["TOD-05"];
+      return go("TOD-05");
+    }
+    if (action.startsWith("energy-date:")) {
+      if (state.current !== "TOD-06" || !state.signedIn) return;
+      const operation = action.slice(12);
+      if (operation === "latest") return selectEnergyDate(state.healthDemoRecordDate);
+      if (!["previous", "next"].includes(operation)) return;
+      const parsed = new Date(`${energyRecordDate()}T12:00:00Z`);
+      parsed.setUTCDate(parsed.getUTCDate() + (operation === "previous" ? -1 : 1));
+      return selectEnergyDate(parsed.toISOString().slice(0, 10));
+    }
+    if (action.startsWith("sleep-stage:")) {
+      if (state.current !== "TOD-05" || !state.signedIn || !isHardwareActive() || sleepRecordDate() !== state.healthDemoRecordDate || !["accumulating", "baseline", "interpretable"].includes(state.dataLifecycle)) return;
+      const stage = action.slice(12);
+      if (stage !== "all" && !SLEEP_STAGE_META[stage]) return;
+      state.sleepStage = stage === state.sleepStage ? "all" : stage;
+      return render();
+    }
+    if (action.startsWith("sleep-date:")) {
+      if (state.current !== "TOD-05" || !state.signedIn) return;
+      const operation = action.slice(11);
+      if (operation === "latest") return selectSleepDate(state.healthDemoRecordDate);
+      if (!["previous", "next"].includes(operation)) return;
+      const parsed = new Date(`${sleepRecordDate()}T12:00:00Z`);
+      parsed.setUTCDate(parsed.getUTCDate() + (operation === "previous" ? -1 : 1));
+      return selectSleepDate(parsed.toISOString().slice(0, 10));
+    }
+    if (action.startsWith("health-date:")) {
+      if (!state.signedIn) return go("AUTH-01");
+      const operation = action.slice(12);
+      let date = state.healthSelectedDate;
+      if (operation === "today") date = beijingDateKey();
+      else if (operation === "latest") date = state.healthDemoRecordDate;
+      else if (["previous", "next"].includes(operation)) {
+        const parsed = new Date(`${date}T12:00:00Z`);
+        parsed.setUTCDate(parsed.getUTCDate() + (operation === "previous" ? -1 : 1));
+        date = parsed.toISOString().slice(0, 10);
+      } else return;
+      if (!validHealthDate(date)) return;
+      state.healthSelectedDate = date;
+      state.healthDetailContext = null;
+      if (state.current !== "HLT-00") return go("HLT-00");
+      return render();
+    }
+    if (action.startsWith("health-open:")) {
+      if (state.current !== "HLT-00" || !state.signedIn) return;
+      const metric = action.slice(12);
+      const entry = HEALTH_OVERVIEW_ITEMS.find(item => item.key === metric);
+      const route = entry?.route || (metric === "quality" ? "TOD-11" : "");
+      if (!route) return;
+      state.healthDetailContext = { date: state.healthSelectedDate, metric, route };
+      if (route === "HLT-02") state.respirationWindowEnd = state.healthSelectedDate;
+      if (route === "HLT-06") state.temperatureWindowEnd = state.healthSelectedDate;
+      if (route === "HLT-05") { state.oxygenWindowEnd = state.healthSelectedDate; state.oxygenMode = "day"; state.oxygenDaySelection = null; }
+      // Each entry has a distinct landing position even when two metrics reuse one detail.
+      delete state.pageViews[route];
+      return go(route);
+    }
+    if (action === "halo-usage") return showInfoModal("和 Halo 聊聊", `${!isHardwareActive() ? "未绑定 Halo Ring 时，每天可发送 10 条普通消息，北京时间 00:00 恢复。你主动带入的感受记录可以用于这次对话，但不会读取戒指身体数据。\n\n" : "身体状态只有在数据可用、且你允许参考时才会带入。\n\n"}你可以点来源标签查看参考内容，或移除这一项。Halo 的回复不替代医疗诊断。当前原型使用本地示例回复，没有接入真实 AI。`, "知道了");
+    if (action === "halo-source-details") {
+      const source = haloVisibleSource();
+      if (!source) return flash("这次没有额外参考来源");
+      const detail = state.haloSource?.text || (source.kind === "body" ? "这次可以参考今天可用的身体状态。完整记录仍在今日页面，移除本次参考不会删除原始数据。" : source.kind === "inspiration" ? "仅作文化灵感参考，不代表健康判断，也不预测结果。" : "由你主动带入，只用于理解这次话题；它不是设备测量结果。");
+      const isFeeling = state.haloSource?.kind === "feeling";
+      const capturedAt = isFeeling ? state.haloSource?.occurredAt || state.haloFeelingRecords.find(r => r.id === state.haloSource?.recordId)?.occurredAt : state.haloSource?.capturedAt;
+      const time = capturedAt && Number.isFinite(Date.parse(capturedAt)) ? `\n\n${isFeeling ? "记录时间" : "带入时间"}：${experienceTime(capturedAt)}` : "";
+      return showInfoModal(source.label, `${detail}${time}\n\n移除本次来源不会删除原记录，也不会关闭全局身体参考设置。`, "知道了");
+    }
+    if (action.startsWith("connect-review:")) {
+      const outcome = action.slice(15);
+      if (["granted", "denied", "bluetooth-off", "failed"].includes(outcome) && state.connectionIntro.request?.status !== "checking") { connectionReviewOutcome = outcome; render(); }
+      return;
+    }
+    if (action === "device-guide-help") return showDeviceGuideHelp();
+    if (action.startsWith("connect-intro-")) {
+      if (!state.signedIn) return go("AUTH-01");
+      if (action === "connect-intro-start") {
+        if (state.current !== "ONB-03") return;
+        if (connectionIntroTimer) clearTimeout(connectionIntroTimer);
+        connectionIntroTimer = null;
+        state.connectionIntro.request = null;
+        state.connectionIntro.choice = "connect";
+        state.connectionIntro.completed = true;
+        trackPrototypeEvent("onboarding_connection_started", { source_page: "ONB-03", destination: "DEV-01", simulated: true });
+        closeModal();
+        return go("DEV-01");
+      }
+      if (action === "connect-intro-skip") {
+        if (state.current !== "ONB-03") return;
+        if (connectionIntroTimer) clearTimeout(connectionIntroTimer);
+        connectionIntroTimer = null;
+        state.connectionIntro.request = null;
+        state.connectionIntro.choice = "skipped";
+        state.connectionIntro.completed = true;
+        state.connectionIntro.returnRoute = "";
+        if (["ONB-03", "PERM-01"].includes(state.authForm.login?.destination)) state.authForm.login.destination = "TOD-01";
+        trackPrototypeEvent("onboarding_connection_skipped", { source_page: "ONB-03", destination: guardedRoute("TOD-01"), simulated: true });
+        closeModal();
+        return go("TOD-01", false);
+      }
+      if (state.current !== "DEV-01" || state.connectionIntro.request?.status === "checking") return;
+      if (action === "connect-intro-request") {
+        if (deviceGuideBlocker()) { closeModal(); return render(); }
+        state.connectionIntro.choice = "connect";
+        state.connectionIntro.request = { id: `bluetooth-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, sourcePage: "DEV-01", status: "checking", readyAt: Date.now() + 900, outcome: connectionReviewOutcome };
+        trackPrototypeEvent("onboarding_bluetooth_requested", { request_id: state.connectionIntro.request.id, source_page: "DEV-01", simulated: true });
+        closeModal();
+        return render();
+      }
+      return;
+    }
+    if (action.startsWith("auth-review:")) {
+      const outcome = action.slice(12);
+      if (authUiState().busy) return;
+      if (["success", "offline", "limited"].includes(outcome)) authReviewOutcome = outcome;
+      if (outcome === "cooldown-end") state.authForm.cooldownUntil = 0;
+      if (outcome === "expire" && state.authForm.request?.status === "sent") state.authForm.request.expiresAt = Date.now() - 1;
+      render();
+      return;
+    }
+    if (action.startsWith("auth-login-review:")) {
+      const outcome = action.slice(18);
+      if (["success", "offline"].includes(outcome) && !authUiState().busy) { authLoginReviewOutcome = outcome; render(); }
+      return;
+    }
+    // Product browsing is public; commerce mutations still require a signed-in account.
+    if (action.startsWith("commercial:product-open:")) state.welcomeShopping = state.current === "ONB-01";
+    const publicProductAction = /^commercial:(product-open|sku-open|sku-color|sku-size|sku-inc|sku-dec|sku-close|sku-save)(:|$)/.test(action);
+    if (!state.signedIn && action.startsWith("commercial:") && !publicProductAction) {
+      state.authReturnRoute = state.current === "SEL-03" ? "SEL-03" : "";
+      return go("AUTH-01");
+    }
+    if (action.startsWith("report-month:")) return healthReports.openMonth(action.slice(13));
+    if (action === "monthly-review-start") return healthReports.openMonth(state.selectedReportMonth || "");
     if (action === "go:HAL-01") { state.haloToolsOpen = false; return go("HAL-01"); }
-    if (action === "halo-rhythm-context") { state.haloContext = "rhythm"; state.haloToolsOpen = false; return go("HAL-01"); }
-    if (action === "halo-new-conversation") { state.activeConversationId = ""; state.chat = []; state.conversationStatus = "new"; return go("HAL-01"); }
+    if (action === "halo-rhythm-context") {
+      if (state.current !== "RHY-06") return;
+      const result = rhythmHandoff.confirm(rhythmContextPreview);
+      if (!result.ok) { rhythmHandoffFeedback = result.error; render(); return; }
+      rhythmHandoffFeedback = ""; return go("HAL-01");
+    }
+    if (action === "halo-new-conversation") { startHaloConversation(); return go("HAL-01"); }
+    if (action === "halo-resume-active") {
+      const conversation = state.conversations.find((entry) => entry.id === state.activeConversationId && entry.status !== "deleted");
+      if (!conversation || !["paused", "archived"].includes(conversation.status)) return;
+      conversation.status = "active"; state.conversationStatus = "active"; saveHaloConversation(); render();
+      document.getElementById("chat-input")?.focus();
+      return;
+    }
+    if (action === "halo-remove-source") { setHaloSource("none"); return render(); }
     if (action === "halo-preferences") return showHaloPreferences();
-    if (action.startsWith("halo-preference:")) { const [, key, value] = action.split(":"); if (["tone", "length"].includes(key)) state.haloPreferences[key] = value; persistAppProgress(); return showHaloPreferences(); }
+    if (action.startsWith("halo-preference:")) { const [, key, value] = action.split(":"); return selectGeneralPreference(key, value); }
     if (action === "halo-safety-help") return showInfoModal("现实中的帮助", "如有紧迫危险，请拨打所在地急救电话，或请身边的人协助求助。在中国大陆可拨打 120（医疗急救）或 110（人身安全）。不在中国大陆时，请使用当地急救号码。\n\n也可以立即联系一位你信任的人，告诉对方你需要陪伴。Halo 客服不是紧急救援机构。", "知道了");
     if (action === "halo-safety-pause") { const conversation = state.conversations.find((entry) => entry.id === state.activeConversationId); if (conversation) conversation.status = "paused"; state.conversationStatus = "paused"; return go("HAL-02"); }
     if (action.startsWith("halo-memory-confirm:")) { const memory = state.haloMemories.find((entry) => entry.id === action.slice(20)); if (memory) memory.confirmed = true; return render(); }
@@ -2070,75 +5324,57 @@
     if (action.startsWith("resume-conversation:")) {
       return openHaloConversation(action.slice(20));
     }
-    if (action === "remove-halo-context") { state.toggles.haloBody = false; state.haloContext = "none"; return render(); }
-    if (action === "restore-halo-context") { if (state.dataLifecycle !== "interpretable") return flash("身体数据可以解释后，才会开放本次参考"); state.toggles.haloBody = true; state.haloContext = "body"; return render(); }
-    if (action.startsWith("halo-feeling:")) { state.haloFeeling = action.slice(13); return render(); }
-    if (action === "save-halo-feeling") {
-      const note = state.haloFeelingNote.trim();
-      if (!note && !state.haloFeeling) return flash("先选一个感受，或写下你想记录的话");
-      const text = [state.haloFeeling, note].filter(Boolean).join(" · ");
-      state.haloFeelingRecords.push({ id: `feeling-${Date.now()}`, label: state.haloFeeling, text, occurredAt: new Date().toISOString(), source: "user-record" });
-      state.haloContext = "feeling";
-      state.haloToolsOpen = false;
-      trackPrototypeEvent("halo_user_record_saved", { source: "user-record" });
-      go("HAL-01");
-      return flash("已保存为用户记录，并带入这次对话");
-    }
+    if (action === "remove-halo-context") { state.toggles.haloBody = false; if (state.haloContext === "body") setHaloSource("none"); return render(); }
+    if (action === "restore-halo-context") { if (!isHardwareActive() || state.dataLifecycle !== "interpretable") return flash("身体数据可以解释后，才会开放本次参考"); state.toggles.haloBody = true; setHaloSource("body"); return render(); }
     if (action === "ai-correction:open") return showAiCorrectionModal();
     if (action.startsWith("ai-correction-select:")) {
       const reason = action.slice(21);
-      state.aiCorrection.reason = reason;
-      state.aiCorrection.reasonLabel = AI_CORRECTION_REASONS[reason] || AI_CORRECTION_REASONS.other;
+      if (!correctionModalIsCurrent() || !AI_CORRECTION_REASONS[reason]) return;
+      state.aiCorrectionDraft.reason = reason;
+      persistAppProgress();
       return showAiCorrectionConfirm(reason);
     }
     if (action.startsWith("ai-correction-save:")) {
-      const [, reason, mode] = action.split(":");
-      const reasonLabel = AI_CORRECTION_REASONS[reason] || AI_CORRECTION_REASONS.other;
-      state.aiCorrection = {
-        status: "saved",
-        reason,
-        reasonLabel,
-        note: document.getElementById("ai-correction-note")?.value.trim() || "",
-        memoryReview: mode === "memory",
-        savedAt: new Date().toISOString(),
-      };
-      state.haloContext = "correction";
-      trackPrototypeEvent("ai_interpretation_correction_saved", { correction_type: reason, memory_review_requested: mode === "memory" });
-      closeModal();
-      if (mode === "memory") {
-        go("HAL-03");
-        return flash("已纠正，并完成相关记忆检查");
-      }
-      render();
-      return flash("已按你的感受调整这次解释");
+      const [, reason, mode, token] = action.split(":");
+      return saveAiCorrection(reason, mode, token);
     }
     if (action === "ai-correction-check-memory") {
-      state.aiCorrection.memoryReview = true;
-      trackPrototypeEvent("ai_correction_memory_checked", { related_confirmed_memory_found: false });
-      render();
-      return flash("相关记忆已检查");
+      return showInfoModal("查看已保存的 Halo 记忆", "当前原型不会自动判断哪些记忆与这次反馈有关。你可以逐条查看下方记忆，分别纠正或删除。", "查看记忆", "go:HAL-03");
     }
     if (action === "ai-correction-reset") {
-      state.aiCorrection = { ...DEFAULT_AI_CORRECTION };
-      state.haloContext = hasBodyContext() ? "body" : "none";
+      const correction = activeWeatherCorrection();
+      if (!correction) return;
+      return showModal("撤销这次反馈？", "撤销后不再用这份反馈解释今天。戒指数据、历史反馈和过去的聊天内容都会保留。", "确认撤销", `ai-correction-reset-confirm:${correction.id}`);
+    }
+    if (action.startsWith("ai-correction-reset-confirm:")) {
+      const correction = activeWeatherCorrection();
+      const id = action.slice("ai-correction-reset-confirm:".length);
+      if (!correction || correction.id !== id || !modalRoot.querySelector(`[data-action="ai-correction-reset-confirm:${CSS.escape(id)}"]`)) return;
+      const withdrawn = { ...correction, status: "withdrawn", withdrawnAt: new Date().toISOString() };
+      const haloSource = state.haloSource?.kind === "correction" && state.haloSource.correctionId === id ? null : state.haloSource;
+      const conversations = state.conversations.map(conversation => conversation.source?.kind === "correction" && conversation.source.correctionId === id ? { ...conversation, source: null, context: "none" } : conversation);
+      if (!writeCorrectionState({ aiCorrection: { ...DEFAULT_AI_CORRECTION }, aiCorrectionHistory: [...state.aiCorrectionHistory, withdrawn], haloSource, haloContext: !haloSource && state.haloContext === "correction" ? "none" : state.haloContext, conversations })) return showInfoModal("暂时没能撤销", "原反馈仍然保留，请稍后重试。", "重新撤销", "ai-correction-reset");
       trackPrototypeEvent("ai_interpretation_correction_withdrawn");
+      closeModal();
       render();
-      return flash("这次纠正已撤销");
+      return flash("反馈已撤销，历史记录仍保留");
     }
     if (action.startsWith("rhythm-state:")) {
       const next = action.slice(13);
-      if (next === "ready" && (!rhythmSettingsValid() || state.rhythmDeleted)) { state.rhythmStatus = "empty"; return go("RHY-00"); }
+      if (state.current === "RHY-05" && ["paused", "ready"].includes(next)) return handleRhythmManagement(next === "paused" ? "rh-manage:pause" : "rh-manage:resume");
+      if (next === "ready" && state.rhythmMode === "cycle" && (!rhythmSettingsValid() || state.rhythmDeleted)) { state.rhythmStatus = "empty"; return go("RHY-00"); }
       state.rhythmStatus = next;
       return render();
     }
     if (action.startsWith("rhythm-date:")) {
-      const date = action.slice(12);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > beijingDateKey()) return flash("请选择今天或过去的日期");
-      state.selectedRhythmDate = date;
-      const record = state.rhythmRecords[date];
-      state.rhythmFeeling = record?.feeling || "";
-      state.rhythmNote = record?.note || "";
-      return go("RHY-03");
+      const result = rhythmRecordStore.open(action.slice(12));
+      if (!result.ok) return showInfoModal("暂时无法打开记录", result.error);
+      rhythmEditorProblem = ""; closeModal(); return go("RHY-03");
+    }
+    if (action.startsWith("rhythm-draft-latest:")) {
+      const result = rhythmRecordStore.discardDraft(action.slice(20));
+      if (!result.ok) { closeModal(); return showInfoModal("草稿仍保留", result.error); }
+      rhythmEditorProblem = ""; closeModal(); return go("RHY-03");
     }
     if (action.startsWith("rhythm-month:")) {
       const [year, month] = state.rhythmMonth.split("-").map(Number);
@@ -2147,47 +5383,93 @@
       state.rhythmMonth = next;
       return render();
     }
-    if (action === "rhythm-setup-skip") { state.rhythmStatus = "paused"; return go(state.rhythmSetupReturn || "RHY-01"); }
+    if (action === "rhythm-setup-skip" || action === "rhythm-record-only") {
+      if (state.current === "RHY-05") return handleRhythmManagement("rh-manage:settings");
+      if (action === "rhythm-setup-skip" && state.current !== "RHY-00") return;
+      state.rhythmMode = "record-only"; state.rhythmStatus = "ready"; return go(action === "rhythm-setup-skip" ? state.rhythmSetupReturn || "RHY-01" : "RHY-01");
+    }
+    if (action === "rhythm-manage-days") { if (state.current === "RHY-05" && !rhythmManagementStore.inspect().canManage) return; return go("RHY-01"); }
+    if (action.startsWith("rhythm-delete:")) {
+      const date = action.slice(14);
+      if (!state.rhythmRecords[date]) return flash("这一天没有已保存的记录");
+      return showModal("删除这一天的记录？", `将删除 ${date} 的感受和补充原话，同时移除趋势中的对应标记，之后不再供 Halo 引用。其他日期和周期设置保留；已发送的聊天内容不会随之删除。`, "确认删除这一天", `rhythm-delete-confirm:${date}`);
+    }
+    if (action.startsWith("rhythm-delete-confirm:")) {
+      const date = action.slice(22), result = rhythmRecordStore.remove(date);
+      if (!result.ok) { closeModal(); rhythmEditorProblem = result.error; render(); return; }
+      if (state.haloSource?.kind === "rhythm" && state.haloSource.date === date) setHaloSource("none");
+      state.conversations.forEach(entry => { if (entry.source?.kind === "rhythm" && entry.source.date === date) { entry.source = null; entry.context = "none"; } });
+      rhythmEditorProblem = ""; state.rhythmMonth = date.slice(0, 7);
+      closeModal(); go("RHY-01"); return flash(`${date} 的记录已删除`);
+    }
     if (action === "open-outfit-inspiration") {
       trackPrototypeEvent("daily_outfit_inspiration_open", { palette: DAILY_INSPIRATION.outfitColor, source_page: state.current });
       return showOutfitInspirationModal();
     }
     if (action === "outfit-inspiration-chat") {
-      state.haloContext = "inspiration";
+      setHaloSource("inspiration", null, true);
       state.haloToolsOpen = false;
       trackPrototypeEvent("daily_outfit_halo_open", { palette: DAILY_INSPIRATION.outfitColor, source_page: state.current });
       closeModal();
       go("HAL-01");
-      return appendHaloReply(DAILY_INSPIRATION.outfitQuestion, DAILY_INSPIRATION.outfitReply);
+      return appendHaloReply(DAILY_INSPIRATION.outfitQuestion, DAILY_INSPIRATION.outfitReply, { preserveDraft: true });
     }
-    if (action === "open-inspiration") { state.haloContext = "inspiration"; state.haloToolsOpen = false; trackPrototypeEvent("daily_inspiration_halo_open", { source_page: state.current }); return go("HAL-01"); }
+    if (action === "open-inspiration") { setHaloSource("inspiration", null, true); state.haloToolsOpen = false; trackPrototypeEvent("daily_inspiration_halo_open", { source_page: state.current }); return go("HAL-01"); }
     if (action === "auth-code-requested") {
-      const phone = String(document.getElementById("auth-phone")?.value || "").replace(/\s/g, "");
-      if (!/^1\d{10}$/.test(phone)) return flash("请填写完整的 11 位手机号");
-      state.authPhone = phone;
-      state.authCodeRequested = true;
-      state.authVerified = false;
-      return go("AUTH-02");
+      const ui = authUiState();
+      if (ui.busy) return;
+      if (ui.sendDisabled) { state.authForm.touched = true; updateAuthControls(); persistAppProgress(); return; }
+      invalidateAuthRequest();
+      state.toggles.legal = false;
+      state.toggles.aiLegal = false;
+      const sequence = Math.max(0, Number(state.authForm.sequence) || 0);
+      state.authForm.sequence = sequence + 1;
+      const readyAt = Date.now() + 1200;
+      // Demo-only challenge. Production codes, expiry, rate limits and account lookup belong to the server.
+      state.authForm.request = { version: 2, id: `auth-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, phone: ui.phone, status: "sending", readyAt, expiresAt: readyAt + 300000, demoCode: AUTH_DEMO_CODE, attempts: 0, outcome: authReviewOutcome, consentSource: "AUTH-01" };
+      trackPrototypeEvent("auth_code_request_started", { request_id: state.authForm.request.id, simulated: true });
+      return render();
     }
-    if (action === "auth-verified") {
-      if (!state.authCodeRequested) return go("AUTH-01");
-      if (document.getElementById("auth-code")?.value.replace(/\s/g, "") !== "682106") return flash("请填写演示验证码 682106");
-      state.authVerified = true;
-      return go("LEGAL-01");
+    if (action === "auth-login" || action === "auth-verified") {
+      if (state.current !== "AUTH-01") return;
+      const ui = authUiState();
+      if (ui.busy || state.authForm.login?.status === "complete") return;
+      if (ui.disabled) { state.authForm.touched = true; updateAuthControls(); persistAppProgress(); return; }
+      state.authForm.codeError = "";
+      state.authForm.login = { id: `login-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, requestId: state.authForm.request.id, status: "verifying", readyAt: Date.now() + 900, outcome: authLoginReviewOutcome };
+      trackPrototypeEvent("auth_login_started", { attempt_id: state.authForm.login.id, request_id: state.authForm.request.id, simulated: true });
+      return render();
     }
-    if (action === "legal-continue") {
-      if (!state.authVerified && !state.signedIn) return go("AUTH-01");
-      if (!state.toggles.legal || !state.toggles.aiLegal) return flash("请先确认两项必需说明");
-      if (!state.signedIn && state.membershipHardwareState === "never-bound" && !state.memberCreatedAt) { state.newMember = true; state.memberCreatedAt = new Date().toISOString(); state.dataLifecycle = "none"; }
-      state.signedIn = true;
-      trackPrototypeEvent("required_agreements_accepted", { user_agreement: true, ai_service_notice: true });
-      return go("PERM-01");
-    }
+    // Legacy action is a return only: agreement confirmation now belongs to AUTH-01.
+    if (action === "legal-continue") return state.signedIn ? goBack() : go("AUTH-01");
     if (action.startsWith("legal-read:")) return showLegalReading(action.slice(11));
-    if (action === "permission-skip") return go("TOD-01");
+    if (action === "permission-skip") return goBack();
     if (action === "permission-connect") { if (!state.toggles.bluetooth) return showInfoModal("请先开启蓝牙", "蓝牙用于连接、同步和主动测量。开启后再连接戒指。", "知道了"); state.deviceResetStatus = "ready"; return go(isHardwareActive() ? "DEV-10" : "DEV-01"); }
-    if (action === "device-pair-confirm") { if (!state.toggles.bluetooth) return flash("请先开启蓝牙权限"); state.devicePaired = true; return go("DEV-04"); }
-    if (action.startsWith("go:")) { closeModal(); return go(action.slice(3)); }
+    if (action === "today-records") return showTodayRecords();
+    if (action === "today-device") {
+      const description = !isHardwareActive() ? "连接 Halo Ring 后开始记录；你记下的感受仍然保留。" : state.deviceStatus === "syncing" ? "正在接收戒指记录。你可以继续浏览，已保存的记录不受影响。" : state.deviceStatus === "disconnected" ? "把戒指放在手机附近，并检查蓝牙。已有记录仍可查看。" : state.deviceStatus === "action" ? "本次同步没有完成。检查连接后可以重试，已有记录不会丢失。" : state.deviceStatus === "low" ? "请给戒指充电，以便继续记录和同步。" : "连接状态不代表所有记录都已同步，可进入设备页查看进度。";
+      return showInfoModal(todaySyncLabel(), description, isHardwareActive() ? "查看设备与同步" : "连接 Halo Ring", isHardwareActive() ? "go:DEV-10" : "go:DEV-01");
+    }
+    if (action === "today-advice" || action === "today-weather-details") {
+      go("TOD-03");
+      if (state.current !== "TOD-03") return;
+      const target = screen.querySelector(action === "today-advice" ? ".detail-action" : ".detail-conclusion");
+      screen.scrollTop = action === "today-advice" && target ? screen.scrollTop + target.getBoundingClientRect().top - screen.getBoundingClientRect().top - 16 : 0;
+      if (target) { target.setAttribute("tabindex", "-1"); target.focus({ preventScroll: true }); }
+      capturePageView(); persistAppProgress();
+      return;
+    }
+    if (action === "today-night") {
+      const session = state.nightSession;
+      if (!session || session.status === "ended") return go("NIG-01");
+      if (session.status === "paused" && nightPosition(session) < session.duration * 60) changeNightPlayback();
+      return go("NIG-04");
+    }
+    if (action.startsWith("go:")) {
+      if (action === "go:TOD-02" && state.current === "TOD-03") state.recordDraft.returnRoute = "TOD-03";
+      if (action === "go:TOD-02" && !["TOD-01", "TOD-02"].includes(state.current)) { state.recordEditorMode = "new"; state.recordEditorError = ""; }
+      closeModal(); return go(action.slice(3));
+    }
     if (action === "previous") return goBack();
     if (action === "toast:文字已复制") return copyText(`${currentBodyWeather().label}｜${currentBodyWeather().shareLine}`, "文字已复制");
     if (action === "toast:已开始重新同步") { const unavailable = deviceOperationUnavailable("sync"); if (unavailable) return flash(unavailable); state.deviceStatus = "syncing"; render(); return flash("正在重新同步"); }
@@ -2195,6 +5477,7 @@
     if (action === "toast:单位设置已打开") return showInfoModal("单位", "当前使用公制与摄氏度。", "知道了");
     if (action.startsWith("toast:")) { closeModal(); return flash(action.slice(6)); }
     if (window.HALO_COMMERCIAL_EXTENSION?.handleAction(action, {
+      applicationContext: () => ({ signedIn: state.signedIn, accountRef: state.authPhone || state.authForm?.phone || "", key: state.authForm?.login?.id || state.agreementAcceptance?.acceptedAt || (state.signedIn ? "legacy-session" : ""), page: state.current }),
       go,
       render,
       flash,
@@ -2214,163 +5497,258 @@
       return flash("已发起明文文件下载，请妥善保管");
     }
     if (action === "export-copy-link") return showExportResult("secure");
-    if (action === "share-system") {
-      const content = shareContent();
-      if (navigator.share && navigator.canShare) return buildShareCanvas(content).then(canvas => new Promise(resolve => canvas.toBlob(resolve, "image/png"))).then(blob => {
-        const file = new File([blob], "HALORING-Body-Weather.png", { type: "image/png" });
-        if (!navigator.canShare({ files: [file] })) return showInfoModal("请先保存图片", "当前浏览器不支持直接分享图片。", "保存图片", "share-save");
-        return navigator.share({ title: "Halo Body Weather", text: `${content.title}｜${content.description}`, files: [file] }).catch(() => flash("未完成分享"));
-      });
-      return showInfoModal("系统分享暂不可用", "当前浏览器没有开放系统分享面板。你可以保存图片后再分享。", "保存图片", "share-save");
-    }
-    if (action === "share-copy") { const content = shareContent(); return copyText(`${content.title}｜${content.description}`, "已复制分享文字"); }
-    if (action === "share-save") { closeModal(); return saveShareImage(); }
-    if (action === "support-instructions") return showInfoModal("企业微信联系指引", "请在企业微信中搜索 Halo Ring 官方客服，或扫描正式服务入口提供的二维码。App 不会随跳转发送健康数据、Halo 对话或其他敏感信息。", "知道了");
+    if (action === "support-instructions") return supportContact.open();
     if (action === "widget-preview") return showWidgetPreview();
     if (action === "widget-add") return showWidgetAdded();
     if (action.startsWith("record-detail:")) return showRecordDetail(action.slice(14));
     if (action === "info:membership-rights") return showMembershipRules();
     if (action === "commerce-entry") return showCommerceBoundary();
-    if (action === "account-deletion-submit") return showAccountDeletionConfirm();
     if (action === "account-channel-support") return showInfoModal("处理体验顾问合作", "注销会员账号不会结束独立渠道合同。请从这里联系企业微信客服，继续处理合同、历史结算和未完成事项；不需要重新开通经营身份。", "查看客服入口", "go:HELP-03");
-    if (action === "account-deletion-confirm") {
-      state.accountDeletionStatus = "submitted";
-      state.navigationHistory = [];
-      trackPrototypeEvent("account_deletion_submitted", { processing_sla: "15-business-days" });
-      closeModal();
-      return render();
-    }
     if (action === "support-handoff") return showSupportHandoff();
-    if (action === "logout") {
-      state.signedIn = false;
-      state.authCodeRequested = false;
-      state.authVerified = false;
-      state.chat = [];
-      state.navigationHistory = [];
-      trackPrototypeEvent("account_signed_out");
-      return go("AUTH-01");
-    }
     if (action === "studio-claim-benefit") return handleAction("studio-benefit-refresh");
-    if (action === "wake-save") { if (!/^\d{2}:\d{2}$/.test(state.wakeDraft.time)) return flash("请填写有效的唤醒时间"); state.wakeSettings = { ...state.wakeDraft }; state.alarmSound = state.wakeSettings.sound; state.toggles.wake = state.wakeSettings.enabled; state.wakeSaved = true; state.snoozeUntil = ""; render(); return flash("唤醒设置已保存，原型不会实际响铃"); }
     if (action === "memory-confirm") return handleAction("halo-memory-confirm:quiet");
-    if (action === "journey-pause") { state.journeyPaused = true; state.journeyDecision = "active"; trackPrototypeEvent("halo_journey_paused"); return render(); }
-    if (action === "journey-resume") { state.journeyPaused = false; state.journeyDecision = "active"; trackPrototypeEvent("halo_journey_resumed"); return render(); }
-    if (action === "journey-resume-today") { state.journeyPaused = false; state.journeyDecision = "active"; return render(); }
-    if (action === "journey-replace") {
-      if (state.journeyVariant < 2) state.journeyVariant += 1;
-      else { state.journeyTheme = state.journeyTheme === "boundary" ? "pause" : "boundary"; state.journeyVariant = 1; state.journeyProgress = state.journeyRecords[state.journeyTheme].days.length; }
-      state.journeyDecision = "active";
-      state.journeyPaused = false;
-      trackPrototypeEvent("halo_journey_action_replaced", { theme: state.journeyTheme, difficulty: state.journeyVariant });
-      render();
-      return flash("已经换成更容易开始的一步");
+    if (action.startsWith("journey-theme:")) {
+      const theme = action.slice(14);
+      if (!JOURNEY_THEMES[theme]) return;
+      state.journeyTheme = theme; syncJourneyAliases(); return render();
     }
-    if (action === "journey-defer-open") return showJourneyDeferModal();
+    if (action === "journey-pause") { if (!["active", "deferred"].includes(state.journeyRecords[state.journeyTheme].status)) return; updateJourney({ status: "paused" }); trackPrototypeEvent("halo_journey_paused"); return render(); }
+    if (action === "journey-resume" || action === "journey-resume-today") { if (!["paused", "deferred"].includes(state.journeyRecords[state.journeyTheme].status)) return; updateJourney({ status: "active" }); trackPrototypeEvent("halo_journey_resumed"); return render(); }
+    if (action === "journey-replace") {
+      if (!["active", "deferred"].includes(state.journeyRecords[state.journeyTheme].status)) return;
+      if (state.journeyVariant >= 2) return flash("已经是最轻的一步，也可以选择另一个主题");
+      updateJourney({ variant: state.journeyVariant + 1, status: "active" });
+      trackPrototypeEvent("halo_journey_action_replaced", { theme: state.journeyTheme, difficulty: state.journeyVariant });
+      render(); return flash("已经换成更容易开始的一步");
+    }
+    if (action === "journey-defer-open") { if (state.journeyRecords[state.journeyTheme].status !== "active") return; return showJourneyDeferModal(); }
     if (action.startsWith("journey-defer:")) {
+      if (state.journeyRecords[state.journeyTheme].status !== "active") return;
       const reason = action.slice(14);
       const reasons = { time: "今天没时间。", hard: "这一步还是太难。", timing: "现在不是合适的时候。", mood: "今天不想做。" };
-      state.journeyMissCount += 1;
-      state.journeyReason = reasons[reason] || "今天先不做。";
-      state.journeyDecision = "deferred";
-      state.journeyPaused = false;
-      if (reason === "hard" || state.journeyMissCount >= 2) state.journeyVariant = Math.min(2, Math.max(1, state.journeyVariant + 1));
-      trackPrototypeEvent("halo_journey_action_deferred", { reason, miss_count: state.journeyMissCount, difficulty_adjusted: state.journeyVariant > 0 });
-      closeModal();
-      return render();
+      const missCount = state.journeyMissCount + 1;
+      updateJourney({ status: "deferred", reason: reasons[reason] || "今天先不做。", missCount, variant: reason === "hard" || missCount >= 2 ? Math.min(2, state.journeyVariant + 1) : state.journeyVariant });
+      trackPrototypeEvent("halo_journey_action_deferred", { reason, miss_count: missCount });
+      closeModal(); return render();
     }
-    if (action === "journey-unsuitable") return showInfoModal("停用这个主题？", "停用后不会再提醒你做这组练习，已有进度会保留。你可以换一个方向。", "停用并换主题", "journey-unsuitable-confirm");
-    if (action === "journey-unsuitable-confirm") {
-      state.journeyDecision = "unsuitable";
-      state.journeyReason = "你已选择“这个主题不适合我”。";
-      state.journeyPaused = false;
-      trackPrototypeEvent("halo_journey_marked_unsuitable", { theme: state.journeyTheme });
-      closeModal();
-      return render();
+    if (action === "journey-end" || action === "journey-unsuitable") {
+      if (["ended", "completed", "deleted"].includes(state.journeyRecords[state.journeyTheme].status)) return;
+      return showModal("结束这个主题？", "结束本轮练习并停止提醒，完成统计、日期和感受都会保留。以后可重新开始新一轮。", "结束并保留记录", action === "journey-unsuitable" ? "journey-unsuitable-confirm" : "journey-end-confirm");
     }
-    if (action === "journey-replace-theme") {
-      state.journeyTheme = state.journeyTheme === "boundary" ? "pause" : "boundary";
-      state.journeyProgress = state.journeyRecords[state.journeyTheme].days.length;
-      state.journeyVariant = 1;
-      state.journeyDecision = "active";
-      state.journeyReason = "";
-      state.journeyMissCount = 0;
-      state.journeyPaused = false;
-      trackPrototypeEvent("halo_journey_theme_replaced", { theme: state.journeyTheme });
-      return render();
+    if (action === "journey-end-confirm" || action === "journey-unsuitable-confirm") {
+      if (["ended", "completed", "deleted"].includes(state.journeyRecords[state.journeyTheme].status)) return closeModal();
+      updateJourney({ status: "ended", endedAt: new Date().toISOString(), reason: action === "journey-unsuitable-confirm" ? "你选择了这个主题不适合我。" : "由你结束本轮。" });
+      trackPrototypeEvent("halo_journey_ended", { theme: state.journeyTheme }); closeModal(); return render();
     }
-    if (action === "journey-step") { const journey = state.journeyRecords[state.journeyTheme]; if (journey.days.includes(experienceDay()) || journey.days.length >= 7) return flash("今天已经记下了，明天再继续"); journey.days.push(experienceDay()); journey.entries.push({ day: experienceDay(), action: currentJourneyStep().action, note: journey.note }); state.journeyPaused = false; state.journeyDecision = "active"; state.journeyMissCount = 0; state.journeyProgress = journey.days.length; trackPrototypeEvent("halo_journey_step_completed", { progress: state.journeyProgress, theme: state.journeyTheme, difficulty: state.journeyVariant }); return render(); }
-    if (action === "journey-reset") { const previous = state.journeyRecords[state.journeyTheme]; state.journeyRecords[state.journeyTheme] = { days: [], entries: [], note: "", previous: [...(previous.previous || []), { days: previous.days, entries: previous.entries, note: previous.note }] }; state.journeyPaused = false; state.journeyProgress = 0; state.journeyVariant = 0; state.journeyMissCount = 0; state.journeyDecision = "active"; state.journeyReason = ""; trackPrototypeEvent("halo_journey_restarted"); return render(); }
+    if (action === "journey-step") {
+      const journey = state.journeyRecords[state.journeyTheme];
+      if (journey.status !== "active") return flash("请先继续或重新开始这个主题");
+      if (journey.days.includes(experienceDay()) || journey.days.length >= 7) return flash("今天已经记下了，明天再继续");
+      journey.days.push(experienceDay());
+      journey.entries.push({ day: experienceDay(), action: currentJourneyStep().action, note: journey.note });
+      updateJourney({ status: journey.days.length >= 7 ? "completed" : "active", missCount: 0, ...(journey.days.length >= 7 ? { endedAt: new Date().toISOString() } : {}) });
+      trackPrototypeEvent("halo_journey_step_completed", { progress: state.journeyProgress, theme: state.journeyTheme }); return render();
+    }
+    if (action === "journey-reset") {
+      if (state.journeyRecords[state.journeyTheme].status === "deleted") return handleAction("journey-reset-confirm");
+      return showModal("重新开始这个主题？", "当前轮次的完成统计和感受将保留在历史中，新一轮从 0 / 7 天开始。", "保留历史，重新开始", "journey-reset-confirm");
+    }
+    if (action === "journey-reset-confirm") {
+      const previous = state.journeyRecords[state.journeyTheme];
+      const history = previous.status === "deleted" ? [] : [...previous.previous, { days: [...previous.days], entries: previous.entries.map(entry => ({ ...entry })), note: previous.note, status: previous.status === "completed" ? "completed" : "ended", endedAt: previous.endedAt || new Date().toISOString() }];
+      state.journeyRecords[state.journeyTheme] = { days: [], entries: [], note: "", previous: history, status: "active", variant: 0, missCount: 0, reason: "" };
+      syncJourneyAliases(); trackPrototypeEvent("halo_journey_restarted", { theme: state.journeyTheme }); closeModal(); return render();
+    }
+    if (action === "journey-delete") {
+      const title = state.journeyTheme === "pause" ? "白天短暂停顿" : "睡前放下工作";
+      return showModal(`删除“${title}”的全部记录？`, "将清空这个主题的当前计划、完成统计、感受和所有历史轮次，无法恢复。其他主题、节律和设备记录保留。", "确认删除全部记录", "journey-delete-confirm");
+    }
+    if (action === "journey-delete-confirm") {
+      state.journeyRecords[state.journeyTheme] = { days: [], entries: [], note: "", previous: [], status: "deleted", variant: 0, missCount: 0, reason: "" };
+      syncJourneyAliases(); trackPrototypeEvent("halo_journey_deleted", { theme: state.journeyTheme }); closeModal(); render(); return flash("这个主题的记录已删除");
+    }
     if (action.startsWith("open-conversation:")) return openHaloConversation(action.slice(18));
-    if (action.startsWith("conversation-state:")) { const status = action.slice(19); const conversation = state.conversations.find((entry) => entry.id === state.activeConversationId); if (!conversation || !["active", "paused", "archived", "deleted"].includes(status)) return; conversation.status = status; state.conversationStatus = status; if (status === "deleted") { conversation.messages = []; conversation.title = "已删除会话"; state.chat = []; } trackPrototypeEvent("halo_conversation_state_changed", { conversation_id: state.activeConversationId, status }); return render(); }
-    if (action.startsWith("rhythm-feeling:")) { state.rhythmFeeling = action.slice(15); return render(); }
+    if (action.startsWith("conversation-state:")) {
+      const status = action.slice(19);
+      const conversation = state.conversations.find((entry) => entry.id === state.activeConversationId && entry.status !== "deleted");
+      if (!conversation || !["active", "paused", "archived", "deleted"].includes(status)) return;
+      if (status === "deleted") return showInfoModal("删除这段对话？", `“${conversation.title}”中的消息和草稿将被删除，无法在最近对话中恢复。你的感受记录和健康数据会保留。`, "确认删除", `halo-delete-conversation-confirm:${conversation.id}`);
+      conversation.status = status; state.conversationStatus = status;
+      trackPrototypeEvent("halo_conversation_state_changed", { conversation_id: state.activeConversationId, status });
+      return render();
+    }
+    if (action.startsWith("halo-delete-conversation-confirm:")) {
+      const id = action.slice("halo-delete-conversation-confirm:".length);
+      const conversation = state.conversations.find((entry) => entry.id === id && entry.status !== "deleted");
+      if (!conversation) return closeModal();
+      conversation.status = "deleted"; conversation.messages = []; conversation.draft = ""; conversation.source = null; conversation.context = "none"; conversation.title = "已删除会话";
+      if (state.activeConversationId === id) { state.activeConversationId = ""; state.chat = []; state.haloDraft = ""; state.haloSource = null; state.haloContext = "none"; state.conversationStatus = "new"; }
+      trackPrototypeEvent("halo_conversation_state_changed", { conversation_id: id, status: "deleted" });
+      closeModal(); render(); return flash("对话已删除");
+    }
+    if (action.startsWith("rhythm-feeling:")) {
+      if (state.current !== "RHY-03") return;
+      const view = rhythmRecordStore.inspect(), feeling = action.slice(15);
+      if (!view.canEdit || view.conflict || !["睡得少", "情绪敏感", "身体轻松", "有精神"].includes(feeling)) return;
+      state.rhythmFeeling = state.rhythmFeeling === feeling ? "" : feeling;
+      captureRhythmDraft(); return;
+    }
+    if (action === "rhythm-editor-latest") {
+      if (state.current !== "RHY-03" || !rhythmRecordStore.inspect().conflict) return;
+      return showModal("查看最新记录？", "你现在这份未保存的修改会被放弃，已保存的记录不会删除。取消可继续保留这份草稿。", "放弃修改并查看最新", `rhythm-draft-latest:${state.selectedRhythmDate}`);
+    }
     if (action === "rhythm-feeling-save") {
-      if (!state.rhythmFeeling) return;
-      const date = state.selectedRhythmDate;
-      if (date > beijingDateKey()) return flash("不能为未来日期保存感受");
-      const note = String(state.rhythmNote || "").trim();
-      const id = `rhythm-${date}`;
-      state.rhythmRecords[date] = { id, date, feeling: state.rhythmFeeling, note, source: "user-record", savedAt: new Date().toISOString() };
-      state.subjectiveRecords = state.subjectiveRecords.filter(record => record.id !== id);
-      state.subjectiveRecords.push({ id, label: state.rhythmFeeling, labels: [state.rhythmFeeling], original: note, category: "rhythm", source: "user-record", occurredAt: date, recordedAt: new Date().toISOString() });
-      state.subjectiveMarkers = [...new Set(state.subjectiveRecords.flatMap(record => record.labels || [record.label]))];
-      go("RHY-01");
+      if (state.current !== "RHY-03") return;
+      const view = rhythmRecordStore.inspect();
+      if (!view.canSave) { rhythmEditorProblem = view.error; rhythmEditor.update(view, rhythmEditorProblem, rhythmEditorDraftStatus); return; }
+      const result = rhythmRecordStore.save();
+      if (!result.ok) { rhythmEditorProblem = result.error; render(); return; }
+      rhythmEditorProblem = ""; rhythmEditorDraftStatus = ""; go("RHY-01");
       return flash("已保存为用户记录");
     }
     if (action === "rhythm-settings-save" || action === "rhythm-setup-save") {
-      const { startDate, cycleLength, duration } = state.rhythmSettingsDraft;
-      if (!rhythmSettingsValid(state.rhythmSettingsDraft)) return flash("请检查日期和周期范围，开始日不能晚于今天");
-      state.rhythmSettings = { startDate, cycleLength, duration };
-      state.rhythmSettingsSaved = true;
-      state.rhythmDeleted = false;
-      state.rhythmStatus = "ready";
-      trackPrototypeEvent("rhythm_settings_saved", { cycle_length: Number(cycleLength), duration: Number(duration) });
+      if (!["RHY-00", "RHY-04"].includes(state.current)) return;
+      const draft = { ...state.rhythmSettingsDraft, mode: "cycle", notice: rhythmSettingsStore.inspect().values.notice };
+      let result = rhythmSettingsStore.open();
+      for (const [key, value] of Object.entries(draft)) { if (!result.ok) break; result = rhythmSettingsStore.change(key, value); }
+      if (result.ok) result = rhythmSettingsStore.save();
+      rhythmSettingsWriteFailed = result.code === "storage";
+      if (!result.ok) return showInfoModal("设置暂未保存", result.error);
+      if (!result.unchanged) trackPrototypeEvent("rhythm_settings_saved", { mode: "cycle" });
       if (action === "rhythm-setup-save") return go(state.rhythmSetupReturn || "RHY-01");
       return render();
     }
-    if (action === "profile-save") { const valid = state.profile.nickname.trim().length >= 2 && state.profile.birthday && Number(state.profile.height) >= 100 && Number(state.profile.height) <= 230 && Number(state.profile.weight) >= 25 && Number(state.profile.weight) <= 250; if (!valid) return flash("请检查昵称、生日、身高和体重"); state.profileSaved = true; trackPrototypeEvent("profile_saved"); return render(); }
-    if (action === "feedback-submit") {
-      const text = String(document.getElementById("feedback-text")?.value || state.feedbackDraft.text || "").trim();
-      if (!text) return flash("请先描述遇到的问题");
-      const ticket = { id: `FB-${Date.now().toString(36).toUpperCase()}-${state.feedbackTickets.length + 1}`, type: state.feedbackDraft.type, text, createdAt: new Date().toISOString(), logsAllowed: Boolean(state.toggles.logConsent), status: "local-draft" };
-      state.feedbackTickets.unshift(ticket);
-      state.activeFeedbackTicketId = ticket.id;
-      state.feedbackDraft = { type: "设备连接", text: "" };
-      state.feedbackSubmitted = true;
-      trackPrototypeEvent("feedback_recorded_locally", { ticket_id: ticket.id, logs_allowed: ticket.logsAllowed });
+    if (action === "profile-save") return saveProfileEditor();
+    if (action === "profile-purpose") {
+      if (!state.signedIn || state.current !== "ACC-01") return;
+      return showInfoModal("关于身体信息", "出生日期用来显示年龄。身高、体重作为你填写的基础资料保存，方便查看和更新。这些信息都可以不填，也不会自动开启生日权益提醒。");
+    }
+    if (action === "profile-save-confirm-conflicts") return saveProfileEditor(true);
+    if (action === "profile-birthday-benefit") {
+      if (!state.signedIn || state.current !== "ACC-01" || state.accountDeletionStatus === "submitted") return;
+      const draft = profileEditorDraft();
+      draft.birthdayBenefit = !draft.birthdayBenefit;
+      profileDraftRestored = false;
+      state.profileEditor.touched.birthdayBenefit = true;
+      profileConflictReview = null;
+      if (typeof updateProfileEditorControls === "function") updateProfileEditorControls();
+      return persistAppProgress();
+    }
+    if (action === "profile-back") {
+      if (state.current !== "ACC-01") return;
+      const dirty = profileEditorDirty();
+      persistAppProgress(); goBack();
+      if (dirty) flash("草稿已保留，下次可继续编辑");
+      return;
+    }
+    if (action === "profile-discard") {
+      if (!state.signedIn || state.current !== "ACC-01" || !profileEditorDirty()) return;
+      showInfoModal("放弃这次修改？", "只清除这页尚未保存的修改，已保存资料和首次连接时的填写草稿不变。", "放弃修改", "profile-discard-confirm");
+      modalRoot.querySelector('[data-action="close-modal"]').textContent = "继续编辑";
+      return;
+    }
+    if (action === "profile-discard-confirm") {
+      if (!state.signedIn || state.current !== "ACC-01" || !modalRoot.querySelector('[data-action="profile-discard-confirm"]')) return;
+      const saved = savedProfileEditorSnapshot();
+      state.profileEditor = { draft: { ...saved }, base: { ...saved }, touched: {}, savedAt: state.profileEditor.savedAt };
+      profileDraftRestored = false;
+      profileConflictReview = null;
+      closeModal(); render(); return flash("已恢复到上次保存的资料");
+    }
+    if (action.startsWith("record-option:")) {
+      if (state.current !== "TOD-02") return;
+      const draft = currentRecordDraft();
+      const label = action.slice(14);
+      const original = state.recordEditorMode === "edit" ? state.subjectiveRecords.find(item => item.id === draft.id) : null;
+      if (![...(original?.category === "activity" ? ACTIVITY_FEELINGS : RECORD_OPTIONS), ...(original?.labels || (original ? [original.label] : []))].includes(label)) return;
+      draft.labels = original?.category === "activity" ? draft.labels.includes(label) ? [] : [label] : draft.labels.includes(label) ? draft.labels.filter(item => item !== label) : [...draft.labels, label];
+      state.recordEditorError = "";
       return render();
     }
-    if (action === "feedback-new" || action === "feedback-list") { state.activeFeedbackTicketId = ""; state.feedbackSubmitted = false; return render(); }
-    if (action.startsWith("feedback-view:")) { state.activeFeedbackTicketId = action.slice(14); return render(); }
-    if (action === "sleep-goal-save") {
-      state.sleepGoal = {
-        duration: document.getElementById("sleep-duration")?.value || DEFAULT_SLEEP_GOAL.duration,
-        workdayBedtime: document.getElementById("sleep-workday-bedtime")?.value || DEFAULT_SLEEP_GOAL.workdayBedtime,
-        workdayWake: document.getElementById("sleep-workday-wake")?.value || DEFAULT_SLEEP_GOAL.workdayWake,
-        restBedtime: document.getElementById("sleep-rest-bedtime")?.value || DEFAULT_SLEEP_GOAL.restBedtime,
-        restWake: document.getElementById("sleep-rest-wake")?.value || DEFAULT_SLEEP_GOAL.restWake,
-      };
-      localStorage.setItem(SLEEP_GOAL_KEY, JSON.stringify(state.sleepGoal));
-      render();
-      return flash("睡眠目标已保存");
+    if (action === "record-new") {
+      capturePageView();
+      state.recordEntryContext = state.current === "HLT-01" ? heartReturnContext() : state.current === "HLT-02" ? respirationReturnContext() : state.current === "HLT-05" ? oxygenReturnContext() : state.current === "HLT-06" ? temperatureReturnContext() : null;
+      if (state.current === "TOD-03") state.recordDraft.returnRoute = "TOD-03";
+      state.recordEditorMode = "new"; state.recordEditorError = ""; closeModal(); return go("TOD-02");
     }
-    if (action === "record-save" || action === "record-save-inline") {
+    if (action === "record-back") {
+      if (state.current !== "TOD-02") return;
+      const context = state.recordEditorMode === "edit" ? state.recordEditDraft?.returnContext : state.recordEntryContext;
+      const healthReturn = restoreHealthDetailReturn(context);
+      if (state.recordEditorMode === "edit" && !recordEditHasChanges()) { state.recordEditDraft = null; state.recordEditorMode = "new"; }
+      if (healthReturn && history.state?.trail?.at(-2) !== context.route) return go(context.route, false);
+      return goBack();
+    }
+    if (action === "record-help") return showInfoModal("关于用户记录", "感受和文字都可以自由选择。只有点保存才会加入记录，返回时会保留草稿。\n\n这是你主动记下的内容，不会改动戒指数据。已保存的记录可以单独修改或删除。", state.recordEditorMode === "edit" ? "放弃本次修改" : "知道了", state.recordEditorMode === "edit" ? "record-discard-edit" : "close-modal");
+    if (action === "record-discard-edit" && state.current === "TOD-02" && state.recordEditorMode === "edit") return showModal("放弃本次修改？", "原记录不会改变，新记录的草稿也会保留。", "放弃修改", "record-discard-edit-confirm");
+    if (action === "record-discard-edit-confirm") {
+      if (state.current !== "TOD-02" || state.recordEditorMode !== "edit" || !modalRoot.querySelector('[data-action="record-discard-edit-confirm"]')) return;
+      const context = state.recordEditDraft?.returnContext;
+      const healthReturn = restoreHealthDetailReturn(context);
+      state.recordEditDraft = null; state.recordEditorMode = "new"; state.recordEditorError = "";
+      closeModal();
+      return healthReturn && history.state?.trail?.at(-2) !== context.route ? go(context.route, false) : goBack();
+    }
+    if (action.startsWith("record-edit:")) return startRecordEdit(action.slice(12));
+    if (action === "record-conflict-review") return reviewRecordConflict();
+    if (["record-conflict-rebase", "record-conflict-copy"].includes(action)) {
+      if (state.current !== "TOD-02" || !state.recordEditDraft || !modalRoot.querySelector(`[data-action="${action}"]`)) return;
+      const draft = state.recordEditDraft;
+      const records = readStoredJson(SUBJECTIVE_RECORDS_KEY, null);
+      if (!Array.isArray(records)) return flash("暂时无法读取最新记录，输入仍保留，请稍后重试。");
+      const latest = records.find(value => todayRhythmStorage.own(value) && value.id === draft.id);
+      if (action === "record-conflict-rebase" && (!latest || JSON.stringify(latest) !== JSON.stringify(recordConflictSnapshot))) return reviewRecordConflict();
+      try { todayRhythmStorage.resolveEdit(); } catch { return flash("暂时无法读取最新记录，请稍后重试。"); }
+      if (action === "record-conflict-rebase") draft.baseRecord = JSON.parse(JSON.stringify(latest));
+      else { state.recordDraft = { labels: [...draft.labels], note: draft.note }; state.recordEditDraft = null; state.recordEditorMode = "new"; }
+      state.recordEditorError = ""; recordConflictSnapshot = null;
+      closeModal(); render(); return;
+    }
+    if (action.startsWith("record-delete:")) {
+      const record = state.subjectiveRecords.find(item => item.id === action.slice(14) && item.category !== "rhythm");
+      if (!record) return showInfoModal("记录不存在", "可以返回查看其他记录。");
+      return showModal("删除这条记录？", `${record.label} · ${record.occurredAt ? recordDateTime(record.occurredAt) : "原记录未保存日期"}\n\n只删除这一条，其他记录不受影响。删除后不能恢复。`, "删除这条记录", `record-delete-confirm:${record.id}`);
+    }
+    if (action.startsWith("record-delete-confirm:")) {
+      if (!Array.from(modalRoot.querySelectorAll("[data-action]")).some(button => button.dataset.action === action)) return;
+      return deleteUserRecord(action.slice(22));
+    }
+    if (action === "record-save") return saveRecordEditor();
+    if (action === "record-save-inline") {
       const labels = [...state.recordDraft.labels];
       const note = state.recordDraft.note.trim();
       if (!labels.length && !note) return flash("先选一个标签，或写下此刻的感受");
       const occurredAt = new Date().toISOString();
       const reportMonth = state.recordDraft.reportMonth;
-      state.subjectiveRecords.push({ id: `record-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, label: labels.join("、") || "感受", labels, original: note, occurredAt, source: "user-record", ...(reportMonth ? { reportMonth } : {}) });
-      if (reportMonth && isHardwareActive() && state.dataLifecycle === "interpretable") window.HALO_COMMERCIAL_EXTENSION?.completeTask?.({ taskId: "monthly-review", occurredAt, verified: true, hardwareActive: true, newMember: state.newMember, memberCreatedAt: state.memberCreatedAt });
-      state.subjectiveMarkers = [...new Set(state.subjectiveRecords.flatMap(record => record.labels || [record.label]))];
+      const record = { id: `record-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, label: labels.join("、") || "感受", labels, original: note, occurredAt, source: "user-record", ...(reportMonth ? { reportMonth } : {}) };
+      const identity = memberTaskIdentity();
+      if (reportMonth && isHardwareActive() && state.dataLifecycle === "interpretable" && identity) record.memberTaskEvidence = { taskId: "monthly-review", ...identity, occurredAt, verified: true, hardwareActive: true };
+      if (!commitUserRecords([...state.subjectiveRecords, record])) { render(); return flash(state.recordEditorError); }
+      if (record.memberTaskEvidence) {
+        const evidence = record.memberTaskEvidence, newMember = Boolean(state.newMember);
+        Promise.resolve().then(() => window.HALO_COMMERCIAL_EXTENSION?.completeTask?.({ ...evidence, memberCreatedAt: evidence.registrationId, newMember })).catch(() => false).then(posted => {
+          if (posted !== true && state.signedIn && (state.authPhone || state.authForm?.phone || "") === evidence.accountRef && state.memberCreatedAt === evidence.registrationId) flash("记录已保存，奖励待同步，可在会员任务重试");
+        });
+      }
       state.recordDraft = { labels: [], note: "" };
-      if (action === "record-save") go("TOD-01"); else render();
+      render();
       return flash("用户记录已保存");
+    }
+    if (action === "toggle:rhythmNotice" && state.current === "RHY-00") {
+      const view = rhythmSettingsStore.inspect();
+      if (!view.canEdit) return;
+      const result = rhythmSettingsStore.change("notice", !view.values.notice);
+      rhythmSettingsWriteFailed = result.code === "storage";
+      render(); return flash(result.ok ? "提醒偏好已保留，保存后生效" : result.error);
     }
     if (action.startsWith("toggle:")) {
       const key = action.slice(7);
+      if (key === "reduceMotion") return handleGeneralAction("general:motion/toggle");
+      if (key === "birthdayBenefit") return handleAction("profile-birthday-benefit");
+      if (["legal", "aiLegal"].includes(key)) return;
       const handled = (typeof handleAccountToggle === "function" && handleAccountToggle(key)) || (typeof handleExperienceToggle === "function" && handleExperienceToggle(key));
       if (!handled) state.toggles[key] = !state.toggles[key];
-      if (key === "haloBody") state.haloContext = hasBodyContext() ? "body" : "none";
+      if (key === "haloBody" && (state.haloContext === "body" || !state.haloSource)) setHaloSource(hasBodyContext() ? "body" : "none");
       return render();
     }
     if (action.startsWith("choose:")) {
@@ -2390,77 +5768,53 @@
       state.recordDraft.labels = state.recordDraft.labels.includes(value) ? state.recordDraft.labels.filter(item => item !== value) : [...state.recordDraft.labels, value];
       return render();
     }
-    if (action === "activate-hardware") {
-      if (!state.devicePaired || !state.toggles.bluetooth) return showInfoModal("请先完成配对", "确认蓝牙已开启并完成戒指配对后，才能同步激活。", "返回配对", "go:DEV-03");
-      const firstActivation = state.membershipHardwareState === "never-bound";
-      setMembershipState("active");
-      state.deviceStatus = "connected";
-      state.deviceResetStatus = "ready";
-      if (firstActivation) { state.hardwareActivatedAt = new Date().toISOString(); state.dataLifecycle = "none"; }
-      const commerce = window.HALO_COMMERCIAL_EXTENSION?.state;
-      if (commerce?.resumeAfterDevice) { commerce.resumeAfterDevice = false; commerce.channelIdentity = "application"; return go("CHN-06"); }
-      return go("RHY-00");
-    }
-    if (action.startsWith("measurement-start:")) { const type = action.slice(18); if (!ACCOUNT_MEASUREMENT_TYPES[type]) return; const unavailable = measurementUnavailable(); if (unavailable) return flash(unavailable); state.measurementType = type; state.measurementStatus = "running"; state.measured = false; return go("HLT-04"); }
+    if (action === "activate-hardware") return initialSync.handle("initial-sync:continue");
+    if (action.startsWith("measurement-start:")) { const type = action.slice(18); if (!ACCOUNT_MEASUREMENT_TYPES[type]) return; const unavailable = measurementUnavailable(type); if (unavailable) return flash(unavailable); state.measurementType = type; state.measurementStatus = "running"; state.measured = false; return go("HLT-04"); }
     if (action === "measurement-reset") { if (state.measurementStatus === "running") state.measurementStatus = "ready"; const unavailable = measurementUnavailable(); if (unavailable) return flash(unavailable); state.measurementStatus = "running"; state.measured = false; return render(); }
     if (action === "measurement-cancel") { state.measurementStatus = "ready"; state.measured = false; return go("HLT-03"); }
     if (action === "measurement-fail") { state.measurementStatus = "failed"; state.measured = false; return render(); }
     if (action.startsWith("measurement-state:")) { state.measurementStatus = action.slice(18); state.measured = state.measurementStatus === "complete"; return render(); }
-    if (action.startsWith("public-play:")) { const id = action.slice(12); if (!NIGHT_CONTENT[id]) return; state.publicNightChoice = id; state.nightChoice = id; return handleAction("night-start"); }
+    if (action.startsWith("public-play:")) { const id = action.slice(12); if (!NIGHT_CONTENT[id]) return; state.publicNightChoice = id; state.nightChoice = id; nightPlaylist.setSingle(id); return handleAction("night-start"); }
     if (action === "public-night-end") return handleAction("night-end");
     if (action === "night-preview") return showInfoModal("播放演示", `${currentNightContent().title}，${currentNightContent().duration} 分钟。当前原型不输出真实声音；开始后可以验证暂停、继续、历史与复盘。`, "开始演示", "night-start");
-    if (action === "night-start") { if (state.nightSession && state.nightSession.status !== "ended") { if (state.nightSession.contentId !== state.nightChoice) return showInfoModal("还有一段内容未结束", "请先结束正在听的内容，再开始新的一段。已听进度不会丢失。", "回到正在听的内容", "go:NIG-04"); return go("NIG-04"); } const selected = currentNightContent(); const now = new Date().toISOString(); state.nightSession = { id: `night-${Date.now()}`, contentId: state.nightChoice, title: selected.title, duration: selected.duration + (isHardwareActive() && state.toggles.nightTail ? 20 : 0), primaryDuration: selected.duration, appendNoise: Boolean(isHardwareActive() && state.toggles.nightTail), startedAt: now, resumedAt: now, positionSeconds: 0, status: "playing", fadeEnabled: isHardwareActive() && state.toggles.sleepFade, hardwareEligibleAtStart: isHardwareActive(), personalized: hasBodyContext() }; state.playing = true; closeModal(); trackPrototypeEvent("night_content_started", { content_id: state.nightChoice, session_id: state.nightSession.id }); return go("NIG-04"); }
-    if (action === "night-end") { const session = state.nightSession; if (!session || session.status === "ended") return go("NIG-10"); session.positionSeconds = nightPosition(session); session.status = "ended"; session.endedAt = new Date().toISOString(); session.review = { ...DEFAULT_NIGHT_REVIEW, factors: [], observationCount: 0 }; session.detail = `听了 ${Math.floor(session.positionSeconds / 60)} 分 ${session.positionSeconds % 60} 秒 · ${experienceTime(session.endedAt)} 结束`; session.taskVerification = session.hardwareEligibleAtStart && session.personalized && session.positionSeconds >= session.duration * 60 ? "eligible-prototype" : "ineligible"; if (session.taskVerification === "eligible-prototype") window.HALO_COMMERCIAL_EXTENSION?.completeTask?.({ taskId: "night-repair", occurredAt: session.endedAt, verified: true, hardwareActive: session.hardwareEligibleAtStart, newMember: Boolean(state.newMember), memberCreatedAt: state.memberCreatedAt || "" }); state.playing = false; state.nightHistory.unshift({ ...session }); state.selectedNightSessionId = session.id; state.nightReview = state.nightHistory[0].review; trackPrototypeEvent("night_content_completed", { content_id: session.contentId, session_id: session.id }); return go("NIG-10"); }
-    if (action.startsWith("night-history:")) { const id = action.slice(14); if (!state.nightHistory.some((entry) => entry.id === id)) return flash("这条记录已不存在"); state.selectedNightSessionId = id; return go("TOD-08"); }
-    if (action.startsWith("night-review-execution:")) {
-      const execution = action.slice(23);
-      state.nightReview.execution = execution;
-      state.nightReview.saved = false;
-      if (execution === "none") state.nightReview.helpfulness = "unknown";
-      else if (state.nightReview.helpfulness === "unknown") state.nightReview.helpfulness = "";
-      return render();
+    if (action === "night-start") {
+      if (state.nightSession && state.nightSession.status !== "ended") return go("NIG-04");
+      const snapshot = nightPlaylist.snapshot();
+      if (!snapshot) return showInfoModal("组合还是空的", "先添加一段内容，或选用 AI 推荐组合。", "选择内容", "go:NIG-03");
+      const now = new Date().toISOString();
+      const session = { ...snapshot, id: `night-${Date.now()}`, startedAt: now, resumedAt: now, positionSeconds: 0, status: "playing", fadeEnabled: isHardwareActive() && state.toggles.sleepFade, hardwareEligibleAtStart: isHardwareActive(), personalized: hasBodyContext(), ownerAccount: state.authPhone || "", memberRegistrationId: state.memberCreatedAt || "", recordScope: window.HaloPersonalScope.scope(state) };
+      if (!writeNotificationProgress({ nightSession: session, playing: true })) return showInfoModal("暂时无法开始", "这次播放没能保存，组合还在。请重试后再开始。");
+      closeModal();
+      trackPrototypeEvent("night_content_started", { content_id: session.contentId, content_ids: session.tracks.map(item => item.id), duration_minutes: session.duration, session_id: session.id });
+      return go("NIG-04");
     }
-    if (action.startsWith("night-review-help:")) { state.nightReview.helpfulness = action.slice(18); state.nightReview.saved = false; return render(); }
-    if (action.startsWith("night-review-factor:")) {
-      const factor = action.slice(20);
-      if (factor === "none") state.nightReview.factors = state.nightReview.factors.includes("none") ? [] : ["none"];
-      else {
-        const current = state.nightReview.factors.filter((value) => value !== "none");
-        state.nightReview.factors = current.includes(factor) ? current.filter((value) => value !== factor) : [...current, factor];
-      }
-      return render();
-    }
-    if (action === "night-review-save") {
-      const review = state.nightReview;
-      if (!review.execution || (review.execution !== "none" && !review.helpfulness)) return flash("请先完成前两项");
-      review.observationCount = state.nightHistory.filter((entry) => entry.review?.saved || entry.id === state.selectedNightSessionId).length;
-      review.saved = true;
-      review.counted = true;
-      trackPrototypeEvent("night_reflection_saved", { execution: review.execution, helpfulness: review.helpfulness, factor_count: review.factors.length, observation_count: review.observationCount });
-      return render();
-    }
-    if (action === "night-review-edit") { state.nightReview.saved = false; return render(); }
-    if (action === "wake-snooze") { const [hours, minutes] = (state.snoozeUntil || state.wakeSettings.time).split(":").map(Number); const total = (hours * 60 + minutes + 5) % 1440; state.snoozeUntil = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`; trackPrototypeEvent("smart_wake_snoozed", { minutes: 5 }); return render(); }
+    if (action === "night-end") return finishNightSession();
+    if (action.startsWith("night-history:")) { const id = action.slice(14); if (!state.nightHistory.some((entry) => entry.id === id && ownsNightSession(entry))) return flash("这条记录已不存在或不属于当前账号"); state.selectedNightSessionId = id; return go("TOD-08"); }
     if (action.startsWith("device-status:")) {
       const value = action.slice(14);
+      if (state.current === "DEV-05" && value === "connected") return handleAction("activate-hardware");
+      if (state.current === "DEV-01" && value === "connecting") {
+        if (state.connectionIntro.request?.status === "checking" || deviceGuideBlocker()) return;
+        if (deviceGuideState() === "failed") return handleAction("connect-intro-request");
+        if (state.connectionIntro.permission !== "granted" || !state.toggles.bluetooth) return showConnectionPermission(["denied", "bluetooth-off"].includes(deviceGuideState()));
+        trackPrototypeEvent("device_guide_scan_started", { source_page: "DEV-01", destination: "DEV-02", simulated: true });
+        deviceScan.start();
+        return go("DEV-02"); // Searching does not change the currently bound device's connection state.
+      }
       if (value !== "disconnected" && !state.toggles.bluetooth) return flash("请先开启蓝牙权限");
       if (value === "syncing") { const unavailable = deviceOperationUnavailable("sync"); if (unavailable) return flash(unavailable); }
       if (value === "disconnected" && state.measurementStatus === "running") state.measurementStatus = "failed";
       if (value === "disconnected" && ["downloading", "verifying"].includes(state.firmwareStatus)) state.firmwareStatus = "failed";
+      // Only a simulated sync completion timestamps the receipt; reconnecting does not.
+      if (state.deviceStatus === "syncing" && ["connected", "low"].includes(value)) state.deviceLastSyncedAt = new Date().toISOString();
       state.deviceStatus = value;
-      if (state.current === "DEV-01" && value === "connecting") return go("DEV-02");
-      if (state.current === "DEV-05" && value === "connected") return go("RHY-00");
       return render();
     }
     if (action.startsWith("body-weather:")) { state.bodyWeather = action.slice(13); return render(); }
     if (action.startsWith("lifecycle:")) { state.dataLifecycle = action.slice(10); return render(); }
     if (action.startsWith("trend:")) { state.trendPeriod = action.slice(6); return render(); }
-    if (action.startsWith("firmware:")) { const next = action.slice(9); const unavailable = deviceOperationUnavailable("firmware"); if (unavailable) return flash(unavailable); const transitions = { available: ["downloading", "failed"], downloading: ["verifying", "failed"], verifying: ["current", "failed"], current: ["available"], failed: ["downloading"] }; if (!(transitions[state.firmwareStatus] || []).includes(next)) return flash("请按更新步骤继续"); state.firmwareStatus = next; return render(); }
-    if (action.startsWith("share-bg:")) { state.shareBackground = action.slice(9); return render(); }
-    if (action.startsWith("switch-halo-context:")) { const requested = action.slice(20); state.haloContext = requested === "body" && !hasBodyContext() ? "none" : requested; return render(); }
-    if (action === "share-photo") return document.getElementById("share-photo-input")?.click();
-    if (action === "share-preview") return showSharePreview();
-    if (action === "request-location") { state.toggles.location = true; flash("位置已单独授权"); return render(); }
+    if (action.startsWith("firmware:")) return; // Retired manual firmware stages.
+    if (action.startsWith("switch-halo-context:")) { setHaloSource(action.slice(20)); return render(); }
     if (action === "status-detail" || action.startsWith("status-detail:")) {
       const requestedStatus = action.includes(":") ? action.split(":")[1] : state.deviceStatus;
       const current = DEVICE_STATUS[requestedStatus] || DEVICE_STATUS.connected;
@@ -2472,75 +5826,88 @@
     }
     if (action === "info:stress") { const weather = currentBodyWeather(); return showInfoModal("今天什么时候比较紧绷", `今天${weather.pressure}。Halo 会结合清醒时的 HRV、心率和活动来区分安静、紧绷与运动；运动时心率升高不会被算成压力。\n\n这些记录只用于回看日常变化，不能用于诊断。`, "知道了"); }
     if (action === "info:education") return showInfoModal("Halo 怎样看这些数据", "同一个数字对每个人意义不同。Halo 会先了解你的平时水平，再看连续几天有没有变化，不会因为一次高低就下结论。这些内容用于日常健康管理，不替代医疗诊断。");
-    if (action === "info:inspiration") { trackPrototypeEvent("daily_inspiration_info_open", { source_page: state.current }); return showInfoModal("关于今日灵感", "这是一份每日固定的文化灵感，不是预测，也不会读取或解释你的健康数据。旺运穿衣借用五行穿衣的文化表达，颜色分组和吉级只是象征性提示，不保证改变心情、贵人、合作、收益或办事结果，也不会要求你购买新衣服。未填写生日时使用通用内容；授权生日后可以生成更贴近你的表达。它不用于医疗、投资、消费或其他重要决定。"); }
+    if (action === "info:inspiration") { trackPrototypeEvent("daily_inspiration_info_open", { source_page: state.current }); return showInfoModal("关于今日灵感", window.HALO_INSPIRATION_DESCRIPTION); }
     if (action === "info:agreement") return showInfoModal("用户协议", "当前版本：2026 年 9 月 1 日。这里说明账号使用、服务边界、用户责任和争议处理方式。核心规则发生变化时，会按适用要求提前公示。");
     if (action === "info:privacy-policy") return showInfoModal("隐私政策", "这里说明设备、健康、会员、订单和服务数据的使用范围、保存方式，以及访问、更正、导出和删除入口。法定留存数据不会继续用于运营或个性化。");
     if (action === "info:health-ai-boundary") return showInfoModal("Halo 能做什么、不能做什么", "Halo 可以帮你读懂日常记录，给出生活和运动上的参考；它不会诊断疾病、开处方或处理医疗急症，也不能替代医生和其他专业医疗人员。");
-    if (action.startsWith("sound:")) { const sound = action.slice(6); if (!["晨雾", "微光", "清泉", "柔和铃音"].includes(sound)) return; state.wakeDraft.sound = sound; state.wakeSaved = false; return render(); }
-    if (action === "wake-sound-confirm") { state.previewSound = ""; return go("NIG-06"); }
     if (action.startsWith("ask:") || action === "send-chat") {
-      const text = action.startsWith("ask:") ? action.slice(4) : document.getElementById("chat-input")?.value.trim();
+      const text = action.startsWith("ask:") ? action.slice(4) : state.haloDraft.trim();
       if (!text) return flash("先写下你想说的内容");
-      const copy = currentHaloCopy();
-      const reply = state.haloContext === "inspiration"
+      const source = currentHaloSource();
+      const sourceText = String(source?.text || "").slice(0, 120);
+      const reply = source?.kind === "inspiration"
         ? (text.includes("颜色") || text.includes("穿") ? DAILY_INSPIRATION.outfitReply : "把它当作今天的一点文化灵感就好，不用它替你做重要决定。")
-        : state.haloContext === "rhythm"
-        ? rhythmContextSummary()
-        : state.haloContext === "feeling"
-        ? `我看到了你记录的“${state.haloFeelingRecords.at(-1)?.text || state.haloFeeling}”。我们可以先聊聊这份感受；它不会被写成设备测量结果。`
-        : state.haloContext === "correction"
-        ? `我会以你纠正后的感受为准，不把原解释继续当作事实。${state.aiCorrection.note ? `你补充的“${state.aiCorrection.note}”也只作为用户记录使用。` : ""}`
-        : !hasBodyContext() || state.haloContext === "none" ? copy.noBodyTypedReply : copy.bodyTypedReply;
-      return appendHaloReply(text, reply);
+        : /放松|呼吸|睡前|停下来|睡不着|安静一会|安静一下/.test(text)
+        ? "先把手里的事放一放。你可以选一段呼吸引导或安静的声音，想听时再开始。也可以先告诉我，是什么让你放松不下来？"
+        : source?.kind === "feeling" || source?.kind === "rhythm"
+        ? `你记下了“${sourceText}”。这份感受从什么时候开始的？我们可以从你最想说的那一点聊起。`
+        : source?.kind === "correction"
+        ? `好，按你说的“${sourceText}”来。你现在最想调整的是哪件事？`
+        : /听我说|说一会|聊一聊|陪我聊/.test(text)
+        ? "好，我在。你想从哪件事说起？不用先整理好再说。"
+        : /安排|事情很多|计划/.test(text)
+        ? "先告诉我，今天有哪些事必须做、哪些可以往后放？我们一起排个顺序。"
+        : source?.kind === "body" && hasBodyContext()
+        ? "可以一起看看今天的记录。不过，记录只是一部分：你自己现在感觉怎么样？"
+        : "你现在最想聊的是身体感受、心情，还是今天的安排？从一件小事说起就好。";
+      return appendHaloReply(text, reply, { preserveDraft: action.startsWith("ask:") });
     }
     if (action === "toggle-player") return changeNightPlayback();
     if (action === "measure-complete") { if (state.measurementStatus !== "running") return flash("请先开始测量"); state.measurementStatus = "ready"; const unavailable = measurementUnavailable(); if (unavailable) { state.measurementStatus = "failed"; return render(); } state.measured = true; state.measurementStatus = "complete"; state.lastMeasurement = { type: state.measurementType, source: "prototype-demo", metrics: ACCOUNT_MEASUREMENT_TYPES[state.measurementType].metrics, completedAt: new Date().toISOString() }; return render(); }
-    if (action === "device-reset-cancel") { state.deviceResetStatus = "ready"; return render(); }
-    if (action === "device-reset-complete") { if (state.deviceResetStatus !== "pending") return; state.deviceResetStatus = "ready"; const unavailable = deviceOperationUnavailable("reset"); if (unavailable) { state.deviceResetStatus = "pending"; return flash(unavailable); } state.deviceResetStatus = "complete"; state.devicePaired = false; state.deviceOperationHistory.unshift({ label: "恢复出厂设置 · 演示设备确认完成", at: new Date().toISOString() }); setMembershipState("unbound-retained"); return render(); }
+    if (["device-reset-cancel", "device-reset-complete"].includes(action)) return; // Retired unscoped reset actions.
+    if (action === "studio-detail-continue") {
+      const status = studioDetailState();
+      if (status.disabled) { render(); return flash(status.label); }
+      trackPrototypeEvent("studio_detail_continue", { event_id: state.selectedStudioEventId, target_page: status.route });
+      return go(status.route);
+    }
+    if (action === "studio-home-records") return showStudioHomeRecords();
+    if (action.startsWith("studio-home-filter:")) { const value = action.slice(19); if (!STUDIO_HOME_FILTERS.includes(value)) return; state.studioHomeFilter = value; return render(); }
+    if (action.startsWith("studio-home-open:")) {
+      const id = action.slice(17);
+      const entry = studioHomeRecords().find(item => item.id === id);
+      closeModal();
+      if (!entry) return showInfoModal("没有找到这条体验", "请返回首页重新查看，其他记录不受影响。");
+      if (!entry.status.route) return showInfoModal("这条体验暂时无法打开", "保留的预约记录没有改动。如需协助，请联系 Halo 客服。", "联系客服", "go:HELP-03");
+      state.selectedStudioEventId = id;
+      if (entry.record.sessionDone) state.selectedStudioHistoryId = id;
+      syncStudioAliases();
+      trackPrototypeEvent("studio_home_record_opened", { event_id: id, target_page: entry.status.route });
+      return go(entry.status.route);
+    }
     if (action.startsWith("studio-select:")) { const id = action.slice(14); if (!STUDIO_EVENTS[id]) return flash("未找到这场活动"); state.selectedStudioEventId = id; syncStudioAliases(); return go("STU-09"); }
     if (action.startsWith("studio-history:")) { const id = action.slice(15); if (!state.studioRecords[id]?.sessionDone) return flash("还没有这场活动的完成记录"); state.selectedStudioHistoryId = id; state.selectedStudioEventId = id; syncStudioAliases(); return go("STU-15"); }
     if (action.startsWith("studio-booking:")) { const id = action.slice(15); if (!state.studioRecords[id]?.booked) return flash("没有找到这笔预约"); state.selectedStudioEventId = id; syncStudioAliases(); return go("STU-18"); }
-    if (action === "studio-voucher-toggle") { const record = studioRecord(); if (record.booked) return flash("预约已创建，不能重复选择体验券"); const voucher = window.HALO_COMMERCIAL_EXTENSION?.getStudioVoucher?.(state.selectedStudioEventId); if (!voucher?.eligible) return flash("当前没有可用于这场活动的体验券"); record.useVoucher = !record.useVoucher; return render(); }
-    if (action === "studio-institution-confirm") { const record = studioRecord(); if (record.sessionDone || record.booked) return go("STU-18"); record.eventSnapshot = { ...STUDIO_EVENTS[state.selectedStudioEventId] }; Object.assign(record, { booked: true, paid: true, bookingId: `SI-${state.selectedStudioEventId}-${Date.now()}`, source: "institution", paidAmount: 0, dueAmount: 0 }); syncStudioAliases(); return go("STU-10"); }
-    if (action === "studio-feeling-save") { const record = studioRecord(); record.beforeFeeling = record.beforeDraft.trim(); record.beforeSavedAt = new Date().toISOString(); return go("STU-03"); }
-    if (action === "studio-start") { const record = studioRecord(); if (!studioConfirmed(record) || !record.activityConsent) return go("STU-10"); const other = Object.entries(state.studioRecords).find(([id, entry]) => id !== state.selectedStudioEventId && entry.sessionStarted && !entry.sessionDone); if (other) return showInfoModal("还有一场体验未结束", "先结束或继续上一场体验，避免两场记录混在一起。", "继续上一场体验", `studio-resume:${other[0]}`); if (record.mode === "ring" && record.healthConsent && (state.deviceStatus !== "connected" || state.dataLifecycle !== "interpretable")) return showInfoModal("当前还不能生成个人报告", "戒指连接或有效记录尚未准备好。你可以先按基础方式参与，不生成个人健康报告。", "基础参与并开始", "studio-start-basic"); if (!record.sessionStarted) { record.startedAt = new Date().toISOString(); record.sessionStarted = true; } return go("STU-04"); }
-    if (action.startsWith("studio-resume:")) { const id = action.slice(14); if (!state.studioRecords[id]?.sessionStarted) return; state.selectedStudioEventId = id; syncStudioAliases(); closeModal(); return go("STU-04"); }
-    if (action === "studio-start-basic") { const record = studioRecord(); record.mode = "basic"; record.healthConsent = false; record.reportStatus = "insufficient"; syncStudioAliases(); closeModal(); return handleAction("studio-start"); }
-    if (action === "studio-code-confirm") { if (state.studioCode.trim().toUpperCase() !== "HALO-STUDIO-2026") { state.studioCodeError = "请检查字母、数字和连字符后重试。"; return render(); } state.studioCodeError = ""; state.selectedStudioEventId = "yoga-evening"; return go("STU-02"); }
-    if (action === "studio-scan-open") { state.studioScannerOpen = true; state.studioCodeError = ""; return render(); }
-    if (action === "studio-scan-close") { state.studioScannerOpen = false; return render(); }
-    if (action === "studio-scan-result") { state.studioScannerOpen = false; state.studioCode = "HALO-STUDIO-2026"; state.studioCodeError = ""; state.selectedStudioEventId = "yoga-evening"; return go("STU-02"); }
-    if (action === "studio-book") { const record = studioRecord(); const event = selectedStudioEvent(); if (record.booked) return go("STU-18"); if (!event.seats) return flash("本场已满，请选择其他场次"); const voucher = window.HALO_COMMERCIAL_EXTENSION?.getStudioVoucher?.(state.selectedStudioEventId); if (record.useVoucher && !voucher?.eligible) { record.useVoucher = false; return flash("体验券当前不可用，请重新确认金额"); } record.eventSnapshot = { ...STUDIO_EVENTS[state.selectedStudioEventId] }; record.bookingId = `SB-${state.selectedStudioEventId}-${Date.now()}`; record.dueAmount = record.useVoucher ? 0 : event.price; if (record.useVoucher && !window.HALO_COMMERCIAL_EXTENSION?.consumeStudioVoucher?.(state.selectedStudioEventId, record.bookingId)) return flash("体验券没有锁定成功，请重试"); record.voucherId = record.useVoucher ? voucher.id : ""; record.booked = true; record.source = "app"; record.paid = record.dueAmount === 0; record.paidAmount = 0; syncStudioAliases(); return go(record.paid ? "STU-18" : "STU-17"); }
-    if (action === "studio-pay") { const record = studioRecord(); if (!record.booked || record.refundStatus !== "none") return flash("这笔预约当前不能付款"); if (!record.paid) { record.paid = true; record.paidAmount = record.dueAmount; record.paidAt = new Date().toISOString(); } syncStudioAliases(); return go("STU-18"); }
-    if (action === "studio-refund") { const record = studioRecord(); if (!record.booked || record.refundStatus !== "none") return flash("这笔预约无需重复取消"); if (record.sessionStarted || record.sessionDone || (record.paid && Date.now() > new Date(selectedStudioEvent().startsAt).getTime() - selectedStudioEvent().cancellationHours * 3600000)) return showInfoModal("已超过自助取消期限", "已开始或距离活动开始不足24小时，请联系活动客服核对可处理方式。", "联系活动客服", "go:HELP-03"); if (record.source === "institution") return showInfoModal("机构预约", "请通过原预约机构处理取消与退款，App 不会替机构确认到账。", "联系活动客服", "go:HELP-03"); record.refundStatus = record.paid && record.paidAmount > 0 ? "submitted" : "cancelled"; record.refundRequestedAt = new Date().toISOString(); if (record.refundStatus === "cancelled") window.HALO_COMMERCIAL_EXTENSION?.restoreStudioVoucher?.(record.bookingId); syncStudioAliases(); return render(); }
-    if (action === "studio-refund-refresh") { const record = studioRecord(); if (record.refundStatus !== "submitted") return flash("没有待处理的退款"); record.refundStatus = "refunded"; record.refundedAmount = record.paidAmount; record.refundedAt = new Date().toISOString(); window.HALO_COMMERCIAL_EXTENSION?.restoreStudioVoucher?.(record.bookingId); syncStudioAliases(); return render(); }
-    if (action === "studio-complete") { const record = studioRecord(); if (!studioConfirmed(record) || !record.sessionStarted || !record.activityConsent) return flash("请先完成预约确认并开始本次体验"); if (!record.sessionDone) { record.sessionDone = true; record.completedAt = new Date().toISOString(); record.hardwareEligibleAtCompletion = isHardwareActive(); record.reportStatus = studioCanReport(record) ? "waiting" : "insufficient"; record.benefitStatus = "pending"; } state.selectedStudioHistoryId = state.selectedStudioEventId; syncStudioAliases(); trackPrototypeEvent("studio_session_completed", { event_id: state.selectedStudioEventId, booking_id: record.bookingId }); return go("STU-12"); }
-    if (action === "studio-report-refresh") { const record = studioRecord(); if (!record.sessionDone) return flash("体验尚未完成"); record.reportStatus = studioCanReport(record) ? "generated" : "insufficient"; syncStudioAliases(); trackPrototypeEvent("studio_report_status_refreshed", { event_id: state.selectedStudioEventId, booking_id: record.bookingId, status: record.reportStatus }); return render(); }
-    if (action === "studio-report-retry") { const record = studioRecord(); if (!studioCanReport(record)) return flash("当前不满足个人报告条件"); record.reportStatus = "waiting"; syncStudioAliases(); return render(); }
-    if (action === "studio-benefit-refresh") { const record = studioRecord(); if (!record.sessionDone || !studioConfirmed(record) || !record.hardwareEligibleAtCompletion) return flash("本次活动尚不符合奖励条件"); const posted = window.HALO_COMMERCIAL_EXTENSION?.awardStudioBenefit?.({ eventId: state.selectedStudioEventId, bookingId: record.bookingId, completed: record.sessionDone, paid: record.paid, hardwareActive: record.hardwareEligibleAtCompletion, occurredAt: record.completedAt, newMember: Boolean(state.newMember), memberCreatedAt: state.memberCreatedAt || "" }); if (!posted) return flash("暂无新增奖励：请检查本月活动次数或稍后核对"); record.benefitStatus = "posted"; syncStudioAliases(); trackPrototypeEvent("studio_benefit_posted", { event_id: state.selectedStudioEventId, booking_id: record.bookingId, points: 100, growth: 40 }); return render(); }
+    if (action.startsWith("studio-booking-review:")) { studioBookingReviewOutcome = action.endsWith(":fail") ? "fail" : "success"; return render(); }
+    if (action === "studio-voucher-toggle") {
+      const quote = studioBookingQuote();
+      if (!quote.known) return;
+      const record = studioRecord();
+      if (record.booked || record.bookingRequest?.status === "submitting") return flash("预约正在处理，不能更换体验券。");
+      if (record.useVoucher && record.bookingRequest?.id && quote.voucher?.status === "used" && quote.voucher.bookingId === record.bookingRequest.id) return flash("体验券处理状态待确认，请先重试预约。");
+      if (record.useVoucher) { record.useVoucher = false; record.selectedVoucherId = ""; }
+      else {
+        if (!quote.voucher?.eligible || quote.eventSnapshot.price === 0) return flash("本场无需或不能使用这张体验券。");
+        record.useVoucher = true; record.selectedVoucherId = quote.voucher.id;
+      }
+      record.bookingError = "";
+      return render();
+    }
+    if (action === "studio-book") return submitStudioBooking();
     if (action.startsWith("danger:")) {
       const [, title, message, label] = action.split(":");
+      if (title === "删除节律数据") return handleRhythmManagement("rh-manage:delete");
       return showModal(title, message, label, `confirm-danger:${title}`);
     }
     if (action.startsWith("confirm-danger:")) {
       const title = action.slice(15);
       closeModal();
-      if (["恢复出厂设置", "清空戒指缓存", "重置今日步数"].includes(title)) { const unavailable = deviceOperationUnavailable("reset"); if (unavailable) return flash(unavailable); if (title === "恢复出厂设置") { state.deviceResetStatus = "pending"; return render(); } state.deviceOperationHistory.unshift({ label: `${title} · 本地演示确认，未操作真实设备`, at: new Date().toISOString() }); render(); return flash("演示操作已记录，真实设备未操作"); }
+      if (["恢复出厂设置", "清空戒指缓存", "重置今日步数"].includes(title)) return;
       if (title === "清空 Halo 记忆") { state.haloMemories = []; state.haloMemoryCleared = true; flash("Halo 记忆已清空"); return render(); }
-      if (title === "删除 Halo 数据") { state.haloMemories = []; state.conversations = []; state.chat = []; state.haloFeelingRecords = []; state.haloFeelingNote = ""; state.haloFeeling = ""; state.haloMemoryCleared = true; state.haloDataDeletionStatus = "submitted"; flash("本地 Halo 内容已清空，云端删除需在正式服务中核验"); return render(); }
-      if (title === "删除节律数据") {
-        state.rhythmDeleted = true; state.rhythmStatus = "empty";
-        state.rhythmRecords = {}; state.rhythmFeeling = ""; state.rhythmNote = "";
-        state.rhythmSettings = { startDate: "", cycleLength: "29", duration: "5" }; state.rhythmSettingsSaved = false;
-        state.rhythmSettingsDraft = { ...state.rhythmSettings };
-        state.subjectiveRecords = state.subjectiveRecords.filter(record => record.category !== "rhythm" && !(record.labels || []).includes("经期不适"));
-        state.subjectiveMarkers = [...new Set(state.subjectiveRecords.flatMap(record => record.labels || [record.label]))];
-        state.recordDraft.labels = state.recordDraft.labels.filter(label => label !== "经期不适");
-        state.haloContext = state.haloContext === "rhythm" ? "none" : state.haloContext;
-        flash("节律数据已删除"); return render();
-      }
+      if (title === "删除 Halo 数据") { state.haloMemories = []; state.haloMemoryDrafts = {}; state.conversations = []; state.chat = []; state.haloDraft = ""; state.haloSource = null; state.haloContext = "none"; state.activeConversationId = ""; state.conversationStatus = "new"; state.haloFeelingRecords = []; state.haloFeelingEditor = null; state.haloFeelingNote = ""; state.haloFeeling = ""; state.haloMemoryCleared = true; state.haloDataDeletionStatus = "submitted"; flash("本地 Halo 内容已清空，云端删除需在正式服务中核验"); return render(); }
+      if (title === "删除节律数据") return; // Only the scoped management confirmation may delete records.
       if (title === "删除健康记录") { state.healthDeletionStatus = "submitted"; flash("健康记录删除申请已提交"); return render(); }
-      if (title === "删除本次体验记录") { const record = studioRecord(); record.deletionStatus = "deleted"; record.beforeFeeling = ""; record.beforeDraft = ""; record.healthConsent = false; record.reportStatus = "withdrawn"; record.contactConsent = false; record.marketingConsent = false; syncStudioAliases(); flash("本次个人体验内容已从本地删除"); return render(); }
+      if (title === "删除本次体验记录") return; // Scoped STU-15 confirmation owns this action.
       flash(`${title}已完成`);
       return;
     }
@@ -2550,17 +5917,76 @@
   groupNav.addEventListener("click", (event) => { const button = event.target.closest("[data-group]"); if (!button) return; state.group = button.dataset.group; const first = filteredPages()[0]; if (first) state.current = first.id; render(); });
   nav.addEventListener("click", (event) => { const button = event.target.closest("[data-page]"); if (button) go(button.dataset.page); });
   screen.addEventListener("click", (event) => handleAction(event.target.closest("[data-action]")?.dataset.action));
+  screen.addEventListener("submit", (event) => {
+    if (event.target.id === "profile-editor-form") { event.preventDefault(); if (!profileEditorComposing) handleAction("profile-save"); return; }
+    if (event.target.id === "basic-profile-form") { event.preventDefault(); handleAction("basic-profile-save"); return; }
+    if (event.target.id !== "auth-login-form") return;
+    event.preventDefault();
+    handleAction("auth-login");
+  });
+  screen.addEventListener("keydown", (event) => {
+    if (event.target.closest("#basic-profile-form") && event.key === "Enter" && (basicProfileEditor.isComposing() || event.isComposing || event.keyCode === 229)) { event.preventDefault(); return; }
+    if (event.target.closest("#profile-editor-form") && event.key === "Enter" && (profileEditorComposing || event.isComposing || event.keyCode === 229)) { event.preventDefault(); return; }
+    if (event.target.id === "chat-input" && event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
+      event.preventDefault();
+      return handleAction("send-chat");
+    }
+    if (event.target.id === "auth-phone" && event.key === "Enter") { event.preventDefault(); document.getElementById("auth-code")?.focus(); }
+  });
+  screen.addEventListener("compositionstart", (event) => { if (event.target.closest("#profile-editor-form")) profileEditorComposing = true; });
+  modalRoot.addEventListener("input", (event) => { if (event.target.id === "halo-memory-edit") haloMemory.input(); });
+  screen.addEventListener("compositionend", (event) => { if (event.target.id === "conversation-search") haloHistory.search(event.target.value); });
+  screen.addEventListener("compositionend", (event) => { if (event.target.closest("#profile-editor-form")) profileEditorComposing = false; });
+  screen.addEventListener("compositionstart", (event) => { if (event.target.closest("#basic-profile-form")) basicProfileEditor.composition(true); });
+  screen.addEventListener("compositionend", (event) => { if (event.target.closest("#basic-profile-form")) basicProfileEditor.composition(false); });
+  screen.addEventListener("focusout", (event) => {
+    if (event.target.id.startsWith("basic-profile-")) { basicProfileEditor.blur(event); return; }
+    if (event.target.id !== "auth-phone") return;
+    state.authForm.touched = Boolean(state.authForm.phone.trim());
+    updateAuthControls();
+    persistAppProgress();
+  });
   screen.addEventListener("input", (event) => {
+    if (event.target.id === "activity-record-note" && state.current === "TOD-07" && state.signedIn) {
+      state.activityRecordDraft.id ||= `activity-record-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      state.activityRecordDraft.note = event.target.value;
+      activityRecordError = "";
+      persistAppProgress(); updateActivityRecordControls(); return;
+    }
+    if (event.target.id.startsWith("basic-profile-")) {
+      basicProfileEditor.input(event);
+      return;
+    }
+    if (event.target.id === "auth-phone") {
+      if (authUiState().busy) return;
+      const previousPhone = normalizedAuthPhone();
+      state.authForm.phone = event.target.value;
+      if (normalizedAuthPhone() !== previousPhone) invalidateAuthRequest();
+      updateAuthControls();
+      persistAppProgress();
+      resumeAuthRequest();
+      return;
+    }
+    if (event.target.id === "auth-code") {
+      if (authUiState().busy) return;
+      state.authForm.code = event.target.value.replace(/\D/g, "").slice(0, 6);
+      state.authForm.codeError = "";
+      if (state.authForm.login?.status === "failed") state.authForm.login = null;
+      updateAuthControls();
+      persistAppProgress();
+      return;
+    }
     if (window.HALO_COMMERCIAL_EXTENSION?.handleInput(event.target, { render, flash, track: trackPrototypeEvent })) return;
     if (typeof handleAccountInput === "function" && handleAccountInput(event.target)) return;
     if (typeof handleExperienceInput === "function" && handleExperienceInput(event.target)) return;
-    if (event.target.id === "record-note") { state.recordDraft.note = event.target.value; persistAppProgress(); return; }
-    if (event.target.id === "rhythm-note") { state.rhythmNote = event.target.value; persistAppProgress(); return; }
+    if (event.target.id === "record-note") { currentRecordDraft().note = event.target.value; state.recordEditorError = ""; updateRecordEditorControls(); persistAppProgress(); return; }
+    if (event.target.id === "rhythm-note") {
+      const view = rhythmRecordStore.inspect();
+      if (state.current !== "RHY-03" || !view.canEdit || view.conflict) return;
+      state.rhythmNote = event.target.value; captureRhythmDraft(); return;
+    }
     if (event.target.id === "conversation-search") {
-      state.conversationQuery = event.target.value;
-      persistAppProgress();
-      render();
-      requestAnimationFrame(() => { const input = document.getElementById("conversation-search"); if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } });
+      if (!event.isComposing) haloHistory.search(event.target.value);
       return;
     }
     if (event.target.id === "studio-code") {
@@ -2573,43 +5999,144 @@
     }
     if (["rhythm-start-date", "rhythm-cycle-length", "rhythm-duration"].includes(event.target.id)) {
       const key = event.target.id === "rhythm-start-date" ? "startDate" : event.target.id === "rhythm-cycle-length" ? "cycleLength" : "duration";
-      state.rhythmSettingsDraft[key] = event.target.value;
-      state.rhythmSettingsSaved = false;
-      persistAppProgress();
+      if (state.current === "RHY-04") {
+        const result = rhythmSettingsStore.change(key, event.target.value);
+        rhythmSettingsWriteFailed = result.code === "storage";
+        rhythmSettingsFeedback = result.ok ? "修改已保留，保存后生效" : result.error;
+        rhythmSettingsPage.update(rhythmSettingsStore.inspect(), rhythmSettingsFeedback);
+        return;
+      }
+      if (state.current !== "RHY-00" || !rhythmSettingsStore.inspect().canEdit) return;
+      const result = rhythmSettingsStore.change(key, event.target.value);
+      rhythmSettingsWriteFailed = result.code === "storage";
+      if (!result.ok) flash(result.error);
       const valid = rhythmSettingsValid(state.rhythmSettingsDraft);
       const button = screen.querySelector('[data-action="rhythm-settings-save"], [data-action="rhythm-setup-save"]');
       if (button) { button.disabled = !valid; button.setAttribute("aria-disabled", String(!valid)); }
       return;
     }
     if (["profile-nickname", "profile-birthday", "profile-height", "profile-weight"].includes(event.target.id)) {
+      if (!state.signedIn || state.current !== "ACC-01" || state.accountDeletionStatus === "submitted") return;
       const key = event.target.id.replace("profile-", "");
-      state.profile[key] = event.target.value;
-      state.profileSaved = false;
+      profileEditorDraft()[key] = event.target.value;
+      profileDraftRestored = false;
+      state.profileEditor.touched[key] = true;
+      profileConflictReview = null;
+      if (typeof updateProfileEditorControls === "function") updateProfileEditorControls();
       persistAppProgress();
-      const valid = state.profile.nickname.trim().length >= 2 && state.profile.birthday && Number(state.profile.height) >= 100 && Number(state.profile.height) <= 230 && Number(state.profile.weight) >= 25 && Number(state.profile.weight) <= 250;
-      const button = screen.querySelector('[data-action="profile-save"]');
-      if (button) { button.disabled = !valid; button.setAttribute("aria-disabled", String(!valid)); }
       return;
     }
     if (event.target.id === "help-search") {
-      state.helpQuery = event.target.value;
-      persistAppProgress();
-      render();
-      requestAnimationFrame(() => { const input = document.getElementById("help-search"); if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } });
+      helpCenter.input(event);
       return;
     }
-    if (event.target.id !== "share-zoom") return;
-    state.shareZoom = Number(event.target.value);
-    paintShareCards();
   });
+  function saveHealthRecordView() {
+    if (!["TOD-06", "TOD-07"].includes(state.current) || screen.dataset.page !== state.current) return;
+    capturePageView();
+    persistAppProgress();
+  }
+  screen.addEventListener("toggle", event => {
+    if (event.target.matches?.(".energy-disclosures details, .activity-disclosures details")) saveHealthRecordView();
+  }, true);
+  window.addEventListener("pagehide", saveHealthRecordView);
+  function saveNightSupportView() {
+    if (state.current !== "NIG-11") return;
+    capturePageView(); persistAppProgress();
+  }
+  screen.addEventListener("toggle", event => { if (event.target.matches?.(".ns-faq")) saveNightSupportView(); }, true);
+  window.addEventListener("pagehide", saveNightSupportView);
+  function saveRhythmGuideView() {
+    if (state.current !== "RHY-02" || screen.dataset.page !== "RHY-02") return;
+    capturePageView();
+    const ok = writePrivacyProgress({ pageViews: state.pageViews });
+    const feedback = screen.querySelector(".rh-guide-feedback");
+    if (feedback) feedback.textContent = ok ? "" : "浏览位置暂未保存，重新打开时可能回到页首。";
+  }
+  let rhythmGuideScrollTimer;
+  screen.addEventListener("scroll", () => { if (state.current === "RHY-02") { clearTimeout(rhythmGuideScrollTimer); rhythmGuideScrollTimer = setTimeout(saveRhythmGuideView, 120); } });
+  screen.addEventListener("toggle", event => { if (event.target.matches?.(".rh-guide-note, .rh-guide-boundary")) saveRhythmGuideView(); }, true);
+  window.addEventListener("pagehide", saveRhythmGuideView);
+  function saveBodyWeatherView() {
+    if (state.current !== "TOD-03" || screen.dataset.page !== "TOD-03") return;
+    capturePageView(); persistAppProgress();
+  }
+  screen.addEventListener("toggle", event => { if (event.target.matches?.(".bw-source")) saveBodyWeatherView(); }, true);
+  window.addEventListener("pagehide", saveBodyWeatherView);
+  window.addEventListener("pagehide", () => { if (["HLT-05", "HLT-06"].includes(state.current)) { capturePageView(); persistAppProgress(); } });
+  window.addEventListener("offline", resumeActivitySync);
+  window.addEventListener("online", () => { if (state.current === "TOD-07" && state.activitySync.blocked) render(); });
   screen.addEventListener("change", (event) => {
-    if (event.target.id !== "share-photo-input" || !event.target.files?.[0]) return;
-    const file = event.target.files[0];
-    if (!file.type.startsWith("image/") || file.size > 8 * 1024 * 1024) return flash("请选择小于 8 MB 的图片");
-    const reader = new FileReader();
-    reader.onload = () => { state.sharePhotoUrl = String(reader.result); state.shareBackground = "photo"; render(); };
-    reader.onerror = () => flash("图片读取失败，请重新选择");
-    reader.readAsDataURL(file);
+    if (event.target.id === "bw-trend-date" && state.current === "TOD-03") {
+      if (!bodyWeatherTrendModel()?.daily.some(day => day.date === event.target.value)) return;
+      state.bodyWeatherTrendView = { ...state.bodyWeatherTrendView, date: event.target.value };
+      return render();
+    }
+    if (event.target.id === "bw-trend-records" && state.current === "TOD-03" && bodyWeatherTrendModel()) {
+      state.toggles.trendRecords = event.target.checked;
+      return render();
+    }
+    if (event.target.id === "activity-record-date") {
+      if (state.current !== "TOD-07" || !state.signedIn) return;
+      if (!validHealthDate(event.target.value)) { event.target.value = activityRecordDate(); return flash("请选择今天或更早的日期"); }
+      return selectActivityDate(event.target.value);
+    }
+    if (event.target.id === "temperature-record-date") {
+      if (state.current !== "HLT-06" || !state.signedIn) return;
+      if (!validHealthDate(event.target.value)) { event.target.value = temperatureRecordDate(); return flash("请选择今天或更早的日期"); }
+      return selectTemperatureDate(event.target.value);
+    }
+    if (event.target.id === "oxygen-record-date") {
+      if (state.current !== "HLT-05" || !state.signedIn) return;
+      if (!validHealthDate(event.target.value)) { event.target.value = oxygenRecordDate(); return flash("请选择今天或更早的日期"); }
+      return selectOxygenDate(event.target.value);
+    }
+    if (event.target.id === "respiration-record-date") {
+      if (state.current !== "HLT-02" || !state.signedIn) return;
+      if (!validHealthDate(event.target.value)) { event.target.value = respirationRecordDate(); return flash("请选择今天或更早的日期"); }
+      return selectRespirationDate(event.target.value);
+    }
+    if (event.target.id === "heart-record-date") {
+      if (state.current !== "HLT-01" || !state.signedIn) return;
+      if (!validHealthDate(event.target.value)) { event.target.value = heartRecordDate(); return flash("请选择今天或更早的日期"); }
+      return selectHeartDate(event.target.value);
+    }
+    if (event.target.id === "energy-record-date") {
+      if (state.current !== "TOD-06" || !state.signedIn) return;
+      if (!validHealthDate(event.target.value)) { event.target.value = energyRecordDate(); return flash("请选择今天或更早的日期"); }
+      return selectEnergyDate(event.target.value);
+    }
+    if (event.target.id === "sleep-record-date") {
+      if (state.current !== "TOD-05" || !state.signedIn) return;
+      if (!validHealthDate(event.target.value)) { event.target.value = sleepRecordDate(); return flash("请选择今天或更早的日期"); }
+      return selectSleepDate(event.target.value);
+    }
+    if (event.target.id === "health-overview-date") {
+      if (state.current !== "HLT-00") return;
+      if (!validHealthDate(event.target.value)) { event.target.value = state.healthSelectedDate; return flash("请选择今天或之前的有效日期"); }
+      state.healthSelectedDate = event.target.value;
+      state.healthDetailContext = null;
+      return render();
+    }
+    if (event.target.id === "auth-terms") {
+      if (authUiState().busy) return;
+      state.authForm.termsAccepted = event.target.checked;
+      state.authForm.consentScope = event.target.checked ? AUTH_CONSENT_SCOPE : "";
+      if (!state.authForm.termsAccepted) {
+        state.toggles.legal = false;
+        state.toggles.aiLegal = false;
+      }
+      updateAuthControls();
+      persistAppProgress();
+      return;
+    }
+  });
+  modalRoot.addEventListener("input", (event) => {
+    if (event.target.id !== "ai-correction-note" || !correctionModalIsCurrent()) return;
+    state.aiCorrectionDraft.note = event.target.value;
+    const saved = writeCorrectionState({ aiCorrectionDraft: state.aiCorrectionDraft });
+    const hint = modalRoot.querySelector("#ai-correction-feedback");
+    if (hint) hint.textContent = saved ? `${event.target.value.length}/500 · 草稿已保留，保存后才更新反馈。` : "草稿暂时无法保存到本机，请勿刷新或关闭页面；原反馈没有变化。";
   });
   modalRoot.addEventListener("click", (event) => handleAction(event.target.closest("[data-action]")?.dataset.action));
   document.querySelector(".inspector")?.addEventListener("click", (event) => handleAction(event.target.closest("[data-action]")?.dataset.action));
@@ -2618,13 +6145,148 @@
   document.getElementById("previous").addEventListener("click", () => go(previousId(state.current)));
   document.getElementById("next").addEventListener("click", () => handleAction(nextId(state.current)));
   window.addEventListener("keydown", (event) => { if (modalRoot.querySelector(".modal") || event.target.matches("input, textarea, select")) return; if (event.key === "ArrowLeft") go(previousId(state.current)); if (event.key === "ArrowRight") handleAction(nextId(state.current)); });
+  const saveStudioDetailView = () => {
+    if (!["STU-09", "STU-16", "STU-17", "STU-18", "STU-10", "STU-11", "STU-03", "STU-04", "STU-12", "STU-05", "STU-06"].includes(screen.dataset.page)) return;
+    if (screen.dataset.page === "STU-03" && !studioPreflight.prepare()) return;
+    if (screen.dataset.page === "STU-04" && !studioSession.prepare()) return;
+    if (screen.dataset.page === "STU-12" && !studioReport.prepare()) return;
+    if (screen.dataset.page === "STU-05" && !studioReport.prepare()) return;
+    if (screen.dataset.page === "STU-06" && !studioReport.prepare()) return;
+    capturePageView();
+    persistAppProgress();
+  };
+  screen.addEventListener("scroll", event => { if (event.target.matches?.(".studio-detail-scroll")) saveStudioDetailView(); }, { capture: true, passive: true });
+  screen.addEventListener("scroll", event => { if (event.target.matches?.(".record-page-scroll, .rh-editor-scroll, .rh-settings-scroll, .rh-setup-scroll, .rh-halo-scroll")) { capturePageView(); persistAppProgress(); } }, { capture: true, passive: true });
+  window.addEventListener("pagehide", () => { if (["RHY-00", "RHY-03", "RHY-04", "RHY-06"].includes(state.current)) { capturePageView(); persistAppProgress(); } });
+  window.addEventListener("beforeunload", event => {
+    if (state.current === "RHY-03" && rhythmRecordStore.inspect().dirty && rhythmRecordStore.lastIssue()?.code === "storage") { event.preventDefault(); event.returnValue = ""; }
+    if (["RHY-00", "RHY-04"].includes(state.current) && rhythmSettingsStore.inspect().dirty && rhythmSettingsWriteFailed) { event.preventDefault(); event.returnValue = ""; }
+  });
+  screen.addEventListener("keydown", event => {
+    if (state.current !== "RHY-04" || !event.target.matches('.rh-settings-mode button') || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    const choices = [...screen.querySelectorAll('.rh-settings-mode button:not(:disabled)')];
+    if (!choices.length) return;
+    event.preventDefault(); event.stopPropagation();
+    const offset = ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1;
+    const index = event.key === "Home" ? 0 : event.key === "End" ? choices.length - 1 : (choices.indexOf(event.target) + offset + choices.length) % choices.length;
+    choices[index].focus();
+  });
+  screen.addEventListener("toggle", event => { if (event.target.matches?.(".studio-detail-info")) saveStudioDetailView(); }, true);
+  window.addEventListener("pagehide", saveStudioDetailView);
+  const refreshStudioDetailAvailability = () => {
+    if (document.hidden) return;
+    if (state.current === "STU-17") return studioPayment.refresh();
+    if (state.current === "STU-18") return studioReservation.refresh();
+    if (state.current === "STU-10") return studioPreparation.refresh();
+    if (state.current === "STU-11") return studioFeeling.refresh();
+    if (state.current === "STU-03") return studioPreflight.refresh();
+    if (state.current === "STU-04") return studioSession.refresh();
+    if (state.current === "STU-12") return studioReport.refresh();
+    if (state.current === "STU-16") {
+      const booking = screen.querySelector(".studio-booking[data-quote-key]");
+      if (booking && booking.dataset.quoteKey !== studioBookingQuote().key) render();
+      return;
+    }
+    if (state.current !== "STU-09") return;
+    const detail = screen.querySelector(".studio-detail[data-status-key]");
+    if (detail && detail.dataset.statusKey !== JSON.stringify(studioDetailState())) render();
+  };
+  setInterval(refreshStudioDetailAvailability, 20000);
+  document.addEventListener("visibilitychange", refreshStudioDetailAvailability);
+  const updateHaloViewport = () => document.documentElement.style.setProperty("--hal-viewport-height", `${window.visualViewport?.height || window.innerHeight}px`);
+  window.visualViewport?.addEventListener("resize", updateHaloViewport);
+  window.addEventListener("resize", updateHaloViewport);
+  let bodyWeatherChartResizeFrame = 0;
+  window.addEventListener("resize", () => {
+    if (state.current !== "TOD-03") return;
+    cancelAnimationFrame(bodyWeatherChartResizeFrame);
+    bodyWeatherChartResizeFrame = requestAnimationFrame(() => {
+      const host = screen.querySelector(".bw-trend-graph");
+      const model = bodyWeatherTrendModel();
+      if (host && model) host.innerHTML = bodyWeatherTrendGraph(model);
+    });
+  });
+  updateHaloViewport();
+  window.addEventListener("popstate", () => {
+    if (["RHY-02", "RHY-06"].includes(state.current) && location.hash.toUpperCase() === `#${state.current}`) {
+      const prior = state.selectedRhythmDate;
+      rhythmHome.restore(state.current, history.state?.rhythmHomeContext);
+      if (prior !== state.selectedRhythmDate) render();
+    }
+    const reading = legalReadingView();
+    if (reading && location.hash.toUpperCase() === `#${state.current}`) showLegalReading(reading.kind, true);
+    else if (modalRoot.querySelector(".legal-reading-modal, .permission-system-modal, .system-health-modal")) closeModal(true);
+    // Back-menu jumps between two TOD-08 entries can keep the same hash.
+    const context = history.state?.nightReviewContext;
+    if (state.current === "TOD-08" && location.hash.toUpperCase() === "#TOD-08" && context && context.sessionId !== state.selectedNightSessionId) {
+      nightReview.restore("TOD-08", context, "");
+      render();
+    }
+  });
   window.addEventListener("hashchange", () => {
+    if (!generalSettingsSafe()) { history.replaceState({ ...history.state, id: "SET-03" }, "", "#SET-03"); return; }
     const id = location.hash.slice(1).toUpperCase();
-    if (!pages.some((item) => item.id === id)) return;
+    if (!["CHN-05", "SEL-08"].includes(id) && !pages.some((item) => item.id === id)) return;
     if (id === state.current) return;
+    if (state.current === "HAL-08" && !haloSettingsHub.canLeave()) {
+      history.replaceState({ ...history.state, id:"HAL-08" }, "", "#HAL-08");
+      return;
+    }
+    if (state.current === "HAL-07" && !haloPrivacyControls.canLeave()) {
+      history.replaceState({ ...history.state, id:"HAL-07" }, "", "#HAL-07");
+      return;
+    }
+    if (state.current === "HAL-06" && !haloJourney.canLeave()) {
+      history.replaceState({ ...history.state, id:"HAL-06" }, "", "#HAL-06");
+      return;
+    }
+    if (state.current === "HAL-05" && !haloFeelingEditor.canLeave()) {
+      history.replaceState({ ...history.state, id:"HAL-05" }, "", "#HAL-05");
+      return;
+    }
+    if (state.current === "HAL-04" && !haloProactive.canLeave()) {
+      history.replaceState({ ...history.state, id:"HAL-04" }, "", "#HAL-04");
+      return;
+    }
+    if (state.current === "HAL-03" && !haloMemory.canLeave()) {
+      history.replaceState({ ...history.state, id:"HAL-03" }, "", "#HAL-03");
+      return;
+    }
+    if (state.current === "HAL-02" && !haloHistory.canLeave()) {
+      history.replaceState({ ...history.state, id:"HAL-02" }, "", "#HAL-02");
+      return;
+    }
+    if (state.current === "ACC-03" && !accountDeletion.canLeave()) {
+      const trail = Array.isArray(history.state?.trail) ? history.state.trail : ["ACC-03"];
+      history.replaceState({ ...history.state, id: "ACC-03", trail: [...trail.slice(0, -1), "ACC-03"] }, "", "#ACC-03");
+      return;
+    }
     capturePageView();
     const target = guardedRoute(id);
+    nightReview.restore(target, history.state?.nightReviewContext, state.current);
+    nightHome.restore(target, history.state?.nightContentDetail, state.current);
+    supportContact?.enter(target, state.current, true);
+    aboutLegal?.enter(target, state.current, true);
+    helpCenter?.enter(target, state.current);
+    healthReports.restore(target, history.state?.healthReportContext);
+    stateShare.restore(target, history.state?.stateShareContext);
+    dataQuality.restore(target, history.state?.dataQualityContext);
+    bodyWeatherRoute.restore(target, history.state?.bodyWeatherContext);
+    rhythmHome.restore(target, history.state?.rhythmHomeContext);
+    deviceWear.restore(target, state.current);
+    initialSync?.enter(target, state.current);
+    basicProfileEditor.enter(target, state.current);
+    const healthContext = history.state?.healthContext;
+    if (target === "HLT-02" && validHealthDate(history.state?.respirationWindowEnd)) state.respirationWindowEnd = history.state.respirationWindowEnd;
+    if (target === "HLT-06" && validHealthDate(history.state?.temperatureWindowEnd)) state.temperatureWindowEnd = history.state.temperatureWindowEnd;
+    if (target === "HLT-05" && validHealthDate(history.state?.oxygenWindowEnd)) state.oxygenWindowEnd = history.state.oxygenWindowEnd;
+    if (target === "HLT-05" && ["day", "night"].includes(history.state?.oxygenMode)) { state.oxygenMode = history.state.oxygenMode; state.oxygenDaySelection = history.state.oxygenDaySelection || null; }
+    state.healthDetailContext = healthContext?.route === target && validHealthDate(healthContext.date) ? healthContext : null;
+    if (state.healthDetailContext) state.healthSelectedDate = state.healthDetailContext.date;
+    if (target === "HLT-00" && validHealthDate(history.state?.healthDate)) state.healthSelectedDate = history.state.healthDate;
     state.current = target;
+    if (target === "RHY-03") { const result = rhythmRecordStore.open(state.selectedRhythmDate); rhythmEditorProblem = result.ok ? "" : result.error; rhythmEditorDraftStatus = result.ok && rhythmRecordStore.inspect().dirty ? "已恢复未保存的草稿" : ""; }
+    if (["RHY-00", "RHY-04"].includes(target)) openRhythmSettings();
     const tab = tabForRoute(target);
     if (tab) {
       state.activeTab = tab;
@@ -2633,12 +6295,39 @@
       state.tabStacks[tab] = index >= 0 ? stack.slice(0, index + 1) : [...stack, target];
     }
     const trail = Array.isArray(history.state?.trail) ? history.state.trail : [target];
-    history.replaceState({ halo: true, id: target, trail: [...trail.slice(0, -1), target] }, "", `#${target}`);
+    const reading = legalReadingView();
+    history.replaceState({ halo: true, id: target, ...window.haloChannelStorage?.historyFields(target), ...window.HALO_MEMBER_TASKS.historyFields(target), ...window.HALO_COUPON_WALLET?.historyFields?.(target), ...window.HALO_MEMBER_TASK_DETAIL.historyFields(target), trail: bodyWeatherRoute.mapTrail([...trail.slice(0, -1), target]), ...window.HALO_MEMBER_LEVELS.historyFields(target), ...window.HALO_MEMBER_UPGRADE.historyFields(target), ...deviceWear.historyFields(target), ...nightReview.historyFields(target), ...nightHome.historyFields(target), ...healthReports.historyFields(target), ...stateShare.historyFields(target), ...dataQuality.historyFields(target), ...rhythmHome.historyFields(target), ...bodyWeatherRoute.historyFields(target), ...(reading ? { legalReading: reading } : {}) }, "", `#${target}`);
     render();
+    if (reading && legalReadingView()) showLegalReading(reading.kind, true);
   });
 
   initializeReviewRepairs();
+  const temperatureDemo = new URLSearchParams(location.search).get("temperature-demo");
+  if (TEMPERATURE_SCENARIOS.includes(temperatureDemo) && state.temperatureDemoEntry !== temperatureDemo) {
+    state.temperatureReviewScenario = temperatureDemo; state.temperatureDemoEntry = temperatureDemo;
+  }
+  if (!TEMPERATURE_SCENARIOS.includes(state.temperatureReviewScenario)) state.temperatureReviewScenario = "unknown";
+  const oxygenDemo = new URLSearchParams(location.search).get("oxygen-demo");
+  if (!["day", "night"].includes(state.oxygenMode)) state.oxygenMode = "day";
+  if (OXYGEN_SCENARIOS.includes(oxygenDemo) && state.oxygenDemoEntry !== oxygenDemo) {
+    state.oxygenReviewScenario = oxygenDemo;
+    state.oxygenDemoEntry = oxygenDemo;
+  }
+  if (!OXYGEN_SCENARIOS.includes(state.oxygenReviewScenario)) state.oxygenReviewScenario = "unknown";
   if (typeof initializeAccountState === "function") initializeAccountState();
+  todayRhythmStorage = window.createHaloTodayRhythmStorage({ state, progressKey: APP_PROGRESS_KEY, recordsKey: SUBJECTIVE_RECORDS_KEY });
+  try { todayRhythmStorage.initialize(); } catch (error) { todayRhythmStorage.fail(error); state.subjectiveRecords = []; }
+  personalScope = window.createHaloPersonalScope({ state, progressKey: APP_PROGRESS_KEY });
+  try { personalScope.initialize(); } catch (error) { todayRhythmStorage.fail(error); }
+  window.addEventListener("storage", event => {
+    if (![APP_PROGRESS_KEY, SUBJECTIVE_RECORDS_KEY].includes(event.key)) return;
+    if (todayRhythmStorage.accessError() || personalScope.accessError()) { render(); return; }
+    if (state.current === "TOD-02" || modalRoot.querySelector(".modal") || ["RHY-00", "RHY-03", "RHY-04"].includes(state.current)) return;
+    try { todayRhythmStorage.refreshRecords(); } catch (error) { todayRhythmStorage.fail(error); return; }
+    // Do not write progress from a storage event: that can cause tab-to-tab loops.
+    if (event.key === SUBJECTIVE_RECORDS_KEY && ["TOD-01", "TOD-03"].includes(state.current)) render();
+  });
+  window.HaloAccountScope.select(state, state.authPhone);
   if (typeof initializeExperienceState === "function") initializeExperienceState();
   new MutationObserver(() => {
     const modal = modalRoot.querySelector(".modal");
@@ -2648,22 +6337,70 @@
     if (!modal.hasAttribute("aria-label") && !modal.hasAttribute("aria-labelledby")) modal.setAttribute("aria-label", modal.querySelector("h2")?.textContent || "提示");
     screen.inert = true; tabbar.inert = true;
     if (!modal.contains(document.activeElement)) modal.querySelector("button:not([disabled]), input, textarea, select")?.focus();
-    if (typeof paintShareCards === "function") paintShareCards(modalRoot);
   }).observe(modalRoot, { childList: true, subtree: true });
   document.addEventListener("keydown", event => {
     const modal = modalRoot.querySelector(".modal");
     if (!modal) return;
+    if (modal.matches('[data-general-modal="preferences"]') && event.target.matches(".gs-option") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+      const options = [...event.target.closest(".gs-options").querySelectorAll(".gs-option")];
+      const offset = ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1;
+      const index = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : (options.indexOf(event.target) + offset + options.length) % options.length;
+      event.preventDefault();
+      options[index].focus();
+      handleGeneralAction(options[index].dataset.action);
+      return;
+    }
     if (event.key === "Escape") { event.preventDefault(); closeModal(); return; }
     if (event.key !== "Tab") return;
     const controls = [...modal.querySelectorAll("button:not([disabled]), input:not([disabled]), textarea, select, a[href], [tabindex='0']")].filter(el => el.getClientRects().length);
     const first = controls[0], last = controls.at(-1);
     if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) { event.preventDefault(); (event.shiftKey ? last : first)?.focus(); }
   });
-  const initial = location.hash.slice(1).toUpperCase() || state.lastVisitedRoute || "TOD-01";
+  // Old bookmarks and saved navigation resume the application, not the retired device prerequisite.
+  const legacyChannelRoute = window.HALO_COMMERCIAL_EXTENSION?.channelJoinNext?.().route || "CHN-01";
+  if (state.lastVisitedRoute === "CHN-05") state.lastVisitedRoute = legacyChannelRoute;
+  state.navigationHistory = state.navigationHistory.map(id => id === "CHN-05" ? legacyChannelRoute : id);
+  for (const key of Object.keys(state.tabStacks)) state.tabStacks[key] = state.tabStacks[key].map(id => id === "CHN-05" ? legacyChannelRoute : id);
+  startup = window.createHaloStartup({ state, pages, esc, symbol: HALO_SYMBOL, go, render,
+    bindingRoute: () => deviceBinding.resumeRoute(),
+    guideRoute: prior => deviceWear.resumeRoute(prior) || initialSync.resumeRoute(prior),
+    expireSession: () => { state.signedIn = false; invalidateAuthRequest(); }, track: trackPrototypeEvent });
+  const requestedInitial = location.hash.slice(1).toUpperCase();
+  const initialCandidate = ["CHN-05", "SEL-08"].includes(requestedInitial) ? guardedRoute(requestedInitial) : requestedInitial;
+  const initial = pages.some(item => item.id === initialCandidate) ? initialCandidate : "SYS-01";
+  // Explicit non-startup hashes remain available for individual prototype reviews.
+  if (initial === "SYS-01") {
+    const preview = new URLSearchParams(location.search).get("startupPreview") === "1";
+    startup.begin(state.lastVisitedRoute, preview ? "preview" : "normal", !preview);
+  }
   if (pages.some((item) => item.id === initial)) {
     state.current = guardedRoute(initial);
   }
-  const initialTrail = Array.isArray(history.state?.trail) ? history.state.trail : [state.current];
-  history.replaceState({ halo: true, id: state.current, trail: [...initialTrail.slice(0, -1), state.current] }, "", `#${state.current}`);
+  // A browser history entry owns its browsing date; another tab may have saved a different one.
+  if (history.state?.id === state.current) {
+    if (state.current === "HLT-02" && validHealthDate(history.state.respirationWindowEnd)) state.respirationWindowEnd = history.state.respirationWindowEnd;
+    if (state.current === "HLT-05" && validHealthDate(history.state.oxygenWindowEnd)) state.oxygenWindowEnd = history.state.oxygenWindowEnd;
+    if (state.current === "HLT-05" && ["day", "night"].includes(history.state.oxygenMode)) { state.oxygenMode = history.state.oxygenMode; state.oxygenDaySelection = history.state.oxygenDaySelection || null; }
+    if (Object.prototype.hasOwnProperty.call(history.state, "healthContext")) {
+      const context = history.state.healthContext;
+      state.healthDetailContext = context?.route === state.current && validHealthDate(context.date) ? context : null;
+    }
+    if (state.current === "HLT-00" && validHealthDate(history.state.healthDate)) state.healthSelectedDate = history.state.healthDate;
+  }
+  if (state.healthDetailContext?.route === state.current) state.healthSelectedDate = state.healthDetailContext.date;
+  const initialTrail = bodyWeatherRoute.mapTrail(Array.isArray(history.state?.trail) ? history.state.trail : [state.current]);
+  bodyWeatherRoute.restore(state.current, history.state?.bodyWeatherContext);
+  deviceWear.restore(state.current);
+  if (state.current === "TOD-08" && history.state?.nightReviewContext) nightReview.restore("TOD-08", history.state.nightReviewContext, "");
+  if (state.current === "NIG-02" && history.state?.nightContentDetail) nightHome.restore("NIG-02", history.state.nightContentDetail, "");
+  if (state.current === "TOD-09" && history.state?.healthReportContext) healthReports.restore("TOD-09", history.state.healthReportContext);
+  if (["RHY-01", "RHY-02", "RHY-03", "RHY-06"].includes(state.current)) rhythmHome.restore(state.current, history.state?.rhythmHomeContext);
+  if (state.current === "RHY-03") { const result = rhythmRecordStore.open(state.selectedRhythmDate); rhythmEditorProblem = result.ok ? "" : result.error; rhythmEditorDraftStatus = result.ok && rhythmRecordStore.inspect().dirty ? "已恢复未保存的草稿" : ""; }
+  const initialLegalReading = legalReadingView();
+  const initialReferralHistory = history.state;
+  if (["RHY-00", "RHY-04"].includes(state.current)) openRhythmSettings();
+  history.replaceState({ halo: true, id: state.current, ...window.haloChannelStorage?.historyFields(state.current), ...window.HALO_MEMBER_TASKS.historyFields(state.current), ...window.HALO_COUPON_WALLET?.historyFields?.(state.current), ...window.HALO_MEMBER_TASK_DETAIL.historyFields(state.current), trail: [...initialTrail.slice(0, -1), state.current], ...window.HALO_MEMBER_LEVELS.historyFields(state.current), ...window.HALO_MEMBER_UPGRADE.historyFields(state.current), ...deviceWear.historyFields(state.current), ...nightReview.historyFields(state.current), ...nightHome.historyFields(state.current), ...healthReports.historyFields(state.current), ...stateShare.historyFields(state.current), ...dataQuality.historyFields(state.current), ...rhythmHome.historyFields(state.current), ...bodyWeatherRoute.historyFields(state.current), ...(initialLegalReading ? { legalReading: initialLegalReading } : {}) }, "", `#${state.current}`);
+  if (state.current === "REF-01" && initialReferralHistory?.referralScope) history.replaceState({ ...history.state, referralScope: initialReferralHistory.referralScope, referralPanel: initialReferralHistory.referralPanel, referralChild: initialReferralHistory.referralChild }, "", location.href);
   render();
+  if (initialLegalReading && legalReadingView()) showLegalReading(initialLegalReading.kind, true);
 })();

@@ -1,0 +1,33 @@
+/* DEV-05 uses the approved device-guide typography, palette and bottom actions. */
+.device-shell:has(.screen[data-page="DEV-05"]) { grid-template-rows: 34px minmax(0, 1fr) 0; min-height: 0; }
+.screen[data-page="DEV-05"] { padding: 12px 28px 24px; overflow: hidden; }
+.initial-sync-page { display: grid; grid-template-rows: 44px minmax(0, 1fr) auto; gap: 12px; height: 100%; min-height: 0; }
+.initial-sync-scroll { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding-bottom: 8px; }
+.initial-sync-symbol { position: relative; display: grid; place-items: center; flex: 0 0 116px; width: 116px; min-height: 116px; margin: 10px auto 0; }
+.initial-sync-symbol img { display: block; width: 70px; height: 84px; object-fit: contain; }
+.initial-sync-symbol.working::before { position: absolute; inset: 8px 0; border: 1px solid var(--line); border-top-color: var(--gold); border-radius: 50%; content: ""; animation: initial-sync-turn 2.2s linear infinite; }
+.initial-sync-symbol > span { position: absolute; bottom: 15px; right: 4px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--paper); }
+.initial-sync-symbol svg, .initial-sync-step-mark svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.screen .initial-sync-note { margin: 0; min-height: 46px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.65; }
+.initial-sync-steps { margin: 0 0 4px; padding: 0; list-style: none; }
+.initial-sync-steps li { display: flex; align-items: center; gap: 12px; min-height: 54px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 16px; line-height: 1.5; }
+.initial-sync-step-mark { display: grid; place-items: center; flex: 0 0 24px; font-size: 12px; }
+.initial-sync-steps .current { color: var(--ink); font-weight: 600; }
+.initial-sync-steps .current .initial-sync-step-mark, .initial-sync-steps .done .initial-sync-step-mark { color: var(--gold); }
+.initial-sync-steps small { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; }
+.initial-sync-page .device-guide-actions { margin-top: auto; gap: 8px; }
+.initial-sync-page .device-guide-actions .secondary { width: 100%; min-height: 48px; border-radius: 12px; font-size: 14px; }
+.initial-sync-page .primary:disabled { opacity: 1; background: var(--line); border-color: var(--line); color: var(--muted); cursor: default; }
+@keyframes initial-sync-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .initial-sync-symbol.working::before { animation: none; } }
+@media (max-width: 360px), (max-height: 680px) {
+  .screen[data-page="DEV-05"] { padding: 8px 20px 16px; }
+  .initial-sync-page { gap: 10px; }
+  .initial-sync-scroll { gap: 10px; }
+  .initial-sync-symbol { flex-basis: 92px; margin-top: 0; min-height: 92px; width: 92px; }
+  .initial-sync-symbol img { width: 54px; height: 64px; }
+  .initial-sync-symbol.working::before { inset: 0; }
+  .initial-sync-steps { margin: 0 0 12px; }
+  .initial-sync-steps li { min-height: 50px; }
+}
+@media (max-height: 570px) { .initial-sync-symbol { display: none; } }

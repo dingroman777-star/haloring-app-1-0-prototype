@@ -1,0 +1,25 @@
+.approval-page { display: grid; gap: 16px; }
+.approval-result { padding: 18px; border-radius: 17px; background: #edf2ed; }
+.approval-result > span { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 12px; border: 1px solid #79947d; border-radius: 50%; color: #345442; font-size: 20px; }
+.approval-result h2 { margin: 0 0 8px; font-family: inherit; font-size: 20px; line-height: 1.4; }
+.approval-result p, .approval-preparing p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.approval-result.is-neutral { background: #f3eee5; }
+.approval-result.is-neutral > span { color: #79552b; border-color: #b69c7b; }
+.approval-steps { display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; margin: 0; padding: 4px 0; }
+.approval-steps li { position: relative; display: grid; justify-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.approval-steps li > span { display: grid; place-items: center; z-index: 1; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); }
+.approval-steps li:not(:last-child)::after { content: ""; position: absolute; top: 13px; left: 62%; width: 76%; height: 1px; background: var(--line); }
+.approval-steps .done > span { background: #eaf0eb; color: #43624e; border-color: #d2dfd4; }
+.approval-steps .current { color: #775329; font-weight: 650; }
+.approval-steps .current > span { background: #f8f2e6; border-color: #a18055; }
+.approval-facts { margin: 0; padding: 0 4px; }
+.approval-facts > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; line-height: 1.7; }
+.approval-facts dt { flex: none; color: var(--muted); }
+.approval-facts dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
+.approval-facts small { display: block; color: var(--muted); font-size: 10px; }
+.approval-facts .text-button { width: auto; min-width: 44px; min-height: 44px; padding: 8px 4px; margin-left: 7px; font-size: 11px; }
+.approval-preparing { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--paper); }
+.approval-preparing h3 { margin: 0 0 6px; font-size: 14px; }
+.approval-page .button-row { margin: 0; }
+.approval-page .approval-help { min-height: 44px; padding: 8px; font-size: 12px; }
+.approval-page button:focus-visible { outline: 2px solid #79552b; outline-offset: 3px; }

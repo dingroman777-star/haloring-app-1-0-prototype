@@ -1,0 +1,47 @@
+.member-upgrade-page { color:#191d19; padding-bottom:16px; }
+.member-upgrade-page button { font-size:14px; line-height:1.5; }
+.member-upgrade-page svg { width:20px; height:20px; flex-shrink:0; }
+.mu-header { display:grid; grid-template-columns:44px 1fr 44px; align-items:center; margin:-8px -8px 15px; }
+.mu-header>button { width:44px;height:44px;display:grid;place-items:center;padding:0;border:0;background:none;color:inherit; }
+.mu-header h1 { margin:0;font-size:20px;text-align:center; }
+.mu-goal { padding:18px 20px;border:1px solid #e3d7c7;border-radius:18px;background:#efe7da; }
+.mu-current { color:#685d4f;font-size:12px;margin:0 0 15px; }
+.mu-kicker { color:#835828;font-size:13px; }
+.mu-goal h2 { font-size:25px;line-height:1.3;margin:5px 0 0; }
+.mu-english { font-size:13px;color:#685d4f;margin:3px 0 17px; }
+.mu-headline { font-size:15px;line-height:1.6; }
+.mu-headline strong { font-size:29px;font-weight:650;font-variant-numeric:tabular-nums; }
+.mu-meter { height:5px;border-radius:8px;overflow:hidden;background:#d9cbb8;margin-top:10px; }
+.mu-meter i { display:block;height:100%;border-radius:inherit;background:#936330; }
+.mu-effective { font-size:11px;line-height:1.7;color:#685d4f;margin:12px 0 0; }
+.mu-section-title { font-size:17px;margin:21px 0 11px; }
+.mu-conditions { overflow:hidden;border:1px solid #e1e3df;border-radius:16px;background:#fff; }
+.mu-condition { display:flex;align-items:center;gap:10px;padding:15px 13px;min-height:83px;background:none;width:100%;border:0;color:inherit;text-align:left; }
+.mu-condition+.mu-condition { border-top:1px solid #e1e3df; }
+.mu-condition-icon { display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;color:#936330; }
+.mu-condition-icon.done { color:#55705e;background:#edf2ee;border-radius:50%; }
+.mu-condition-copy { flex:1;min-width:0;display:grid;gap:5px; }
+.mu-condition-copy>strong { font-size:14px;font-weight:600;line-height:1.6; }
+.mu-condition-copy>small { font-size:12px;color:#646864;line-height:1.7; }
+.mu-condition-end { display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-shrink:0; }
+.mu-condition-end b { font-size:12px;color:#805326;font-weight:500; }
+.mu-condition-end b.done { color:#55705e; }
+.mu-condition-end svg { width:14px;height:14px;color:#646864; }
+.member-upgrade-page .mu-button { width:100%;min-height:44px;padding:10px 14px;margin-top:12px; }
+.mu-feedback { color:#646864;font-size:12px;line-height:1.6;margin:8px 2px 0; }
+.mu-feedback:empty { display:none; }
+.mu-path-button { border:0;background:none;color:#835828;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin-top:8px; }
+.mu-path-button svg { width:15px;height:15px; }
+.mu-note { font-size:12px;line-height:1.8;color:#646864;margin:13px 2px; }
+.mu-info-button { min-height:44px;padding:5px 2px;border:0;background:none;color:#835828; }
+.mu-participation { padding:14px;border:1px solid #e1e3df;background:white;border-radius:12px; }
+.mu-participation[hidden] { display:none; }
+.mu-participation p { font-size:13px;line-height:1.8;margin:0;color:#646864; }
+.mu-empty { padding:24px 20px;border:1px solid #e1e3df;background:white;border-radius:18px; }
+.mu-empty>span { display:block;color:#936330;margin-bottom:12px; }
+.mu-empty>span svg { width:32px;height:32px; }
+.mu-empty h2 { font-size:21px;margin:0 0 8px; }
+.mu-empty p { font-size:13px;color:#646864;line-height:1.8; }
+.mu-highest { display:flex;align-items:center;gap:8px;font-size:17px;color:#55705e; }
+.mu-description { font-size:13px;color:#685d4f;margin:12px 0 0; }
+@media(max-width:350px) { .mu-goal{padding:17px;} .mu-condition{padding:13px 10px;gap:6px;flex-wrap:wrap;} .mu-condition-end{margin-left:auto;} .mu-condition-copy{min-width:140px;} }

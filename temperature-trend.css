@@ -1,0 +1,40 @@
+.temperature-trend { margin: 8px 0 22px; padding-top: 18px; border-top: 1px solid var(--line, #dfe3dd); }
+.temperature-trend > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.screen .temperature-trend h2, .temperature-trend h2 { margin: 0; font-size: 15px; line-height: 1.6; font-weight: 600; }
+.temperature-trend-badge { padding: 2px 7px; background: #eee8e3; border-radius: 5px; color: #795d4d; font-size: 11px; line-height: 1.7; }
+.temperature-trend-subtitle { margin: 5px 0 0; color: var(--muted, #69716d); font-size: 12px; line-height: 1.6; }
+.temperature-trend-readout { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; min-height: 28px; margin: 14px 0 8px; }
+.temperature-trend-readout time { font-size: 13px; color: var(--ink, #202520); line-height: 1.6; font-variant-numeric: tabular-nums; }
+.temperature-trend-readout strong { font-size: 17px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.temperature-trend-plot { display: block; width: 100%; height: 183px; overflow: visible; touch-action: pan-y pinch-zoom; user-select: none; cursor: crosshair; }
+.temperature-trend-plot text { font-family: inherit; font-size: 11px; fill: #69716d; font-variant-numeric: tabular-nums; }
+.temperature-trend-grid { stroke: #e1e3df; stroke-width: .75; shape-rendering: crispEdges; }
+.temperature-trend-baseline { stroke: #a69a91; stroke-width: 1; stroke-dasharray: 3 4; shape-rendering: crispEdges; }
+.temperature-trend-line { fill: none; stroke: #8a6657; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.temperature-trend-dot { fill: #8a6657; }
+.temperature-trend-cursor { stroke: #857269; stroke-width: 1; stroke-dasharray: 3 4; }
+.temperature-trend-selected { fill: #8a6657; stroke: var(--mist, #f7f7f3); stroke-width: 2; }
+.temperature-trend-line, .temperature-trend-grid, .temperature-trend-baseline, .temperature-trend-selected, .temperature-trend-cursor { vector-effect: non-scaling-stroke; }
+.temperature-trend-controls { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.temperature-trend-controls button { flex: 0 0 44px; min-width: 44px; min-height: 44px; border: 1px solid var(--line, #dfe3dd); border-radius: 9px; background: transparent; color: var(--ink, #202520); font-size: 22px; line-height: 1; cursor: pointer; }
+.temperature-trend-controls button:disabled { color: #999e99; border-color: transparent; cursor: default; }
+.temperature-trend-controls p { flex: 1; margin: 0; font-size: 11px; color: var(--muted, #69716d); line-height: 1.6; text-align: center; }
+.temperature-trend-caption { margin: 6px 0 0; font-size: 11px; line-height: 1.6; text-align: center; color: var(--muted, #69716d); }
+.temperature-trend-data { margin-top: 12px; font-size: 12px; line-height: 1.6; color: var(--muted, #69716d); }
+.temperature-trend-data summary { display: list-item; min-height: 44px; padding: 11px 0; cursor: pointer; box-sizing: border-box; }
+.temperature-trend-data ul { list-style: none; margin: 0; padding: 0; }
+.temperature-trend-data li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.temperature-trend-data li span { color: var(--ink, #202520); font-variant-numeric: tabular-nums; }
+.temperature-trend-plot:focus-visible, .temperature-trend-controls button:focus-visible, .temperature-trend-data summary:focus-visible { outline: 2px solid var(--gold, #a27337); outline-offset: 2px; border-radius: 6px; }
+.temperature-summary { padding: 16px 0 20px; }
+.temperature-summary-label { margin: 0 0 8px; font-size: 13px; color: var(--muted, #69716d); line-height: 1.6; }
+.temperature-summary-value { display: flex; align-items: baseline; gap: 5px; font-variant-numeric: tabular-nums; }
+.temperature-summary-value strong { font-size: 56px; font-weight: 500; line-height: 1.05; letter-spacing: -2px; }
+.temperature-summary-value span { font-size: 18px; color: var(--muted, #69716d); }
+.temperature-summary-note { margin: 10px 0 0; font-size: 13px; line-height: 1.7; color: var(--muted, #69716d); }
+.temperature-empty { padding: 25px 0 22px; }
+.temperature-empty h2 { margin: 0 0 9px; font-size: 21px; line-height: 1.4; }
+.temperature-empty p { margin: 0; font-size: 13px; line-height: 1.8; color: var(--muted, #69716d); }
+.temperature-sleep-link > span { flex: 1; }
+.temperature-sleep-link > svg { display: block; width: 18px; height: 18px; flex: 0 0 18px; }
+@media (max-width: 360px) { .temperature-summary-value strong { font-size: 50px; } }

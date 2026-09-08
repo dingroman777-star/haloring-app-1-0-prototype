@@ -1,0 +1,47 @@
+/* SEL-09. A single payment state, open order rows, and stable next actions. */
+#screen[data-page="SEL-09"] { padding: 0; min-height: 0; overflow: hidden; }
+.device-shell:has(#screen[data-page="SEL-09"]) { min-height: 0; }
+#screen[data-page="SEL-09"] .select-payment { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--ink); background: var(--mist); }
+#screen[data-page="SEL-09"] .select-payment button { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#screen[data-page="SEL-09"] .select-payment-header { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; flex: 0 0 56px; padding: 0 24px; }
+#screen[data-page="SEL-09"] .select-payment-header h1 { min-width: 0; margin: 0; color: var(--ink); text-align: center; font-size: 18px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+#screen[data-page="SEL-09"] .select-payment-header button { display: flex; align-items: center; justify-content: flex-start; width: 44px; height: 44px; padding: 0; border: 0; color: var(--ink); background: transparent; }
+#screen[data-page="SEL-09"] .select-payment-header svg { width: 18px; height: 18px; }
+#screen[data-page="SEL-09"] .select-payment-scroll { flex: 1; min-height: 0; padding: 12px 24px 24px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 24px; }
+#screen[data-page="SEL-09"] .select-payment-scroll::-webkit-scrollbar { display: none; }
+#screen[data-page="SEL-09"] .select-payment-status { display: flex; flex-direction: column; align-items: center; padding: 20px 0 0; text-align: center; }
+#screen[data-page="SEL-09"] .select-payment-symbol { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; color: var(--gold); }
+#screen[data-page="SEL-09"] .select-payment-symbol svg { display: block; width: 44px; height: 44px; }
+#screen[data-page="SEL-09"] .select-payment[data-payment-mode="paid"] .select-payment-symbol { color: var(--ink); }
+#screen[data-page="SEL-09"] .select-payment-status p { max-width: 280px; margin: 16px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+#screen[data-page="SEL-09"] .select-payment-amount { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px 0 28px; text-align: center; }
+#screen[data-page="SEL-09"] .select-payment-amount > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+#screen[data-page="SEL-09"] .select-payment-amount > strong { max-width: 100%; color: var(--ink); font-size: 32px; font-weight: 500; line-height: 1.25; font-variant-numeric: tabular-nums; letter-spacing: -.025em; overflow-wrap: anywhere; }
+#screen[data-page="SEL-09"] .select-payment-items { margin: 0; padding: 4px 0; border-block: 1px solid var(--line); }
+#screen[data-page="SEL-09"] .select-payment-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0; padding: 12px 0; }
+#screen[data-page="SEL-09"] .select-payment-item > div { flex: 1; min-width: 0; }
+#screen[data-page="SEL-09"] .select-payment-item h2 { margin: 0; color: var(--ink); font-size: 14px; font-weight: 500; line-height: 1.55; overflow-wrap: anywhere; }
+#screen[data-page="SEL-09"] .select-payment-item p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+#screen[data-page="SEL-09"] .select-payment-quantity { flex-shrink: 0; padding-top: 1px; color: var(--muted); font-size: 13px; line-height: 1.55; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#screen[data-page="SEL-09"] .select-payment-details { margin: 0; padding: 12px 0 0; }
+#screen[data-page="SEL-09"] .select-payment-details > div { display: grid; grid-template-columns: 60px minmax(0,1fr); gap: 12px; padding: 6px 0; font-size: 12px; line-height: 1.65; }
+#screen[data-page="SEL-09"] .select-payment-details dt { color: var(--muted); }
+#screen[data-page="SEL-09"] .select-payment-details dd { min-width: 0; margin: 0; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#screen[data-page="SEL-09"] .select-payment-notice { margin: 16px 0 0; padding: 0 0 0 10px; border-left: 2px solid var(--gold); color: var(--gold); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+#screen[data-page="SEL-09"] .select-payment-footer { display: grid; gap: 4px; flex-shrink: 0; padding: 12px 24px max(16px,env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--mist); }
+#screen[data-page="SEL-09"] .select-payment-footer button { width: 100%; min-width: 0; padding: 10px 16px; border-radius: 7px; font-size: 15px; line-height: 1.5; }
+#screen[data-page="SEL-09"] .select-payment-primary { min-height: 52px; border: 1px solid var(--ink); color: var(--paper); background: var(--ink); font-weight: 600; }
+#screen[data-page="SEL-09"] .select-payment-secondary { min-height: 44px; border: 0; color: var(--muted); background: transparent; font-weight: 400; }
+#screen[data-page="SEL-09"] .select-payment-demo { margin: 0; color: var(--muted); text-align: center; font-size: 11px; line-height: 1.6; }
+#screen[data-page="SEL-09"] .select-payment button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (max-width: 360px) {
+  #screen[data-page="SEL-09"] .select-payment-header, #screen[data-page="SEL-09"] .select-payment-scroll, #screen[data-page="SEL-09"] .select-payment-footer { padding-inline: 16px; }
+  #screen[data-page="SEL-09"] .select-payment-amount > strong { font-size: 30px; }
+}
+@media (max-height: 640px) {
+  #screen[data-page="SEL-09"] .select-payment-scroll { padding-top: 4px; padding-bottom: 16px; }
+  #screen[data-page="SEL-09"] .select-payment-status { padding-top: 8px; }
+  #screen[data-page="SEL-09"] .select-payment-status p { margin-top: 10px; }
+  #screen[data-page="SEL-09"] .select-payment-amount { padding-block: 16px 20px; }
+  #screen[data-page="SEL-09"] .select-payment-footer { padding-block: 8px max(8px,env(safe-area-inset-bottom)); }
+}

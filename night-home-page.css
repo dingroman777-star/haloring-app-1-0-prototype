@@ -1,0 +1,77 @@
+/* NIG-01: only the night-home surface; dark palette and finite static states. */
+.night-home { --night-home-ink: #f2eee5; --night-home-muted: #b3beb4; --night-home-line: #334338; --night-home-copper: #d0ae82; min-width: 0; color: var(--night-home-ink); background: var(--night, #101915); }
+.night-home *, .night-home *::before, .night-home *::after { box-sizing: border-box; }
+.night-home button { max-width: 100%; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.night-home svg { display: block; flex: 0 0 18px; width: 18px; height: 18px; }
+.night-home .night-home-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+.night-home .night-home-header > div { min-width: 0; }
+.night-home .night-home-header > div > p { margin: 0 0 3px; color: var(--night-home-copper); font-size: 9px; line-height: 1.5; letter-spacing: .12em; }
+.night-home .night-home-header h1 { margin: 0; color: var(--night-home-ink); font-size: 27px; line-height: 1.35; font-weight: 550; letter-spacing: -.6px; }
+.night-home .night-home-history { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 10px 0 10px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--night-home-muted); font-size: 12px; line-height: 1.5; }
+.night-home .night-home-history svg { width: 18px; height: 18px; }
+.night-home .night-home-main { padding: 2px 0 16px; text-align: center; }
+.night-home .night-home-art { display: grid; place-items: center; min-height: 84px; margin: 0 auto 10px; }
+.night-home .night-home-art > img { display: block; width: 72px; height: 72px; object-fit: contain; }
+.night-home .night-home-state { margin: 0 0 7px; color: var(--night-home-copper); font-size: 12px; line-height: 1.6; }
+.night-home .night-home-main > h2 { margin: 0; color: var(--night-home-ink); font-size: 24px; line-height: 1.45; font-weight: 500; letter-spacing: -.35px; overflow-wrap: anywhere; }
+.night-home .night-home-description { max-width: 290px; margin: 8px auto 0; color: var(--night-home-muted); font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
+.night-home .night-home-duration { display: flex; align-items: baseline; justify-content: center; gap: 5px; margin-top: 12px; color: var(--night-home-ink); font-variant-numeric: tabular-nums; }
+.night-home .night-home-duration > strong { font-size: 36px; line-height: 1.1; font-weight: 450; letter-spacing: -.8px; }
+.night-home .night-home-duration > span { color: var(--night-home-muted); font-size: 12px; line-height: 1.6; }
+.night-home .night-home-tail { margin: 7px 0 0; color: var(--night-home-muted); font-size: 11px; line-height: 1.65; }
+.night-home .night-home-progress { margin: 13px 0 0; }
+.night-home .night-home-progress > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: var(--night-home-muted); font-size: 11px; line-height: 1.65; font-variant-numeric: tabular-nums; }
+.night-home .night-home-progress progress { display: block; width: 100%; height: 3px; margin-top: 7px; overflow: hidden; appearance: none; border: 0; border-radius: 3px; background: #304034; accent-color: #d0ae82; }
+.night-home .night-home-progress progress::-webkit-progress-bar { border-radius: 3px; background: #304034; }
+.night-home .night-home-progress progress::-webkit-progress-value { border-radius: 3px; background: #d0ae82; }
+.night-home .night-home-progress progress::-moz-progress-bar { border-radius: 3px; background: #d0ae82; }
+.night-home .night-home-primary { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 50px; margin-top: 18px; padding: 12px 16px; border: 1px solid #eee5d6; border-radius: 11px; background: #eee5d6; color: #172219; font-size: 15px; font-weight: 600; line-height: 1.6; }
+.night-home .night-home-primary > svg { width: 18px; height: 18px; }
+.night-home .night-home-about { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; margin: 1px 0 0; padding: 11px 14px; border: 0; border-radius: 7px; background: transparent; color: var(--night-home-muted); font-size: 12px; line-height: 1.65; }
+.night-home .night-home-library { margin: 0 0 20px; border-top: 1px solid var(--night-home-line); }
+.night-home .night-home-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; }
+.night-home .night-home-section-heading > h2 { margin: 0; color: var(--night-home-ink); font-size: 16px; font-weight: 550; line-height: 1.5; }
+.night-home .night-home-text { min-width: 44px; min-height: 44px; padding: 11px 0 11px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--night-home-copper); font-size: 12px; line-height: 1.65; }
+.night-home .night-home-choices { display: flex; flex-direction: column; gap: 2px; }
+.night-home .night-home-choice { display: grid; grid-template-columns: 28px minmax(0, 1fr) 20px; align-items: center; gap: 10px; width: 100%; min-height: 65px; padding: 11px 10px; border: 1px solid transparent; border-bottom-color: #2b3a30; border-radius: 8px; background: transparent; color: var(--night-home-ink); text-align: left; }
+.night-home .night-home-choice-icon { display: grid; place-items: center; width: 28px; height: 28px; color: var(--night-home-muted); }
+.night-home .night-home-choice-icon svg { flex-basis: 20px; width: 20px; height: 20px; }
+.night-home .night-home-choice-copy { min-width: 0; }
+.night-home .night-home-choice-copy > strong { display: block; font-size: 13px; line-height: 1.6; font-weight: 550; overflow-wrap: anywhere; }
+.night-home .night-home-choice-copy > small { display: block; margin-top: 3px; color: var(--night-home-muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.night-home .night-home-choice-mark { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid #71806e; border-radius: 50%; color: #172219; font-size: 12px; font-weight: 600; line-height: 1; }
+.night-home .night-home-choice[aria-checked="true"] { border-color: #50604c; background: #223126; }
+.night-home .night-home-choice[aria-checked="true"] .night-home-choice-icon { color: var(--night-home-copper); }
+.night-home .night-home-choice[aria-checked="true"] .night-home-choice-mark { border-color: #eee5d6; background: #eee5d6; }
+.night-home .night-home-choice[aria-checked="true"] .night-home-choice-mark:empty::after { content: ""; width: 9px; height: 5px; margin-top: -2px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
+.night-home .night-home-queued { margin: 9px 0 0; padding-left: 10px; border-left: 2px solid #9f8665; color: var(--night-home-copper); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.night-home .night-home-settings { margin: 0; border-top: 1px solid var(--night-home-line); border-bottom: 1px solid var(--night-home-line); }
+.night-home .night-home-settings > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) 18px; align-items: center; gap: 10px; min-height: 52px; padding: 12px 0; color: var(--night-home-ink); font-size: 13px; line-height: 1.65; list-style: none; cursor: pointer; }
+.night-home .night-home-settings > summary::-webkit-details-marker { display: none; }
+.night-home .night-home-settings > summary > span { min-width: 0; overflow: hidden; color: var(--night-home-muted); font-size: 11px; white-space: nowrap; text-overflow: ellipsis; text-align: right; }
+.night-home .night-home-settings > summary > svg { width: 18px; height: 18px; color: var(--night-home-muted); transform: rotate(90deg); }
+.night-home .night-home-settings[open] > summary > svg { transform: rotate(270deg); }
+.night-home .night-home-settings > div { padding-bottom: 5px; }
+.night-home .night-home-setting { display: grid; grid-template-columns: minmax(0, 1fr) 18px; align-items: center; gap: 12px; width: 100%; min-height: 65px; padding: 12px 0; border: 0; border-top: 1px solid #28392d; border-radius: 0; background: transparent; color: var(--night-home-ink); text-align: left; }
+.night-home .night-home-setting > span { min-width: 0; }
+.night-home .night-home-setting strong { display: block; font-size: 13px; line-height: 1.6; font-weight: 500; }
+.night-home .night-home-setting small { display: block; margin-top: 3px; color: var(--night-home-muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.night-home .night-home-setting > svg { width: 18px; height: 18px; color: var(--night-home-muted); }
+.night-home .night-home-boundary { margin: 18px 0 0; color: #a5b2a6; font-size: 11px; line-height: 1.75; text-align: center; overflow-wrap: anywhere; }
+.night-home button:disabled, .night-home button[aria-disabled="true"] { opacity: 1; border-color: #3b4c3f; background: #28382d; color: #a4b0a4; cursor: default; }
+.night-home button:focus-visible, .night-home summary:focus-visible { outline: 2px solid #d7b58a; outline-offset: 3px; }
+@media (hover: hover) {
+  .night-home .night-home-choice:not(:disabled):not([aria-disabled="true"]):hover { border-color: #71826b; }
+  .night-home .night-home-primary:not(:disabled):not([aria-disabled="true"]):hover { background: #f5eee3; }
+}
+@media (max-width: 360px), (max-height: 700px) {
+  .night-home .night-home-header { margin-bottom: 12px; }
+  .night-home .night-home-art { min-height: 72px; margin-bottom: 8px; }
+  .night-home .night-home-art > img { width: 64px; height: 64px; }
+  .night-home .night-home-main > h2 { font-size: 22px; }
+  .night-home .night-home-duration { margin-top: 10px; }
+  .night-home .night-home-duration > strong { font-size: 32px; }
+  .night-home .night-home-primary { margin-top: 14px; }
+  .night-home .night-home-choice { gap: 8px; padding-inline: 8px; }
+  .night-home .night-home-settings > summary { gap: 7px; }
+}

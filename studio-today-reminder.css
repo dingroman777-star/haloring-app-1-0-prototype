@@ -1,0 +1,22 @@
+#screen[data-page="TOD-01"] .today-studio-reminder { border: 1px solid #d9e0d8; border-radius: 12px; background: #f0f3ef; }
+.today-studio-reminder > button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 88px; padding: 14px; border: 0; border-radius: inherit; background: transparent; text-align: left; color: var(--ink); }
+.today-studio-reminder-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; color: var(--sage); }
+.today-studio-reminder-icon svg { width: 24px; height: 24px; }
+.today-studio-reminder-copy { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.today-studio-reminder-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--sage); line-height: 1.5; }
+.today-studio-reminder-copy > strong { font-size: 16px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.today-studio-reminder-copy > small { font-size: 12px; line-height: 1.6; color: var(--muted); overflow-wrap: anywhere; }
+.today-studio-unread { display: inline-block; font-size: 11px; font-weight: 500; color: #734922; border-radius: 4px; padding: 1px 5px; background: #ece3d6; }
+.today-studio-read { font-size: 11px; color: var(--muted); }
+.today-studio-reminder > button > svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.screen .today-studio-reminder > p { margin: 0; padding: 0 14px 12px; font-size: 12px; line-height: 1.6; color: #80502e; }
+.studio-reminder-picker { width: min(100%,440px); max-height: 85dvh; overflow-y: auto; }
+.studio-reminder-picker header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.studio-reminder-picker h2 { font-size: 20px; line-height: 1.5; margin: 0; }
+.studio-reminder-picker header button { width: 44px; height: 44px; padding: 10px; flex: 0 0 44px; border: 0; background: transparent; }
+.studio-reminder-picker svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.studio-reminder-picker > div > button { display: flex; width: 100%; gap: 12px; align-items: center; justify-content: space-between; padding: 16px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; color: var(--ink); }
+.studio-reminder-picker > div > button > span { display: grid; gap: 6px; min-width: 0; }
+.studio-reminder-picker strong { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.studio-reminder-picker span > span { font-size: 14px; line-height: 1.5; }
+.studio-reminder-picker small { font-size: 12px; line-height: 1.6; color: var(--muted); }

@@ -1,0 +1,23 @@
+.screen[data-page="STU-02"]{padding:0;overflow:hidden;min-height:0}
+.studio-confirm .studio-detail-header{grid-template-columns:44px minmax(0,1fr) 44px}
+.screen .studio-confirm .studio-detail-header h1{font-size:20px;line-height:1.5;margin:0;text-align:center}
+.studio-confirm-event{display:grid;grid-template-columns:80px minmax(0,1fr);column-gap:16px;align-items:center;margin:26px 0 22px}
+.studio-confirm-event img{width:80px;height:80px;object-fit:cover;border-radius:14px;grid-row:span 2}
+.studio-confirm-event span{font-size:12px;color:var(--muted);align-self:end}
+.screen .studio-confirm-event h2{font-size:22px;line-height:1.5;margin:6px 0 0;align-self:start}
+.studio-confirm-facts{padding:0 0 16px;border-bottom:1px solid var(--line);margin:0}
+.studio-confirm-facts>div{display:flex;justify-content:space-between;gap:16px;margin:14px 0;font-size:13px;line-height:1.7}
+.studio-confirm-facts dt{display:flex;align-items:center;gap:8px;color:var(--muted);flex-shrink:0}
+.studio-confirm-facts dt svg{width:18px;height:18px}
+.studio-confirm-facts dd{margin:0;text-align:right;color:var(--ink);overflow-wrap:anywhere}
+.studio-confirm-status{padding:20px;margin:22px 0;border:1px solid #dce5dc;background:#edf2ed;border-radius:16px}
+.studio-confirm-status-icon svg{width:24px;height:24px;color:#48604e}
+.screen .studio-confirm-status h2{font-size:20px;line-height:1.5;margin:14px 0 8px}
+.screen .studio-confirm-status p,.screen .studio-confirm-details p{font-size:13px;line-height:1.8;margin:8px 0 0;color:var(--muted)}
+.studio-confirm-details{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:20px 0 12px}
+.studio-confirm-details summary{font-size:13px;min-height:48px;padding:16px 0;cursor:pointer}.studio-confirm-details[open]{padding-bottom:16px}
+.studio-confirm-details button{width:100%;min-height:44px;margin-top:14px}
+.studio-confirm-change{min-height:48px;background:transparent;border:0;color:#526c59;width:100%;font-size:13px;margin-bottom:12px}
+.studio-confirm .studio-detail-footer{grid-template-columns:1fr;gap:8px}.studio-confirm .studio-detail-footer button{min-height:48px;font-size:14px}
+.screen .studio-confirm-feedback{font-size:12px;line-height:1.7;color:#805020;margin:0}.studio-confirm-feedback:empty{display:none}
+@media(max-height:640px){.device-shell:has(.screen[data-page="STU-02"]){min-height:0}}

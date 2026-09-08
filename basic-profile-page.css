@@ -1,0 +1,32 @@
+/* Keep the approved onboarding form: mist background, open rows and one dark action. */
+.device-shell:has(.screen[data-page="ONB-04"]) { min-height: 0; }
+.screen[data-page="ONB-04"] { padding: 12px 28px 24px; overflow: hidden; }
+.basic-profile-page { display: grid; grid-template-rows: 44px minmax(0, 1fr); gap: 16px; height: 100%; min-height: 0; }
+#basic-profile-form { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 16px; min-height: 0; margin: 0; }
+.basic-profile-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 0 2px 12px; scroll-padding-block: 12px; }
+.basic-profile-fields { margin-top: 32px; }
+.screen .basic-profile-header p { margin-top: 12px; }
+.basic-profile-actions { margin: 0; }
+.basic-profile-actions .primary { width: 100%; }
+.basic-profile-actions .connect-intro-skip { width: 100%; min-height: 44px; margin-top: 6px; }
+.screen #basic-profile-status { margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: var(--muted); text-align: center; }
+.screen #basic-profile-status.save-error { color: var(--danger); }
+.basic-profile-resume { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 64px; margin: 0 0 16px; padding: 10px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; }
+.basic-profile-resume strong { display: block; font-size: 14px; font-weight: 600; }
+.basic-profile-resume small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.basic-profile-resume svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.basic-profile-conflict { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.basic-profile-conflict dl { margin: 16px 0; }
+.basic-profile-conflict dl > div { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.basic-profile-conflict dt { font-size: 14px; font-weight: 600; }
+.basic-profile-conflict dd { margin: 6px 0 0; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.basic-profile-conflict .primary, .basic-profile-conflict .text-button { width: 100%; min-height: 48px; }
+@media (max-width: 760px) {
+  .device-shell:has(.screen[data-page="ONB-04"]) { height: calc(var(--hal-viewport-height, 100dvh) - 48px); }
+}
+@media (max-width: 360px), (max-height: 680px) {
+  .screen[data-page="ONB-04"] { padding: 8px 20px 16px; }
+  .basic-profile-page { gap: 12px; }
+  #basic-profile-form { margin: 0; gap: 12px; }
+  .basic-profile-fields { margin-top: 24px; gap: 10px; }
+}

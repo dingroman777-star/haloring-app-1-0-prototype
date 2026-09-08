@@ -1,0 +1,68 @@
+.oxygen-measure-page { display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 14px; padding: 4px 0 16px; color: var(--ink, #202520); }
+.oxygen-measure-page *, .oxygen-measure-page *::before, .oxygen-measure-page *::after { box-sizing: border-box; }
+.oxygen-measure-page svg { display: block; flex: 0 0 18px; width: 18px; height: 18px; }
+.oxygen-measure-toolbar { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px; align-items: center; min-height: 44px; }
+.screen .oxygen-measure-toolbar h1 { margin: 0; text-align: center; font-size: 21px; line-height: 1.4; font-weight: 600; letter-spacing: -.4px; }
+.oxygen-measure-toolbar > button { display: grid; place-items: center; width: 44px; height: 44px; min-width: 44px; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink, #202520); cursor: pointer; }
+.oxygen-measure-toolbar > button svg { width: 18px; height: 18px; }
+.oxygen-measure-demo { justify-self: end; padding: 3px 7px; border-radius: 5px; background: #e8ede9; color: #58675b; font-size: 11px; line-height: 1.6; white-space: nowrap; }
+.oxygen-measure-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0 14px 2px; list-style: none; }
+.oxygen-measure-steps li { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; padding: 6px 0; color: #73786f; }
+.oxygen-measure-steps li > span { display: grid; place-items: center; flex: 0 0 23px; width: 23px; height: 23px; border: 1px solid #d4d9cf; border-radius: 50%; background: transparent; font-size: 11px; line-height: 1; font-variant-numeric: tabular-nums; }
+.oxygen-measure-steps li > small { font-size: 11px; line-height: 1.5; }
+.oxygen-measure-steps li[data-state="done"] { color: #49634f; }
+.oxygen-measure-steps li[data-state="done"] > span { border-color: #d4dfd1; background: #e7eee3; }
+.oxygen-measure-steps li[data-state="current"] { color: var(--gold, #8a4b12); font-weight: 600; }
+.oxygen-measure-steps li[data-state="current"] > span { border-color: var(--gold, #8a4b12); background: #f3ede5; }
+.oxygen-measure-steps li[data-state="failed"] { color: #8b4d2c; font-weight: 600; }
+.oxygen-measure-steps li[data-state="failed"] > span { border-color: #b78665; background: #f2e9df; }
+.oxygen-measure-state { text-align: center; }
+.screen .oxygen-measure-state h2 { margin: 0; font-size: 20px; line-height: 1.45; font-weight: 600; }
+.screen .oxygen-measure-state p { margin: 7px auto 0; max-width: 290px; color: var(--muted, #69716d); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.oxygen-measure-header { padding-bottom: 8px; }
+.screen .oxygen-measure-header > p { margin: 0 0 10px; color: var(--muted, #69716d); font-size: 10px; line-height: 1.6; letter-spacing: .12em; }
+.screen .oxygen-measure-header > h1 { margin: 0; font-size: 25px; line-height: 1.45; font-weight: 500; letter-spacing: -.03em; }
+.oxygen-measure-body { display: flex; flex-direction: column; min-width: 0; gap: 12px; flex: 0 0 auto; }
+.screen .oxygen-measure-copy { margin: 0; font-size: 14px; line-height: 1.85; color: var(--ink, #202520); }
+.screen .oxygen-measure-copy.is-muted { color: var(--muted, #69716d); font-size: 13px; }
+.oxygen-measure-visual { display: grid; place-items: center; width: 128px; height: 128px; border: 1px solid #c6d0c5; border-radius: 50%; margin: 4px auto; color: #5e745f; background: #edf1ea; box-shadow: inset 0 0 0 12px var(--mist, #f7f7f3); }
+.oxygen-measure-visual img { display: block; width: 60px; height: 60px; object-fit: contain; }
+.oxygen-measure-visual svg { flex-basis: 32px; width: 32px; height: 32px; }
+.oxygen-measure-visual > span { font-size: 38px; font-weight: 400; letter-spacing: -.06em; }
+.oxygen-measure-visual sub { font-size: 20px; }
+.oxygen-measure-result { display: flex; flex-direction: column; align-items: center; padding: 8px 0 16px; border-bottom: 1px solid var(--line, #dfe3dd); }
+.screen .oxygen-measure-result > p { margin: 0 0 8px; color: var(--muted, #69716d); font-size: 13px; }
+.oxygen-measure-result > strong { color: #456475; font-size: 72px; font-weight: 450; line-height: 1.2; letter-spacing: -.055em; font-variant-numeric: tabular-nums; }
+.oxygen-measure-result > strong > span { margin-left: 4px; font-size: 24px; letter-spacing: 0; }
+.oxygen-measure-result > time { margin-top: 8px; font-size: 12px; line-height: 1.7; font-variant-numeric: tabular-nums; color: var(--ink, #202520); text-align: center; }
+.oxygen-measure-tag { display: inline-block; margin-top: 10px; padding: 4px 8px; border-radius: 5px; background: #e9efed; color: #52685e; font-size: 11px; line-height: 1.6; }
+.oxygen-measure-result.is-pending .oxygen-measure-tag { background: #f3e9db; color: #795a35; }
+.oxygen-measure-alert { padding: 12px 14px; border-left: 3px solid #af8253; background: #f4ece1; border-radius: 3px; color: #775833; font-size: 13px; line-height: 1.85; overflow-wrap: anywhere; }
+.oxygen-measure-resolution { margin: 0; padding: 12px 14px; border-left: 2px solid #af8253; border-radius: 3px; background: #f3ece3; color: #795939; overflow-wrap: anywhere; }
+.screen .oxygen-measure-resolution h3, .oxygen-measure-resolution > strong { display: block; margin: 0; font-size: 13px; font-weight: 600; line-height: 1.65; }
+.screen .oxygen-measure-resolution p { margin: 0; font-size: 12px; line-height: 1.7; }
+.screen .oxygen-measure-resolution p + p { margin-top: 6px; }
+.oxygen-measure-resolution button { display: inline-flex; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; margin-top: 6px; padding: 10px 0; border: 0; border-radius: 6px; background: transparent; color: var(--gold, #8a4b12); font: inherit; font-size: 13px; font-weight: 600; line-height: 1.65; text-align: left; cursor: pointer; }
+.oxygen-measure-details { margin: 0; border-top: 1px solid var(--line, #dfe3dd); }
+.oxygen-measure-details summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 11px 0; color: var(--muted, #69716d); font-size: 12px; line-height: 1.65; list-style: none; cursor: pointer; }
+.oxygen-measure-details summary::-webkit-details-marker { display: none; }
+.oxygen-measure-details summary svg { flex-basis: 16px; width: 16px; height: 16px; }
+.oxygen-measure-details[open] summary > svg { transform: rotate(180deg); }
+.screen .oxygen-measure-details p { margin: 0 0 9px; color: var(--muted, #69716d); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.oxygen-measure-actions { position: static; display: flex; flex-direction: column; flex-shrink: 0; gap: 8px; margin-top: 2px; padding: 0; }
+.oxygen-measure-actions > button { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid transparent; border-radius: 9px; font-size: 14px; line-height: 1.5; white-space: normal; cursor: pointer; }
+.oxygen-measure-actions > .primary { border-color: var(--ink, #202520); background: var(--ink, #202520); color: #fff; }
+.oxygen-measure-actions > .secondary { border-color: var(--line, #dfe3dd); background: transparent; color: var(--ink, #202520); }
+.oxygen-measure-actions > .text, .oxygen-measure-actions > .text-button { min-height: 44px; border-color: transparent; background: transparent; color: var(--muted, #69716d); }
+.oxygen-measure-page button:disabled, .oxygen-measure-page button[aria-disabled="true"] { opacity: 1; border-color: #d9ddd5; background: #e8ebe4; color: #70766c; cursor: default; }
+.oxygen-measure-page button:focus-visible, .oxygen-measure-page summary:focus-visible { outline: 2px solid var(--gold, #a27337); outline-offset: 3px; }
+.screen .oxygen-measure-caption { margin: 0; color: var(--muted, #69716d); font-size: 11px; line-height: 1.75; text-align: center; }
+@media (max-width: 360px), (max-height: 680px) {
+  .oxygen-measure-page { gap: 12px; }
+  .oxygen-measure-steps { gap: 4px; padding-inline: 4px; }
+  .oxygen-measure-steps li { gap: 5px; }
+  .oxygen-measure-visual { width: 108px; height: 108px; margin-block: 0; box-shadow: inset 0 0 0 9px var(--mist, #f7f7f3); }
+  .screen .oxygen-measure-toolbar h1 { font-size: 20px; }
+  .oxygen-measure-result > strong { font-size: 62px; }
+  .oxygen-measure-actions > button { padding-block: 11px; }
+}

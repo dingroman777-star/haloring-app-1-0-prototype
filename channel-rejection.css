@@ -1,0 +1,23 @@
+.rejection-page { display: grid; gap: 14px; }
+.rejection-result { padding: 18px; background: #f3eee5; border-radius: 17px; }
+.rejection-result > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #b69c7b; color: #79552b; margin-bottom: 12px; }
+.rejection-result h2 { font-family: inherit; font-size: 20px; margin: 0 0 8px; line-height: 1.4; }
+.rejection-result p, .rejection-reason p { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 0; }
+.rejection-reason { padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); }
+.rejection-reason small { color: var(--muted); font-size: 11px; }
+.rejection-reason h3 { margin: 7px 0; font-size: 15px; }
+.rejection-facts { margin: 0; padding: 0 4px; }
+.rejection-facts > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; line-height: 1.7; }
+.rejection-facts dt { flex: none; color: var(--muted); }
+.rejection-facts dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
+.rejection-facts .text-button { width: auto; min-width: 44px; min-height: 44px; padding: 8px 4px; font-size: 11px; margin-left: 7px; }
+.rejection-page .button-row { margin: 0; }
+.rejection-contact-note { font-size: 11px; color: var(--muted); line-height: 1.65; text-align: center; margin: 0; }
+.rejection-page .rejection-restart-link { min-height: 44px; font-size: 12px; padding: 8px; }
+.rejection-confirm { border: 1px solid #c7b99e; border-radius: 15px; padding: 16px; background: var(--paper); }
+.rejection-confirm h2 { margin: 0 0 12px; font-size: 17px; font-family: inherit; }
+.rejection-confirm ul { margin: 0 0 16px; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.rejection-confirm li + li { margin-top: 6px; }
+.rejection-error { margin: 0 0 12px; font-size: 12px; color: #8b402e; line-height: 1.7; }
+.rejection-confirm:focus { outline: none; }
+.rejection-page button:focus-visible { outline: 2px solid #79552b; outline-offset: 3px; }

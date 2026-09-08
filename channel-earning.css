@@ -1,0 +1,22 @@
+.channel-earning-detail { display:grid; gap:14px; }
+.earning-result { background:#edf2ed; border:1px solid #dce5dd; border-radius:17px; padding:20px; text-align:left; }
+.earning-result > strong { font-size:36px; line-height:1.2; margin:10px 0 14px; }
+.earning-result > small { font-size:12px; color:var(--muted); }
+.earning-result > p { margin:12px 0 0; font-size:13px; line-height:1.7; color:var(--muted); }
+.earning-order-info { padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+.earning-order-info h2 { font-family:inherit; font-size:16px; line-height:1.5; font-weight:600; margin:0 0 12px; }
+.earning-order-info > span { font-size:11px; color:var(--muted); margin-right:10px; }
+.earning-order-info > strong { font-size:12px; font-weight:500; overflow-wrap:anywhere; }
+.earning-order-info > p { font-size:12px; color:var(--muted); margin:10px 0 0; }
+.earning-calculation,.earning-question { border:1px solid var(--line); border-radius:14px; background:var(--paper); padding:0 15px; }
+.earning-calculation summary,.earning-question summary { cursor:pointer; padding:15px 0; min-height:48px; box-sizing:border-box; font-size:14px; font-weight:550; }
+.earning-calculation dl { margin:4px 0 12px; }
+.earning-calculation dl > div { display:flex; justify-content:space-between; gap:14px; font-size:12px; padding:6px 0; }
+.earning-calculation dt { color:var(--muted); }
+.earning-calculation dd { margin:0; }
+.earning-calculation p { font-size:14px; line-height:1.7; padding:12px; border-radius:9px; background:#edf2ed; margin:0 0 12px; }
+.earning-calculation small { display:block; padding-bottom:15px; font-size:11px; color:var(--muted); line-height:1.7; }
+.earning-question p,.earning-note { font-size:12px; color:var(--muted); line-height:1.7; margin:0; }
+.earning-question .button-row { padding:12px 0 15px; }
+.channel-earning-detail > .button-row { margin:0; }
+.channel-earning-detail button:focus-visible,.channel-earning-detail summary:focus-visible { outline:2px solid #79552b; outline-offset:2px; }

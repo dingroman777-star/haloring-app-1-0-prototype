@@ -1,0 +1,55 @@
+/* SET-03: established settings rhythm; selectable choices show their saved effect. */
+.screen[data-page="SET-03"] { padding: 0 20px 28px; }
+.gs-page { min-width: 0; color: var(--ink); }
+.gs-header { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; min-height: 60px; margin: 0 -8px 20px; }
+.gs-header button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 22px; }
+.screen .gs-header h1 { margin: 0; text-align: center; font-size: 21px; font-weight: 650; line-height: 1.4; }
+.gs-section { margin-top: 25px; }
+.screen .gs-section h2 { margin: 0 0 6px; color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.6; }
+.gs-list { border-top: 1px solid var(--line); }
+.gs-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 80px; padding: 17px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); text-align: left; }
+.gs-row-copy { flex: 1; min-width: 0; }
+.gs-row-copy strong { display: block; font-size: 14px; font-weight: 550; line-height: 1.6; }
+.gs-row-copy small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.7; overflow-wrap: anywhere; }
+.gs-value { flex: 0 1 auto; max-width: 48%; color: var(--muted); font-size: 13px; font-style: normal; line-height: 1.6; text-align: right; overflow-wrap: anywhere; }
+.gs-row > i { flex: 0 0 auto; color: var(--muted); font-size: 18px; font-style: normal; }
+.gs-row-static { min-height: 72px; }
+.gs-switch { position: relative; flex: 0 0 48px; width: 48px; min-width: 48px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; }
+.gs-switch::before { content: ""; position: absolute; top: 10px; left: 2px; width: 44px; height: 24px; border-radius: 16px; background: #c8cdc8; }
+.gs-switch::after { content: ""; position: absolute; top: 13px; left: 5px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #17191718; transition: transform .16s ease; }
+.gs-switch[aria-checked="true"]::before { background: var(--sage); }
+.gs-switch[aria-checked="true"]::after { transform: translateX(20px); }
+.screen .gs-note, .gs-modal .gs-note { margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.75; }
+.gs-modal { max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 22px; border-radius: 16px; scroll-padding: 12px; }
+.gs-modal .modal-title-row { align-items: center; gap: 12px; margin-bottom: 10px; }
+.gs-modal .modal-title-row h2 { margin: 0; font-size: 20px; line-height: 1.5; }
+.gs-modal .modal-title-row > .text-button { flex: 0 0 auto; width: auto; min-width: 44px; min-height: 44px; padding: 8px; font-size: 12px; }
+.gs-fieldset { min-width: 0; padding: 0; margin: 20px 0 0; border: 0; }
+.gs-fieldset legend { margin-bottom: 8px; color: var(--muted); font-size: 12px; }
+.gs-options { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.gs-option { min-width: 0; min-height: 74px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); text-align: left; }
+.gs-option strong { display: block; font-size: 14px; font-weight: 550; line-height: 1.5; }
+.gs-option small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.gs-option[aria-checked="true"] { border-color: var(--sage); background: #edf2ee; box-shadow: inset 0 0 0 1px var(--sage); }
+.gs-option[aria-checked="true"] strong::after { content: " ✓"; color: var(--sage); }
+.gs-preview { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #f4f5f1; }
+.gs-preview h3 { margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 500; }
+.gs-preview p { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.8; }
+.gs-preview small { display: block; margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.gs-feedback { margin: 12px 0 0; color: var(--sage); font-size: 12px; line-height: 1.7; }
+.gs-feedback:empty { display: none; }
+.gs-feedback[data-error="true"], .gs-feedback[role="alert"] { color: var(--danger); }
+.gs-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 20px; }
+.gs-actions > button { min-height: 46px; margin: 0; }
+.gs-actions > button:disabled { background: #e8eae5; color: var(--muted); border-color: var(--line); cursor: default; }
+.gs-page button:focus-visible, .gs-modal :is(button,a,summary):focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (hover:hover) { .gs-page button:hover { background: #edeeeb; } .gs-option:hover { border-color: var(--sage); } }
+@media (max-width:360px), (max-height:650px) {
+  .screen[data-page="SET-03"] { padding-inline: 16px; }
+  .gs-header { min-height: 52px; margin-bottom: 16px; }
+  .screen .gs-header h1 { font-size: 19px; }
+  .gs-row { min-height: 72px; }
+  .gs-modal { padding: 16px; }
+  .gs-option { padding: 10px; }
+}
+@media (prefers-reduced-motion:reduce) { .gs-page *, .gs-page *::before, .gs-page *::after, .gs-modal *, .gs-modal *::before, .gs-modal *::after { animation: none; transition: none; scroll-behavior: auto; } }

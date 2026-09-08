@@ -1,0 +1,30 @@
+.screen[data-page="STU-04"] { padding: 0; overflow: hidden; min-height: 0; }
+.studio-session .studio-detail-header { margin-bottom: 12px; }
+.screen .studio-session .studio-detail-header h1 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 650; text-align: center; }
+.studio-session-link { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: var(--brand-brown); font-size: 14px; padding: 8px 0; }
+.studio-session-event { padding: 4px 0 18px; border-bottom: 1px solid var(--line); }
+.studio-session-event > img { width: 64px; height: 64px; flex-basis: 64px; }
+.screen .studio-session p { font-size: 14px; line-height: 1.65; color: var(--muted); margin: 6px 0 0; text-wrap: pretty; }
+.studio-session-timer { text-align: center; padding: 36px 0 28px; }
+.studio-session-timer output { display: block; font-family: Arial, sans-serif; font-size: clamp(42px, 14vw, 60px); line-height: 1.3; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -1px; margin: 8px 0; overflow-wrap: anywhere; }
+.studio-session-state { text-align: center; padding: 12px 0; }
+.studio-session-mode { display: inline-flex; align-items: center; gap: 14px; text-align: left; max-width: 100%; }
+.studio-session-mode > span { flex: 0 0 32px; }
+.studio-session-mode svg { width: 32px; height: 32px; }
+.studio-session-mode strong { font-size: 15px; line-height: 1.6; font-weight: 550; }
+.studio-session-mode p { display: flex; align-items: baseline; gap: 6px; }
+.studio-session-mode i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 6px; }
+.screen .studio-session .is-ready { color: #46614d; }
+.screen .studio-session .is-warning, .screen .studio-session-offline { color: #805020; }
+.screen .studio-session-note { margin-top: 20px; }
+.screen .studio-session-away { text-align: center; padding: 30px 0 16px; }
+.studio-session .studio-detail-footer { grid-template-columns: minmax(0,1fr); gap: 6px; border-top: 0; }
+.studio-session .studio-detail-footer .primary { min-height: 48px; font-size: 16px; }
+.screen .studio-session .studio-detail-footer > p { font-size: 13px; line-height: 1.6; margin: 0; text-align: center; }
+.screen .studio-session .studio-detail-footer > .studio-session-error { color: #805020; text-align: left; padding-bottom: 6px; }
+.studio-session-empty { padding: 24px 0; }
+.studio-session-modal { max-height: 85dvh; overflow-y: auto; }
+.studio-session-modal h2 { font-size: 22px; line-height: 1.5; }
+.studio-session-modal p { font-size: 14px; line-height: 1.75; color: var(--muted); }
+.studio-session-modal button { min-height: 48px; }
+@media (max-height: 640px) { .device-shell:has(.screen[data-page="STU-04"]) { min-height: 0; } .studio-session-timer { padding-block: 24px; } }

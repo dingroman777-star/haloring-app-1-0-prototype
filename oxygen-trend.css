@@ -1,0 +1,27 @@
+.oxygen-trend { margin: 8px 0 22px; padding-top: 18px; border-top: 1px solid var(--line, #dfe3dd); }
+.oxygen-trend > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.screen .oxygen-trend h2, .oxygen-trend h2 { margin: 0; font-size: 15px; line-height: 1.6; font-weight: 600; }
+.oxygen-trend-badge { padding: 2px 7px; background: #e9eef1; border-radius: 5px; color: #506778; font-size: 11px; line-height: 1.7; }
+.oxygen-trend-subtitle { margin: 5px 0 0; color: var(--muted, #69716d); font-size: 12px; line-height: 1.6; }
+.oxygen-trend-readout { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; min-height: 28px; margin: 14px 0 8px; }
+.oxygen-trend-readout time { font-size: 13px; color: var(--ink, #202520); line-height: 1.6; font-variant-numeric: tabular-nums; }
+.oxygen-trend-readout strong { font-size: 17px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.oxygen-trend-plot { display: block; width: 100%; height: 183px; overflow: visible; touch-action: pan-y pinch-zoom; user-select: none; cursor: crosshair; }
+.oxygen-trend-plot text { font-family: inherit; font-size: 11px; fill: #69716d; font-variant-numeric: tabular-nums; }
+.oxygen-trend-grid { stroke: #e1e3df; stroke-width: .75; shape-rendering: crispEdges; }
+.oxygen-trend-line { fill: none; stroke: #577487; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.oxygen-trend-dot { fill: #577487; }
+.oxygen-trend-cursor { stroke: #647682; stroke-width: 1; stroke-dasharray: 3 4; }
+.oxygen-trend-selected { fill: #577487; stroke: var(--mist, #f7f7f3); stroke-width: 2; }
+.oxygen-trend-line, .oxygen-trend-grid, .oxygen-trend-selected, .oxygen-trend-cursor { vector-effect: non-scaling-stroke; }
+.oxygen-trend-controls { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.oxygen-trend-controls button { flex: 0 0 44px; min-width: 44px; min-height: 44px; border: 1px solid var(--line, #dfe3dd); border-radius: 9px; background: transparent; color: var(--ink, #202520); font-size: 22px; line-height: 1; cursor: pointer; }
+.oxygen-trend-controls button:disabled { color: #999e99; border-color: transparent; cursor: default; }
+.oxygen-trend-controls p { flex: 1; margin: 0; font-size: 11px; color: var(--muted, #69716d); line-height: 1.6; text-align: center; }
+.oxygen-trend-caption { margin: 6px 0 0; font-size: 11px; line-height: 1.6; text-align: center; color: var(--muted, #69716d); }
+.oxygen-trend-data { margin-top: 12px; font-size: 12px; line-height: 1.6; color: var(--muted, #69716d); }
+.oxygen-trend-data summary { display: list-item; min-height: 44px; padding: 11px 0; cursor: pointer; box-sizing: border-box; }
+.oxygen-trend-data ul { list-style: none; margin: 0; padding: 0; }
+.oxygen-trend-data li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.oxygen-trend-data li span { color: var(--ink, #202520); font-variant-numeric: tabular-nums; }
+.oxygen-trend-plot:focus-visible, .oxygen-trend-controls button:focus-visible, .oxygen-trend-data summary:focus-visible { outline: 2px solid var(--gold, #a27337); outline-offset: 2px; border-radius: 6px; }

@@ -1,0 +1,80 @@
+/* HLT-03: scoped measurement controls and history. No shared page overrides. */
+.measurement-center { min-width: 0; color: var(--ink, #171917); }
+.measurement-center *, .measurement-center *::before, .measurement-center *::after { box-sizing: border-box; }
+.measurement-center button, .measurement-center summary { -webkit-tap-highlight-color: transparent; }
+.measurement-center button { max-width: 100%; font: inherit; cursor: pointer; }
+.measurement-center svg { display: block; flex: 0 0 18px; width: 18px; height: 18px; }
+.measurement-center .measure-center-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 4px; margin: 0 0 16px; }
+.measurement-center .measure-center-header h1 { margin: 0; font-size: 22px; line-height: 1.4; font-weight: 650; text-align: center; letter-spacing: -.4px; }
+.measurement-center .measure-center-header button { display: grid; place-items: center; width: 44px; height: 44px; min-width: 44px; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink, #171917); }
+.measurement-center .measure-center-header button svg { width: 18px; height: 18px; }
+.measurement-center .measure-device { display: grid; grid-template-columns: 36px minmax(0, 1fr) 16px; align-items: center; gap: 10px; width: 100%; min-height: 72px; margin: 0 0 18px; padding: 12px; border: 1px solid #dce2d9; border-radius: 10px; background: #eef1eb; color: var(--ink, #171917); text-align: left; }
+.measurement-center .measure-device > span { min-width: 0; }
+.measurement-center .measure-device-icon { display: grid; place-items: center; width: 36px; height: 36px; color: #52634f; }
+.measurement-center .measure-device-icon svg { flex-basis: 22px; width: 22px; height: 22px; }
+.measurement-center .measure-device > svg { flex-basis: 16px; width: 16px; height: 16px; color: var(--muted, #646864); }
+.measurement-center .measure-device strong { display: block; font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.measurement-center .measure-device small { display: block; margin-top: 3px; color: #566052; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.measurement-center .measure-resume { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; padding: 12px 0 12px 12px; border-left: 2px solid var(--gold, #8a4b12); }
+.measurement-center .measure-resume > div { flex: 1 1 0; min-width: 0; }
+.measurement-center .measure-resume strong, .measurement-center .measure-resume h2, .measurement-center .measure-resume h3 { display: block; margin: 0; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.measurement-center .measure-resume p, .measurement-center .measure-resume small { display: block; margin: 4px 0 0; color: var(--muted, #646864); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.measurement-center .measure-resume > button { flex: 0 0 auto; min-width: 60px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--gold, #8a4b12); border-radius: 8px; background: transparent; color: var(--gold, #8a4b12); font-size: 13px; font-weight: 600; line-height: 1.5; }
+.measurement-center .measure-options { margin: 0 0 24px; }
+.measurement-center .measure-options > h2, .measurement-center .measure-history > header h2 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.5; }
+.measurement-center .measure-option { display: grid; grid-template-columns: 32px minmax(0, 1fr) 60px; align-items: center; gap: 10px; min-height: 88px; padding: 16px 0; border-bottom: 1px solid var(--line, #dfe3dd); }
+.measurement-center .measure-option-icon { display: grid; place-items: center; align-self: start; width: 32px; height: 32px; margin-top: 2px; color: #647460; }
+.measurement-center .measure-option-icon svg { flex-basis: 22px; width: 22px; height: 22px; }
+.measurement-center .measure-option-copy { min-width: 0; }
+.measurement-center .measure-option-copy h3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.measurement-center .measure-option-copy p { margin: 4px 0 0; color: var(--muted, #646864); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.measurement-center .measure-option-action { justify-self: end; min-width: 60px; min-height: 44px; padding: 10px 10px; border: 1px solid #d6c3b0; border-radius: 8px; background: #f1eae2; color: var(--gold, #8a4b12); font-size: 13px; font-weight: 600; line-height: 1.5; text-align: center; }
+.measurement-center .measure-option-action[aria-haspopup="dialog"] { background: transparent; }
+.measurement-center .measure-history { margin: 0 0 24px; }
+.measurement-center .measure-history > header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 10px; }
+.measurement-center .measure-history > header > span { color: var(--muted, #646864); font-size: 12px; line-height: 1.6; }
+.measurement-center .measure-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.measurement-center .measure-filters button { flex: 1 1 44px; min-width: 44px; min-height: 44px; padding: 10px 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted, #646864); font-size: 12px; line-height: 1.5; text-align: center; }
+.measurement-center .measure-filters button[aria-pressed="true"] { border-color: #d6ddd2; background: #e9eee5; color: #384a35; font-weight: 600; }
+.measurement-center .measure-history h3 { margin: 16px 0 2px; color: var(--muted, #646864); font-size: 12px; font-weight: 500; line-height: 1.6; }
+.measurement-center .measure-record { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; align-items: center; gap: 10px; width: 100%; min-height: 68px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--line, #dfe3dd); border-radius: 0; background: transparent; color: var(--ink, #171917); text-align: left; }
+.measurement-center .measure-record > span { min-width: 0; }
+.measurement-center .measure-record strong { display: block; margin: 0; font-size: 14px; font-weight: 550; line-height: 1.5; overflow-wrap: anywhere; }
+.measurement-center .measure-record small { display: block; margin-top: 3px; color: var(--muted, #646864); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.measurement-center .measure-record .measure-record-value { max-width: 116px; color: var(--ink, #171917); font-size: 17px; font-weight: 550; line-height: 1.4; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.measurement-center .measure-record-value small { font-size: 11px; font-weight: 400; }
+.measurement-center .measure-record > svg { flex-basis: 16px; width: 16px; height: 16px; color: var(--muted, #646864); }
+.measurement-center .measure-empty { padding: 18px 0 12px; }
+.measurement-center .measure-empty h3 { margin: 0 0 6px; color: var(--ink, #171917); font-size: 15px; font-weight: 550; line-height: 1.6; }
+.measurement-center .measure-empty p { margin: 0; color: var(--muted, #646864); font-size: 12px; line-height: 1.75; }
+.measurement-center .measure-help { margin: 0; border-top: 1px solid var(--line, #dfe3dd); }
+.measurement-center .measure-help summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 13px 0; color: var(--ink, #171917); font-size: 13px; line-height: 1.65; cursor: pointer; list-style: none; }
+.measurement-center .measure-help summary::-webkit-details-marker { display: none; }
+.measurement-center .measure-help[open] summary svg { transform: rotate(90deg); }
+.measurement-center .measure-help > div { padding: 0 0 8px; }
+.measurement-center .measure-help p, .measurement-center .measure-tip, .measurement-center .measure-error, .measurement-center .measure-legacy { margin: 8px 0 12px; color: var(--muted, #646864); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.measurement-center .measure-error { color: #8a3e23; }
+.measurement-center .measure-tip { margin: 6px 0 16px; }
+.measurement-center .measure-legacy { padding-left: 10px; border-left: 2px solid #c8cfc3; }
+.measurement-center .measure-privacy { display: block; width: 100%; margin: 18px 0 0; padding: 12px; border: 1px solid var(--line, #dfe3dd); border-radius: 8px; background: transparent; color: var(--ink, #171917); text-align: left; }
+.measurement-center .measure-privacy h2, .measurement-center .measure-privacy h3, .measurement-center .measure-privacy strong { display: block; margin: 0; font-size: 13px; font-weight: 550; line-height: 1.6; }
+.measurement-center .measure-privacy p, .measurement-center .measure-privacy small { display: block; margin: 4px 0 0; color: var(--muted, #646864); font-size: 12px; line-height: 1.7; }
+.measurement-center .measure-privacy button, .measurement-center .measure-history-more { min-height: 44px; padding: 10px 0; border: 0; border-radius: 6px; background: transparent; color: var(--gold, #8a4b12); font-size: 13px; line-height: 1.65; text-align: left; }
+.measurement-center .measure-history-more { width: 100%; margin-top: 4px; text-align: center; }
+.measurement-center button:disabled, .measurement-center button[aria-disabled="true"] { opacity: 1; border-color: #d9ddd5; background: #e8ebe4; color: #70766c; cursor: default; }
+.measurement-center button:focus-visible, .measurement-center summary:focus-visible { outline: 2px solid var(--gold, #8a4b12); outline-offset: 3px; }
+@media (hover: hover) {
+  .measurement-center .measure-center-header button:hover, .measurement-center .measure-record:hover { background: #edf0e9; }
+  .measurement-center .measure-option-action:not(:disabled):not([aria-disabled="true"]):hover { border-color: var(--gold, #8a4b12); }
+}
+@media (max-width: 360px) {
+  .measurement-center .measure-center-header h1 { font-size: 20px; }
+  .measurement-center .measure-option { grid-template-columns: 28px minmax(0, 1fr) 56px; gap: 8px; }
+  .measurement-center .measure-option-icon { width: 28px; }
+  .measurement-center .measure-option-action { min-width: 56px; padding-inline: 8px; }
+  .measurement-center .measure-device { gap: 8px; padding-inline: 10px; }
+  .measurement-center .measure-record { gap: 8px; }
+  .measurement-center .measure-record .measure-record-value { max-width: 96px; font-size: 16px; }
+  .measurement-center .measure-filters { gap: 4px; }
+  .measurement-center .measure-filters button { padding-inline: 6px; }
+}

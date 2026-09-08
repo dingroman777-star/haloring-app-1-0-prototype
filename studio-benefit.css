@@ -1,0 +1,34 @@
+.screen[data-page="STU-13"] { padding: 0; overflow: hidden; min-height: 0; }
+.studio-benefit .studio-detail-header { grid-template-columns: 44px minmax(0,1fr) 44px; margin-bottom: 12px; }
+.screen .studio-benefit .studio-detail-header h1 { margin: 0; font-size: 20px; line-height: 1.4; text-align: center; }
+.studio-benefit-event { padding: 4px 0 20px; border-bottom: 1px solid var(--line); }
+.studio-benefit-event > img { width: 56px; height: 56px; flex-basis: 56px; }
+.screen .studio-benefit p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.studio-benefit-state { text-align: center; padding: 24px 0 20px; }
+.studio-benefit-state > svg { width: 36px; height: 36px; color: #46614d; display: block; margin: 0 auto 10px; }
+.screen .studio-benefit-state h2 { font-size: 23px; line-height: 1.45; margin: 0; font-weight: 600; }
+.studio-benefit-values { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; margin: 0 0 18px; padding: 20px 16px; background: #eef2ed; border-radius: 12px; }
+.studio-benefit-values > div + div { border-left: 1px solid #d4ddd2; padding-left: 18px; }
+.studio-benefit-values dt { font-size: 12px; line-height: 1.5; color: #46614d; }
+.studio-benefit-values dd { font-size: 20px; font-weight: 550; line-height: 1.5; margin: 10px 0; overflow-wrap: anywhere; }
+.studio-benefit-values dd.is-number { font-size: 32px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.studio-benefit-values small { display: block; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.screen .studio-benefit .studio-benefit-note { font-size: 12px; padding: 0 0 16px; }
+.studio-benefit summary { font-size: 14px; min-height: 48px; padding: 14px 0; cursor: pointer; }
+.studio-benefit-facts, .studio-benefit-rules { border-bottom: 1px solid var(--line); }
+.studio-benefit-rules[open] { padding-bottom: 14px; }
+.studio-benefit-links { display: flex; gap: 12px; justify-content: space-between; }
+.studio-benefit-link { border: 0; background: transparent; color: #46614d; font-size: 13px; min-width: 44px; min-height: 44px; padding: 10px 0; }
+.studio-benefit .studio-detail-footer { grid-template-columns: minmax(0,1fr); gap: 8px; }
+.studio-benefit .studio-detail-footer > button { min-height: 48px; font-size: 16px; }
+.studio-benefit .studio-detail-footer > p { margin: 0; font-size: 12px; color: #805020; }
+.studio-benefit-detail-list { margin: 8px 0 16px; }
+.studio-benefit-detail-list > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; font-size: 13px; line-height: 1.6; border-bottom: 1px solid var(--line); }
+.studio-benefit-detail-list dt { color: var(--muted); }
+.studio-benefit-detail-list dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.studio-benefit-modal { max-height: 85dvh; overflow-y: auto; }
+.studio-benefit-modal > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.studio-benefit-modal h2 { font-size: 20px; margin: 0; line-height: 1.5; }
+.studio-benefit-modal p { font-size: 14px; line-height: 1.6; color: var(--muted); }
+.studio-benefit-modal > .secondary { width: 100%; min-height: 48px; }
+@media(max-height:640px) { .device-shell:has(.screen[data-page="STU-13"]) { min-height: 0; } .studio-benefit-state { padding-top: 16px; } }

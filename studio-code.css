@@ -1,0 +1,24 @@
+.screen[data-page="STU-01"]{padding:0;overflow:hidden;min-height:0}
+.studio-code .studio-detail-header{grid-template-columns:44px minmax(0,1fr) 44px}
+.screen .studio-code .studio-detail-header h1{font-size:20px;margin:0;text-align:center;line-height:1.5}
+.studio-code-symbol{width:64px;height:64px;border-radius:20px;background:#edf2ed;color:#48604e;display:grid;place-items:center;margin:30px 0 22px}
+.studio-code-symbol svg{width:32px;height:32px}
+.studio-code:has(.studio-code-result) .studio-code-symbol{display:none}
+.studio-code:has(.studio-code-result) .studio-detail-header{margin-bottom:24px}
+.screen .studio-code h2{font-size:25px;line-height:1.4;margin:0 0 14px}
+.screen .studio-code p{font-size:13px;color:var(--muted);line-height:1.8;margin:10px 0}
+.studio-code form{display:grid;gap:12px;margin:26px 0 10px}
+.studio-code form label{font-size:13px;font-weight:500}
+.studio-code input{width:100%;min-height:54px;padding:14px;border:1px solid #c7d2c9;border-radius:10px;background:white;color:var(--ink);font-size:16px;box-sizing:border-box}
+.studio-code form button,.studio-code-scan{min-height:48px;width:100%;font-size:14px}
+.studio-code-scan{display:flex;gap:8px;justify-content:center;align-items:center}.studio-code-scan svg{width:18px;height:18px}
+.studio-code-info{margin:24px 0 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.studio-code-info summary{padding:18px 0;font-size:13px;min-height:48px;cursor:pointer}.studio-code-info[open]{padding-bottom:16px}
+.studio-code-info button{width:100%;min-height:44px}
+.studio-code-result{padding:18px;background:#edf2ed;border:1px solid #dce5dc;border-radius:16px;margin:22px 0}
+.studio-code-result>span{font-size:12px;color:#48604e}.screen .studio-code-result h3{font-size:18px;line-height:1.5;margin:12px 0}
+.studio-code-result button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin-top:16px;font-size:14px}.studio-code-result svg{width:14px;height:14px}
+.studio-code .studio-detail-footer{grid-template-columns:1fr;gap:8px}.studio-code .studio-detail-footer button{min-height:48px;font-size:14px}
+.screen .studio-code-feedback{font-size:12px;color:#805020;margin:0;line-height:1.7}.studio-code-feedback:empty{display:none}
+.studio-code-empty{margin:24px 0}.studio-code-empty h3{font-size:20px;line-height:1.5}.studio-code-empty button{min-height:48px;width:100%}
+@media(max-height:640px){.device-shell:has(.screen[data-page="STU-01"]){min-height:0}}

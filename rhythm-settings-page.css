@@ -1,0 +1,50 @@
+#screen[data-page="RHY-04"] { padding:0; overflow:hidden; }
+.rhythm-settings-page { height:100%; display:flex; flex-direction:column; min-height:0; color:#292522; }
+.rh-settings-scroll { overflow-y:auto; flex:1; min-height:0; padding:16px 20px 22px; overscroll-behavior:contain; }
+.rh-settings-header { margin-bottom:25px; }
+.rh-settings-header button { border:0; background:transparent; border-radius:8px; color:#67564a; min-height:44px; padding:0 7px 0 0; font-size:13px; }
+.rh-settings-header h1 { margin:10px 0 0; font-size:27px; line-height:1.4; letter-spacing:-.6px; }
+.rh-settings-mode h2,.rh-settings-cycle h2,.rh-settings-reminder h2 { font-size:15px; line-height:1.5; margin:0 0 12px; }
+.rh-settings-mode>div { display:grid; gap:10px; }
+.rh-settings-mode button { display:flex; justify-content:space-between; gap:12px; width:100%; text-align:left; padding:15px; min-height:74px; border:1px solid #ded5ce; border-radius:14px; background:#fff; color:#4e4035; }
+.rh-settings-mode button[aria-pressed="true"] { background:#eee3d8; border-color:#a78a73; box-shadow:inset 0 0 0 1px #a78a73; }
+.rh-settings-mode strong { font-size:15px; font-weight:600; }
+.rh-settings-mode small { display:block; font-size:12px; color:#7d6b5d; margin-top:6px; }
+.rh-settings-mode i { font-style:normal; align-self:center; font-size:16px; }
+.rh-settings-preserve,.rh-settings-note { font-size:12px; line-height:1.8; color:#7d6b5d; margin:16px 0; }
+.rh-settings-cycle { margin-top:25px; }
+.rh-settings-cycle>p { font-size:12px; line-height:1.7; color:#7d6b5d; margin:-4px 0 16px; }
+.rh-settings-field { display:block; min-width:0; font-size:12px; color:#5f4d3f; }
+.rh-settings-field>span { display:block; margin:0 0 9px; }
+.rh-settings-field input { box-sizing:border-box; width:100%; min-width:0; min-height:48px; border:1px solid #d9cfc6; border-radius:11px; background:#fff; color:#3e342c; padding:10px; font-family:inherit; font-size:16px; }
+.rh-settings-field input[aria-invalid="true"] { border-color:#a94f3b; }
+.rh-settings-number-fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.rh-settings-field-error { display:block; font-size:11px; color:#9e3b25; line-height:1.6; margin-top:6px; }
+.rh-settings-field-error:empty { display:none; }
+.rh-settings-reminder { display:flex; align-items:center; justify-content:space-between; gap:14px; border-top:1px solid #e2d7cf; padding:20px 0 13px; margin-top:23px; }
+.rh-settings-reminder h2 { margin:0 0 5px; }
+.rh-settings-reminder p { margin:0; font-size:12px; line-height:1.7; color:#7d6b5d; }
+.rh-settings-reminder [role="switch"] { display:flex; align-items:center; flex:0 0 52px; min-height:44px; border:0; background:transparent; padding:6px 0; position:relative; }
+.rh-settings-reminder [role="switch"]::before { content:""; height:28px; width:50px; border-radius:18px; background:#cbc8c2; }
+.rh-settings-reminder [role="switch"]>i { position:absolute; top:11px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 2px #0002; }
+.rh-settings-reminder [role="switch"][aria-checked="true"]::before { background:#806047; }
+.rh-settings-reminder [role="switch"][aria-checked="true"]>i { left:25px; }
+.rh-settings-link { display:flex; justify-content:space-between; align-items:center; min-height:52px; padding:12px 0; width:100%; border:0; border-bottom:1px solid #e2d7cf; background:transparent; color:#66503d; font-size:13px; }
+.rh-settings-link>span { font-size:20px; }
+.rh-settings-note { font-size:11px; }
+.rh-settings-paused { border-left:3px solid #a78a73; background:#efe9e1; margin:20px 0; padding:12px 15px; border-radius:3px 12px 12px 3px; }
+.rh-settings-paused strong { font-size:13px; }
+.rh-settings-paused p { font-size:12px; color:#7d6b5d; line-height:1.7; margin:7px 0 0; }
+.rh-settings-paused button { min-height:44px; border:0; background:transparent; color:#785434; padding:6px 0; font-size:13px; }
+.rh-settings-footer { flex-shrink:0; border-top:1px solid #e2d7cf; padding:12px 20px 10px; background:#f8f6f3; }
+.rh-settings-footer .primary,.rh-settings-blocked .primary { width:100%; min-height:48px; background:#403831; color:white; border:0; font-size:15px; }
+.rh-settings-footer .primary:disabled { background:#ded9d3; color:#877c72; opacity:1; }
+.rh-settings-feedback { margin:0 0 8px; font-size:12px; color:#85563d; line-height:1.7; }
+.rh-settings-feedback:empty { display:none; }
+.rh-settings-discard { width:100%; min-height:44px; border:0; background:transparent; color:#795a41; font-size:12px; margin:0 0 6px; }
+.rh-settings-hint { font-size:11px; line-height:1.6; color:#7d6b5d; text-align:center; margin:8px 0 0; }
+.rh-settings-blocked p { font-size:14px; color:#7d6b5d; line-height:1.8; }
+.rh-settings-blocked .secondary { width:100%; min-height:44px; margin-top:12px; }
+.rhythm-settings-page :is(button,input):focus-visible { outline:2px solid #8d642f; outline-offset:2px; }
+.device-shell:has(#screen[data-page="RHY-04"]) { min-height:0; }
+@media(max-width:350px) { .rh-settings-scroll { padding:12px 16px 20px; } .rh-settings-header h1 { font-size:25px; } .rh-settings-footer { padding:10px 16px; } .rh-settings-number-fields { gap:8px; } }

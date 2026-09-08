@@ -1,0 +1,25 @@
+.channel-home-page { display:grid; gap:14px; }
+.home-metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.home-metric { min-width:0; text-align:left; padding:16px; border:1px solid var(--line); border-radius:15px; background:var(--paper); }
+.home-metric span { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+.home-metric i,.home-entry i { font-style:normal; color:var(--muted); }
+.home-metric strong { display:block; font-size:22px; margin-top:10px; font-weight:600; overflow-wrap:anywhere; }
+.home-metric-main { grid-column:1/-1; background:#edf2ed; border-color:#dce5dd; }
+.home-metric-main strong { font-size:34px; letter-spacing:-1px; }
+.home-metric-main small { display:block; margin-top:8px; font-size:11px; color:var(--muted); }
+.home-data-note { margin:-5px 2px 0; font-size:11px; color:var(--muted); }
+.home-notice { padding:14px 16px; background:#f3eee5; border-radius:14px; }
+.home-notice h2 { font-family:inherit; font-size:15px; margin:0 0 6px; }
+.home-notice p,.home-explainer,.home-notice { font-size:12px; line-height:1.7; }
+.home-notice p { margin:0; color:var(--muted); }
+.home-explainer { margin:0 2px; color:var(--muted); }
+.home-entries { background:var(--paper); border:1px solid var(--line); border-radius:15px; overflow:hidden; }
+.home-entry { width:100%; display:flex; gap:12px; align-items:center; padding:14px; min-height:72px; background:none; border:0; text-align:left; }
+.home-entry + .home-entry { border-top:1px solid var(--line); }
+.home-entry strong { display:block; font-size:14px; }
+.home-entry small { display:block; margin-top:4px; font-size:11px; color:var(--muted); line-height:1.5; }
+.home-entry-icon { display:grid; place-items:center; width:30px; height:30px; flex:none; border-radius:9px; color:#526c58; background:#edf2ed; }
+.home-entry i { margin-left:auto; }
+.channel-home-page .home-help { min-height:44px; font-size:12px; }
+.channel-home-page .button-row { margin:0; }
+.channel-home-page button:focus-visible { outline:2px solid #79552b; outline-offset:-3px; }

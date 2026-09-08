@@ -1,0 +1,36 @@
+/* SYS-01 uses the approved welcome-page brand lockup, without user route selectors. */
+.device-shell:has(.screen[data-page="SYS-01"]) { grid-template-rows: 34px minmax(0, 1fr) 0; min-height: 0; }
+.screen[data-page="SYS-01"] { padding: 28px 28px max(40px, env(safe-area-inset-bottom)); scroll-padding-bottom: 24px; }
+.startup-page { min-height: 100%; display: grid; grid-template-rows: minmax(240px, 1fr) minmax(152px, auto); gap: 24px; text-align: center; }
+.startup-brand { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 32px; padding: 32px 0 48px; }
+.startup-brand img { display: block; max-width: 100%; object-fit: contain; }
+.startup-footer { display: flex; flex-direction: column; justify-content: flex-end; }
+.startup-loading { min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.startup-spinner { width: 20px; height: 20px; border: 1.5px solid #d7d3cd; border-top-color: var(--brand-brown); border-radius: 50%; animation: startup-turn 1s linear infinite; }
+.screen .startup-loading p { margin: 0; color: var(--muted); font-size: 13px; }
+.screen .startup-feedback h1 { margin: 0; font-size: 22px; line-height: 1.4; font-weight: 650; }
+.screen .startup-feedback p { margin: 12px 0 24px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.startup-feedback button, .startup-cache footer button { width: 100%; min-height: 52px; border-radius: 12px; font-size: 16px; }
+.startup-feedback button + button, .startup-cache footer button + button { margin-top: 12px; }
+.startup-feedback button:active, .startup-cache button:active { transform: translateY(1px); }
+.startup-cache { min-height: 100%; display: flex; flex-direction: column; }
+.startup-cache header { margin-top: 32px; }
+.startup-cache header span { color: var(--brand-brown); font-size: 12px; }
+.screen .startup-cache h1 { margin: 16px 0 0; font-size: 26px; line-height: 1.4; }
+.screen .startup-cache > p { margin: 14px 0 24px; color: var(--muted); font-size: 14px; }
+.startup-records { flex: 1; }
+.startup-records article { padding: 18px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.startup-records small { color: var(--muted); font-size: 11px; }
+.screen .startup-records h2 { margin: 10px 0 8px; font-size: 17px; }
+.screen .startup-records p { margin: 0; white-space: pre-wrap; font-size: 14px; }
+.startup-cache footer { margin-top: 28px; }
+@keyframes startup-turn { to { transform: rotate(360deg); } }
+.reduce-motion .startup-spinner { animation: none; }
+@media (prefers-reduced-motion: reduce) { .startup-spinner { animation: none; } }
+@media (max-width: 380px) {
+  .screen[data-page="SYS-01"] { padding: 20px 20px max(28px, env(safe-area-inset-bottom)); }
+}
+@media (max-height: 650px) {
+  .startup-page { grid-template-rows: minmax(200px, 1fr) auto; }
+  .startup-brand { padding: 16px 0 28px; gap: 24px; }
+}

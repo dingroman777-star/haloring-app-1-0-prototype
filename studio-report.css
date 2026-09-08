@@ -1,0 +1,21 @@
+.screen[data-page="STU-12"] { padding: 0; overflow: hidden; min-height: 0; }
+.studio-report .studio-detail-header { grid-template-columns: 44px minmax(0,1fr) 44px; margin-bottom: 12px; }
+.screen .studio-report .studio-detail-header h1 { margin: 0; font-size: 20px; font-weight: 650; line-height: 1.4; text-align: center; }
+.studio-report-event { padding: 4px 0 18px; border-bottom: 1px solid var(--line); }
+.studio-report-event > img { width: 64px; height: 64px; flex-basis: 64px; }
+.screen .studio-report p { font-size: 14px; line-height: 1.7; color: var(--muted); margin: 8px 0 0; text-wrap: pretty; }
+.studio-report-state { padding: 32px 0 24px; text-align: center; }
+.studio-report-state > svg { width: 48px; height: 48px; color: #46614d; margin: 0 auto 16px; }
+.screen .studio-report-state > h2 { font-size: 24px; line-height: 1.5; font-weight: 600; margin: 0 0 12px; }
+.screen .studio-report-state > .studio-report-saved { margin-bottom: 16px; }
+.studio-report-state > .primary { width: 100%; min-height: 48px; font-size: 16px; margin-top: 24px; }
+.studio-report-state > .primary:disabled { opacity: 1; background: var(--line); border-color: var(--line); color: var(--muted); }
+.studio-report-links { border-top: 1px solid var(--line); }
+.studio-report-links > button { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 54px; padding: 14px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 15px; text-align: left; }
+.studio-report-links svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.studio-report .studio-detail-footer { grid-template-columns: minmax(0,1fr); border-top: 0; }
+.studio-report .studio-detail-footer > button { min-height: 48px; font-size: 16px; }
+.screen .studio-report .studio-report-updated { font-size: 12px; margin-top: 12px; }
+.screen .studio-report .studio-report-error { color: #805020; text-align: left; padding-top: 8px; }
+.studio-report-link { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: var(--brand-brown); font-size: 14px; }
+@media (max-height: 640px) { .device-shell:has(.screen[data-page="STU-12"]) { min-height: 0; } .studio-report-state { padding-block: 24px; } }

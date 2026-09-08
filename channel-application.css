@@ -1,0 +1,20 @@
+.channel-application-page { display: grid; gap: 12px; }
+.channel-application-page .application-intro { margin: 0; color: var(--muted, #66706a); font-size: 14px; line-height: 1.6; }
+.channel-application-page .field-label { margin: 0; gap: 6px; }
+.channel-application-page .field { width: 100%; min-height: 48px; box-sizing: border-box; }
+.channel-application-page [hidden] { display: none !important; }
+.channel-application-page .check-line { display: flex; gap: 8px; margin: 0; min-height: 44px; align-items: flex-start; font-size: 13px; line-height: 1.65; }
+.channel-application-page .check-line input { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 1px; }
+.channel-application-page .application-declaration { margin: 0; }
+.channel-application-page .application-declaration summary { min-height: 44px; box-sizing: border-box; font-size: 13px; }
+.channel-application-page .application-declaration p { font-size: 13px; line-height: 1.7; }
+.channel-application-page .application-save-status,
+.channel-application-page .application-hint { margin: 0; color: var(--muted, #66706a); font-size: 12px; line-height: 1.6; }
+.channel-application-page .application-save-status { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.channel-application-page .application-save-status.is-error { color: #8a4217; }
+.channel-application-page .application-save-status button { min-height: 44px; padding: 0 4px; text-decoration: underline; }
+.channel-application-page .button-row { margin: 0; }
+.channel-application-page .application-hint:empty { display: none; }
+.channel-application-page input:focus-visible,
+.channel-application-page select:focus-visible,
+.channel-application-page summary:focus-visible { outline: 2px solid #8a592d; outline-offset: 3px; }

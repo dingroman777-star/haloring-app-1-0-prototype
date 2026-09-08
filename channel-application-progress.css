@@ -1,0 +1,24 @@
+.application-review { display: grid; gap: 14px; }
+.application-review-status { padding: 18px; border-radius: 17px; background: #f3eee5; }
+.application-review-symbol { display: grid; place-items: center; width: 36px; height: 36px; margin-bottom: 10px; border: 1px solid #b69870; border-radius: 50%; color: #79552b; font-size: 23px; }
+.application-review-status h2 { margin: 0 0 8px; font-family: inherit; font-size: 20px; line-height: 1.5; }
+.application-review-status p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.75; }
+.application-review-steps { display: grid; grid-template-columns: repeat(3,1fr); list-style: none; margin: 0; padding: 5px 0; }
+.application-review-steps li { display: grid; gap: 8px; justify-items: center; font-size: 12px; color: var(--muted); position: relative; }
+.application-review-steps li span { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; background: var(--paper); border: 1px solid var(--line); z-index: 1; }
+.application-review-steps li:not(:last-child)::after { content: ""; position: absolute; top: 12px; left: 60%; width: 80%; height: 1px; background: var(--line); }
+.application-review-steps .done span { background: #eaf0eb; color: #43624e; border-color: #d2dfd4; }
+.application-review-steps .current { color: #775329; font-weight: 650; }
+.application-review-steps .current span { border-color: #a18055; background: #f8f2e6; }
+.application-review-facts { margin: 0; padding: 0 15px; background: var(--paper); border: 1px solid var(--line); border-radius: 15px; }
+.application-review-facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.6; }
+.application-review-facts > div:last-child { border-bottom: 0; }
+.application-review-facts dt { color: var(--muted); flex: none; }
+.application-review-facts dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
+.application-query-note { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.application-query-note:empty { display: none; }
+.application-query-note p { margin: 0; }
+.application-query-note small { display: block; margin-top: 5px; font-size: 11px; }
+.application-review .button-row { margin: 0; }
+.application-review-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.application-review-links .text-button { width: auto; flex: 0 1 auto; min-height: 44px; font-size: 12px; padding: 8px 0; }

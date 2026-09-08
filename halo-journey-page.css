@@ -1,0 +1,33 @@
+.screen[data-page="HAL-06"]{padding:0 20px;overflow:hidden}
+.hj-page{height:100%;min-height:0;display:flex;flex-direction:column}
+.hj-header{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;min-height:60px;gap:8px}
+.hj-header>button{border:0;background:transparent;color:var(--ink);min-height:44px;padding:0;font-size:27px}.hj-header .hj-more{font-size:12px;color:var(--muted)}
+.screen .hj-header h1{font-size:20px;margin:0;line-height:1.5;text-align:center}
+.hj-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding-bottom:16px}
+.hj-themes{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#eceee9;border-radius:12px;margin:14px 0 24px}
+.hj-themes button{min-height:44px;padding:8px 4px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:12px}
+.hj-themes button[aria-pressed="true"]{background:var(--paper);box-shadow:0 1px 4px #18231a12;color:var(--ink);font-weight:600}
+.hj-status{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted)}.hj-status strong{font-size:24px;color:var(--ink);font-weight:550}
+.hj-dots{display:flex;gap:8px;margin:18px 0 14px}.hj-dots span{flex:1;aspect-ratio:1;display:grid;place-items:center;max-height:38px;border:1px solid var(--line);border-radius:50%;font-size:11px;color:var(--muted)}
+.hj-dots .done{border-color:var(--sage);background:#e4ece3;color:#335043}
+.screen .hj-summary{font-size:12px;color:var(--muted);line-height:1.7;margin:0 0 24px}
+.hj-task{padding:19px 17px;background:#edf0e9;border-radius:16px}
+.hj-task-top{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted);margin-bottom:12px}
+.screen .hj-task h2{margin:0;font-size:22px;line-height:1.45;font-weight:550;overflow-wrap:anywhere}
+.screen .hj-task p{font-size:14px;line-height:1.8;margin:12px 0 0;color:#546156}
+.hj-text{border:0;background:transparent;color:var(--gold);font-size:12px;min-height:44px;padding:10px 0;text-align:left}
+.hj-task .hj-text{margin-top:10px}.hj-task .hj-text:disabled{color:var(--muted);cursor:default}
+.hj-note,.hj-history{margin-top:16px;border-bottom:1px solid var(--line)}
+.hj-note summary,.hj-history summary{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-size:13px}
+.hj-note summary span,.hj-history summary span{font-size:11px;color:var(--muted)}
+.hj-note textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:12px;resize:vertical;color:var(--ink);font:inherit;font-size:14px}
+.screen .hj-note p,.screen .hj-history p{font-size:12px;line-height:1.7;color:var(--muted)}
+.screen .hj-feedback{font-size:12px;color:var(--sage);line-height:1.7;margin:12px 0}.hj-feedback:empty{display:none}
+.hj-feedback[data-error="true"],.hj-modal-feedback[data-error="true"]{color:var(--danger)}
+.hj-run{padding:12px 0}.screen .hj-run h3{font-size:13px;margin:0 0 10px}.hj-run article{padding:12px 0;border-top:1px solid var(--line)}.hj-run time{display:block;font-size:11px;color:var(--muted);margin-bottom:6px}.hj-run strong{font-size:13px;line-height:1.7;font-weight:500}.hj-run p{white-space:pre-wrap;overflow-wrap:anywhere}
+.hj-actions{flex-shrink:0;padding:10px 0 8px;background:var(--bg);border-top:1px solid var(--line)}.screen .hj-actions p{font-size:11px;margin:0 0 10px;text-align:center;line-height:1.6;color:var(--muted)}
+.hj-actions button{width:100%;min-height:44px;border-radius:12px}.hj-actions>.hj-text{text-align:center;margin-top:4px}.hj-actions .primary:disabled{background:#e3e7e0;border-color:#e3e7e0;color:#768175;cursor:default}
+.hj-modal{max-height:calc(100dvh - 40px);overflow:auto;padding:24px;border-radius:18px}.hj-modal h2{font-size:21px;line-height:1.5;margin:0 0 14px}.hj-modal p{font-size:13px;color:var(--muted);line-height:1.8}
+.hj-modal-actions{display:grid;gap:9px;margin-top:18px}.hj-modal-actions button{min-height:44px;border-radius:10px;font-size:13px}.hj-danger{border:1px solid #e5c8c1;color:var(--danger);background:transparent}
+.hj-page :is(button,textarea,summary):focus-visible,.hj-modal button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(max-width:360px),(max-height:650px){.screen[data-page="HAL-06"]{padding-inline:16px}.hj-header{min-height:52px}.hj-themes{margin:8px 0 18px}.hj-dots{gap:7px}.screen .hj-task h2{font-size:20px}.hj-task{padding:16px}.hj-modal{padding:20px}}

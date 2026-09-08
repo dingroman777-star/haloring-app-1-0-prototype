@@ -1,0 +1,61 @@
+.channel-training { display: grid; gap: 14px; }
+.channel-training .training-guidance { margin: -2px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.channel-training .training-course-list { display: grid; gap: 10px; }
+.channel-training .training-course { display: grid; grid-template-columns: 34px minmax(0,1fr) 14px; gap: 12px; align-items: center; width: 100%; min-height: 82px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); text-align: left; color: var(--ink); cursor: pointer; }
+.channel-training .training-course.is-next { border-color: #aa845b; background: #fbf8f3; }
+.channel-training .training-course-number { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #f0f2ed; color: #76512d; font-size: 13px; }
+.channel-training .is-complete .training-course-number { background: #eaf0eb; color: #43624e; }
+.channel-training .training-course-copy { display: grid; gap: 6px; min-width: 0; }
+.channel-training .training-course-copy strong { font-size: 14px; font-weight: 650; line-height: 1.45; }
+.channel-training .training-course-copy small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.channel-training .is-next .training-course-copy small { color: #80552c; }
+.channel-training .training-course-arrow { color: #71776e; font-size: 20px; }
+.channel-training .training-course:hover { border-color: #9b8468; }
+.channel-training .training-course:active { background: #f0ede6; }
+.channel-training .button-row { margin: 0; }
+
+.channel-lesson { display: grid; gap: 20px; }
+.channel-lesson .lesson-position { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.channel-lesson .lesson-position .is-complete { color: #43624e; }
+.channel-lesson h2 { margin: 0 0 12px; font-family: inherit; font-size: 14px; line-height: 1.5; }
+.channel-lesson .lesson-reading ul { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.channel-lesson .lesson-reading li { position: relative; padding-left: 16px; color: var(--ink); font-size: 15px; line-height: 1.85; }
+.channel-lesson .lesson-reading li::before { position: absolute; left: 0; top: .77em; width: 4px; height: 4px; border-radius: 50%; background: var(--brand-brown); content: ""; }
+.channel-lesson .lesson-takeaway { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 10px; padding: 17px; border-radius: 14px; background: #eaf0eb; color: #35523f; }
+.channel-lesson .lesson-takeaway > span { font-size: 20px; line-height: 1.2; }
+.channel-lesson .lesson-takeaway h2 { margin-bottom: 7px; }
+.channel-lesson .lesson-takeaway p { margin: 0; font-size: 14px; line-height: 1.75; }
+.channel-lesson .lesson-actions { display: grid; gap: 12px; }
+.channel-lesson .lesson-next-hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.channel-lesson .button-row { margin: 0; }
+#screen[data-page="CHN-09"] .screen-head h1 { font-family: inherit; font-size: 25px; line-height: 1.45; overflow-wrap: anywhere; }
+#screen[data-page="CHN-09"] .screen-head h1:focus { outline: none; }
+
+.channel-assessment { display: grid; gap: 16px; }
+.channel-assessment .assessment-overview { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; }
+.channel-assessment .assessment-overview strong { color: var(--ink); font-size: 14px; }
+.channel-assessment .assessment-question { min-width: 0; margin: 0; padding: 12px 15px 15px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); }
+.channel-assessment .assessment-question legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.channel-assessment .assessment-question-heading { display: grid; gap: 7px; font-size: 14px; line-height: 1.6; font-weight: 650; }
+.channel-assessment .assessment-question-heading small { color: var(--muted); font-size: 11px; font-weight: 500; }
+.channel-assessment .assessment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.channel-assessment .assessment-option { display: flex; gap: 10px; align-items: center; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); cursor: pointer; font-size: 14px; }
+.channel-assessment .assessment-option input { accent-color: var(--brand-brown); width: 17px; height: 17px; margin: 0; flex: none; }
+.channel-assessment .assessment-option.is-selected { border-color: #987044; background: #faf5ec; }
+.channel-assessment .assessment-option:focus-within { outline: 2px solid var(--brand-brown); outline-offset: 2px; }
+.channel-assessment .assessment-question.is-wrong { border-color: #a97842; }
+.channel-assessment .assessment-explanation { display: grid; gap: 5px; margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.channel-assessment .assessment-explanation strong { color: #43624e; font-weight: 600; }
+.channel-assessment .is-wrong .assessment-explanation strong { color: #815323; }
+.channel-assessment .assessment-result { padding: 15px; border-radius: 13px; background: #faf0e0; color: #715026; }
+.channel-assessment .assessment-result.is-passed { background: #eaf0eb; color: #35523f; }
+.channel-assessment .assessment-result strong { font-size: 15px; }
+.channel-assessment .assessment-result p { margin: 7px 0 0; font-size: 13px; line-height: 1.7; }
+.channel-assessment .assessment-result:focus { outline: none; }
+.channel-assessment .assessment-actions { display: grid; gap: 9px; }
+.channel-assessment .assessment-action-hint { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.channel-assessment .button-row { margin: 0; }
+.channel-assessment .assessment-review { min-width: 0; }
+.channel-assessment .assessment-review summary { min-height: 48px; padding: 13px 0; cursor: pointer; color: var(--ink); font-size: 14px; border-block: 1px solid var(--line); }
+.channel-assessment .assessment-review summary span { float: right; color: var(--muted); font-size: 12px; }
+.channel-assessment .assessment-review > div { display: grid; gap: 14px; margin-top: 14px; }

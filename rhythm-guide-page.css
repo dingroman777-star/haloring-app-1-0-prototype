@@ -1,0 +1,36 @@
+.rhythm-guide-page { color:#292522; padding-bottom:18px; }
+.rh-guide-header { margin-bottom:22px; }
+.rh-guide-header .back { min-height:44px; padding:0 6px 0 0; font-size:13px; color:#67564a; border:0; border-radius:8px; background:transparent; }
+.rh-guide-header h1 { font-size:27px; letter-spacing:-.6px; line-height:1.35; margin:8px 0 10px; }
+.rh-guide-header>p { font-size:13px; line-height:1.8; color:#75665c; margin:0; }
+.rh-guide-record { padding:19px; border:1px solid #e0d4ca; border-radius:17px; background:#eee6e0; }
+.rh-guide-date { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; color:#705d4f; font-size:12px; }
+.rh-guide-record h2 { font-size:22px; line-height:1.4; margin:16px 0 8px; }
+.rh-guide-record p { font-size:13px; line-height:1.8; margin:8px 0 16px; color:#67564a; overflow-wrap:anywhere; }
+.rh-guide-record .primary { width:100%; min-height:46px; margin-top:10px; background:#403831; color:white; border:0; font-size:14px; }
+.rh-guide-record>small { display:block; text-align:center; font-size:11px; line-height:1.6; margin-top:9px; color:#715f52; }
+.rh-guide-note { margin:0; border:0; background:transparent; padding:0; }
+.rh-guide-note summary { min-height:44px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; font-size:13px; color:#684c38; padding:0; }
+.rh-guide-note summary::after,.rh-guide-boundary summary::after { content:"＋"; margin-left:12px; flex-shrink:0; }
+.rh-guide-note[open] summary::after,.rh-guide-boundary[open] summary::after { content:"−"; }
+.rh-guide-note p { white-space:pre-wrap; overflow-wrap:anywhere; }
+.rh-guide-mode { font-size:12px; line-height:1.8; color:#715f52; padding:0 4px; margin:15px 0 0; }
+.rh-guide-method { margin:24px 0 12px; }
+.rh-guide-method>h2 { font-size:15px; margin:0 0 6px; }
+.rh-guide-step { display:flex; align-items:flex-start; gap:13px; padding:15px 0; border-bottom:1px solid #e7ded7; }
+.rh-guide-icon { display:flex; align-items:center; justify-content:center; width:34px; height:34px; flex:0 0 34px; border-radius:50%; color:#81644e; background:#eee7df; }
+.rh-guide-icon svg { width:19px; height:19px; }
+.rh-guide-step h3 { font-size:14px; line-height:1.5; margin:0 0 5px; }
+.rh-guide-step p { font-size:13px; line-height:1.75; color:#75665c; margin:0; }
+.rh-guide-boundary { background:transparent; border:0; border-bottom:1px solid #e0d6ce; border-radius:0; padding:0; margin:0; }
+.rh-guide-boundary summary { display:flex; align-items:center; justify-content:space-between; min-height:52px; font-size:13px; cursor:pointer; padding:8px 0; color:#59483c; }
+.rh-guide-boundary p { margin:0 0 14px; font-size:13px; line-height:1.8; color:#75665c; }
+.rh-guide-calendar { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:52px; border:0; background:transparent; color:#72553e; font-size:13px; padding:10px 0; }
+.rh-guide-feedback { color:#9e3b25; font-size:12px; line-height:1.7; }
+.rh-guide-feedback:empty { display:none; }
+.rhythm-guide-page :is(button,summary):focus-visible { outline:2px solid #8d642f; outline-offset:3px; }
+.rhythm-guide-page summary { list-style:none; }
+.rhythm-guide-page summary::-webkit-details-marker { display:none; }
+.device-shell:has(#screen[data-page="RHY-02"]) { min-height:0; }
+#screen[data-page="RHY-06"] .notice p { white-space:pre-wrap; overflow-wrap:anywhere; }
+@media(max-width:350px) { .rh-guide-record { padding:16px; } .rh-guide-header h1 { font-size:25px; } .rh-guide-step { gap:10px; } }

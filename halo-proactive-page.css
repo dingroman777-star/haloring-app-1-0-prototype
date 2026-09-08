@@ -1,0 +1,19 @@
+.screen[data-page="HAL-04"] { padding: 0 20px 28px; }
+.hp-page { min-width: 0; }
+.screen .hp-intro { margin: 7px 0 20px; font-size: 14px; color: var(--muted); text-align: center; line-height: 1.7; }
+.hp-page .ns-header > button { font-size: 29px; }
+.hp-page .hp-options { margin-top: 12px; }
+.hp-inactive strong { color: var(--muted); }
+.hp-quiet { margin-top: 26px; padding: 16px; border-radius: 12px; background: #eeefeb; }
+.hp-quiet-button { display: flex; justify-content: space-between; gap: 8px; align-items: center; width: 100%; min-height: 60px; border: 0; background: transparent; padding: 0; text-align: left; }
+.hp-quiet-button small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+.hp-quiet-button strong { display: block; color: var(--ink); font-size: 20px; font-weight: 550; font-variant-numeric: tabular-nums; line-height: 1.5; }
+.hp-adjust { color: var(--gold); font-size: 12px; flex-shrink: 0; }
+.screen .hp-quiet p { margin: 10px 0 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.hp-boundary { margin-top: 17px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.hp-boundary summary { min-height: 44px; padding-block: 10px; cursor: pointer; }
+.screen .hp-boundary p { margin: 4px 0 10px; font-size: 12px; }
+.hp-boundary button { min-height: 44px; padding: 8px 0; border: 0; background: transparent; color: var(--gold); text-align: left; }
+.hp-editor { width: min(420px,calc(100vw - 32px)); }
+.hp-editor-feedback { min-height: 22px; }
+@media(max-width:360px) { .screen[data-page="HAL-04"] {padding-inline:16px;} .hp-quiet {padding:12px;} .hp-quiet-button strong {font-size:18px;} }

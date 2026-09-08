@@ -1,0 +1,50 @@
+/* ACC-03: clear consequences, readable assets and a reversible confirmation step. */
+.screen[data-page="ACC-03"] { padding: 0 20px 28px; }
+.device-shell:has(.screen[data-page="ACC-03"]) { grid-template-rows: 34px minmax(0,1fr) 0; }
+.device-shell:has(.screen[data-page="ACC-03"]) > .tabbar { display: none; }
+.ad-page { min-width: 0; color: var(--ink); }
+.ad-header { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; min-height: 60px; margin: 0 -8px 20px; }
+.ad-header > button { width: 44px; min-height: 44px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 22px; }
+.screen .ad-header h1 { margin: 0; font-size: 21px; line-height: 1.4; font-weight: 650; text-align: center; }
+.screen .ad-intro h2, .screen .ad-result h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; line-height: 1.55; }
+.screen .ad-intro p, .screen .ad-result p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.ad-intro { padding: 6px 0 20px; }
+.ad-assets { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.screen .ad-assets h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; line-height: 1.7; }
+.ad-assets dl { margin: 0; }
+.ad-assets dl > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,55%); gap: 12px; align-items: center; min-height: 42px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ad-assets dl > div:last-child { border: 0; }
+.ad-assets dt { color: var(--muted); font-size: 13px; line-height: 1.65; }
+.ad-assets dd { margin: 0; text-align: right; font-size: 14px; font-weight: 550; line-height: 1.65; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.screen .ad-assets > p { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.ad-notes { margin: 18px 0; }
+.ad-notes > details, .ad-details { border-bottom: 1px solid var(--line); }
+.ad-notes summary, .ad-details > summary { min-height: 48px; padding: 14px 2px; font-size: 14px; line-height: 1.6; cursor: pointer; }
+.ad-notes .text-button { min-height: 44px; padding: 8px 2px; line-height: 1.8; }
+.screen .ad-notes p, .screen .ad-details p, .screen .ad-impact p { margin: 0 0 14px; font-size: 13px; color: var(--muted); line-height: 1.85; }
+.screen .ad-impact h2 { margin: 18px 0 8px; font-size: 15px; line-height: 1.6; font-weight: 600; }
+.screen .ad-demo { margin: 14px 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.ad-actions, .ad-modal-actions { display: grid; gap: 10px; }
+.ad-actions { margin-top: 20px; }
+.ad-actions > button, .ad-modal-actions > button { min-height: 48px; width: 100%; font-size: 15px; }
+.screen .ad-actions > p { margin: 0 0 2px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.ad-actions > button:disabled, .ad-modal-actions > button:disabled { background: #e2e4df; border-color: #e2e4df; color: #666a63; cursor: not-allowed; }
+.ad-result { padding: 14px 0 24px; }
+.ad-result time, .ad-demo-badge { display: block; margin: 12px 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.ad-modal, .ad-confirm-modal { max-height: calc(100dvh - 24px); overflow-y: auto; }
+.ad-modal h2, .ad-confirm-modal h2 { margin: 0 0 16px; font-size: 22px; line-height: 1.45; font-weight: 600; }
+.ad-modal p, .ad-confirm-modal p { margin: 0 0 18px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+.ad-modal .ad-modal-error, .ad-confirm-modal .ad-confirm-error, .screen .ad-error { color: var(--danger); font-size: 13px; line-height: 1.8; }
+.ad-review-error { color: var(--danger); font-size: 13px; line-height: 1.8; }
+.ad-modal-error:empty, .ad-confirm-error:empty, .ad-error:empty { display: none; }
+.ad-modal-actions { margin-top: 20px; }
+.ad-page :is(button,summary):focus-visible, .ad-modal button:focus-visible, .ad-confirm-modal button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (hover:hover) { .ad-header > button:hover, .ad-notes summary:hover { background: #edeeeb; } }
+@media (max-width:360px), (max-height:650px) {
+  .screen[data-page="ACC-03"] { padding-inline: 16px; }
+  .ad-header { min-height: 52px; margin-bottom: 14px; }
+  .screen .ad-header h1 { font-size: 19px; }
+  .ad-assets { padding: 14px; }
+  .ad-assets dl > div { gap: 8px; }
+}
+@media (prefers-reduced-motion:reduce) { .ad-page *, .ad-page *::before, .ad-page *::after { animation: none; transition: none; scroll-behavior: auto; } }

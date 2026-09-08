@@ -1,0 +1,22 @@
+.withdrawal-page { display: grid; gap: 16px; }
+.withdrawal-summary { padding: 18px; border-radius: 17px; background: #f3eee5; }
+.withdrawal-summary > span { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 12px; border: 1px solid #b69c7b; border-radius: 50%; color: #79552b; font-size: 20px; }
+.withdrawal-summary h2 { margin: 0 0 8px; font-family: inherit; font-size: 20px; line-height: 1.4; }
+.withdrawal-summary p, .withdrawal-retained p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.7; }
+.withdrawal-summary.is-complete { background: #edf2ed; }
+.withdrawal-summary.is-complete > span { color: #345442; border-color: #79947d; }
+.withdrawal-facts { margin: 0; padding: 0 4px; }
+.withdrawal-facts > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; font-size: 12px; line-height: 1.6; }
+.withdrawal-facts dt { flex: none; color: var(--muted); }
+.withdrawal-facts dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
+.withdrawal-facts small { display: block; color: var(--muted); font-size: 10px; }
+.withdrawal-retained { display: flex; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); }
+.withdrawal-retained > span { color: #45654e; font-size: 18px; }
+.withdrawal-retained h3 { margin: 0 0 6px; font-size: 14px; }
+.withdrawal-footnote { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.7; }
+.withdrawal-page .button-row { margin: 0; }
+.withdrawal-page .withdrawal-danger { color: #914737; border-color: #c9a59b; background: transparent; }
+.withdrawal-page .withdrawal-details { min-height: 44px; padding: 8px; font-size: 12px; }
+.withdrawal-error { margin: 0; padding: 12px; border-radius: 10px; background: #f9eeea; color: #8b402e; font-size: 13px; line-height: 1.7; }
+.withdrawal-summary:focus, .withdrawal-error:focus { outline: none; }
+.withdrawal-page button:focus-visible { outline: 2px solid #79552b; outline-offset: 3px; }

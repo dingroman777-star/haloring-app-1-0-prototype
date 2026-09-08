@@ -1,0 +1,38 @@
+.activation-page { display: grid; gap: 16px; }
+.activation-overview { padding: 16px; border-radius: 16px; background: #edf2ed; }
+.activation-overview > div { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.activation-overview strong { font-size: 17px; }
+.activation-overview span { font-size: 11px; color: #45634d; }
+.activation-overview p, .activation-status p { font-size: 13px; line-height: 1.7; color: var(--muted); margin: 8px 0 0; }
+.activation-task-list { display: grid; gap: 10px; }
+.activation-task { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 16px 14px; min-height: 84px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); }
+.activation-task-icon { flex: 0 0 30px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #f3eee5; color: #775329; font-size: 12px; }
+.activation-task-icon.done { background: #eaf0eb; color: #43624e; }
+.activation-task strong { display: block; font-size: 15px; }
+.activation-task small { display: block; font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 5px; }
+.activation-task i { margin-left: auto; font-style: normal; color: var(--muted); }
+.activation-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 12px; line-height: 1.7; }
+.activation-check input { width: 18px; height: 18px; flex: none; accent-color: #171b18; }
+.activation-note { font-size: 11px; color: var(--muted); line-height: 1.7; margin: 0; }
+.activation-error { margin: 0; padding: 12px; border-radius: 10px; color: #8b402e; background: #f9eeea; font-size: 12px; line-height: 1.7; }
+.activation-document { padding: 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 15px; }
+.activation-document small { font-size: 10px; color: var(--muted); }
+.activation-document h2 { margin: 12px 0; font-size: 19px; font-family: inherit; }
+.activation-document h3 { font-size: 14px; margin: 18px 0 7px; }
+.activation-document p { margin: 8px 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.activation-field { display: grid; gap: 8px; font-size: 13px; }
+.activation-field input { min-width: 0; width: 100%; min-height: 48px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); padding: 12px; font: inherit; }
+.activation-subject { font-size: 12px; color: var(--muted); }
+.activation-page .activation-demo { min-height: 44px; font-size: 12px; }
+.activation-page .button-row { margin: 0; }
+.activation-status { padding: 18px; background: #edf2ed; border-radius: 17px; }
+.activation-status > span { font-size: 24px; color: #43624e; }
+.activation-status h2 { font-family: inherit; font-size: 20px; margin: 12px 0 0; }
+.activation-status small { display: block; font-size: 11px; line-height: 1.7; color: var(--muted); margin-top: 10px; }
+.activation-facts { margin: 0; padding: 0 4px; }
+.activation-facts > div { display: flex; justify-content: space-between; gap: 15px; padding: 8px 0; font-size: 11px; line-height: 1.7; }
+.activation-facts dt { flex: none; color: var(--muted); }
+.activation-facts dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.activation-facts small { display: block; color: var(--muted); font-size: 10px; }
+.activation-panel-heading:focus, .activation-error:focus { outline: none; }
+.activation-page button:focus-visible, .activation-page input:focus-visible { outline: 2px solid #79552b; outline-offset: 3px; }

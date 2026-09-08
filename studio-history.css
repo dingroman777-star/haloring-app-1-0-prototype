@@ -1,0 +1,32 @@
+.screen[data-page="STU-07"] { padding:0; overflow:hidden; min-height:0; }
+.studio-history .studio-detail-header { grid-template-columns:44px minmax(0,1fr) 44px; }
+.screen .studio-history .studio-detail-header h1 { margin:0; text-align:center; font-size:20px; }
+.studio-history-heading { display:flex; align-items:center; justify-content:space-between; margin:22px 0 16px; }
+.studio-history-heading > span { font-size:14px; color:var(--muted); }
+.studio-history-heading > strong { font-size:30px; font-weight:500; }
+.studio-history-heading small { font-size:12px; color:var(--muted); }
+.studio-history-filters { display:flex; gap:6px; flex-wrap:wrap; }
+.studio-history-filters button { min-height:44px; padding:8px 12px; font-size:12px; border:1px solid var(--line); border-radius:24px; background:transparent; color:var(--ink); }
+.studio-history-filters [aria-pressed="true"] { color:white; background:var(--ink); border-color:var(--ink); }
+.screen .studio-history-count { font-size:12px; color:var(--muted); margin:16px 0 12px; }
+.studio-history-list { display:grid; gap:14px; padding-bottom:18px; }
+.studio-history-card { padding:18px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.studio-history-card-top { display:flex; gap:12px; justify-content:space-between; align-items:center; }
+.studio-history-status { font-size:12px; color:#46614d; background:#edf2ed; border-radius:6px; padding:5px 8px; }
+.studio-history-card-top small { font-size:11px; color:var(--muted); }
+.screen .studio-history-card h2 { font-size:18px; line-height:1.5; margin:16px 0 10px; }
+.screen .studio-history-card p { display:flex; align-items:start; gap:8px; margin:6px 0; font-size:12px; color:var(--muted); line-height:1.6; }
+.studio-history-card svg { width:16px; height:18px; flex-shrink:0; }
+.studio-history-actions { display:flex; gap:8px; margin-top:18px; flex-wrap:wrap; }
+.studio-history-actions button { min-height:44px; flex:1; font-size:13px; display:flex; align-items:center; justify-content:center; gap:8px; }
+.studio-history-actions .primary { background:#edf2ed; color:#354b3b; border:1px solid #dce5dc; }
+.studio-history .studio-detail-footer { grid-template-columns:minmax(0,1fr); gap:8px; }
+.studio-history .studio-detail-footer button { min-height:48px; }
+.screen .studio-history-feedback { font-size:12px; color:#805020; margin:0; }
+.studio-history-feedback:empty { display:none; }
+.studio-history-empty { text-align:center; padding:38px 8px; }
+.studio-history-empty > svg { width:38px; height:38px; color:#66796b; }
+.screen .studio-history-empty h2 { font-size:19px; margin:18px 0 8px; }
+.screen .studio-history-empty p { color:var(--muted); font-size:13px; line-height:1.7; }
+.studio-history-empty button { min-height:48px; margin-top:12px; width:100%; }
+@media(max-height:640px) { .device-shell:has(.screen[data-page="STU-07"]) { min-height:0; } }
