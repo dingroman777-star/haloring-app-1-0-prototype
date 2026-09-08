@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Halo · 渠道独立原型审阅</title>
+  <link rel="icon" type="image/png" href="assets/HALORING_super_symbol_copper.png">
+</head>
+<body>
+  <p id="review-loading" role="status">正在打开审核通过示例…</p>
+  <script>
+    // Disposable review entry. Never reads or writes the normal prototype's storage.
+    (() => {
+      const memoryStorage = (seed = {}) => {
+        const values = new Map(Object.entries(seed));
+        return { get length() { return values.size; }, key: index => [...values.keys()][index] ?? null, getItem: key => values.get(String(key)) ?? null, setItem: (key, value) => values.set(String(key), String(value)), removeItem: key => values.delete(String(key)), clear: () => values.clear() };
+      };
+      const applicationId = "ADV-DEMO-001";
+      const requested = new URLSearchParams(location.search).get("page");
+      const reviewPage = ["CHN-11", "CHN-16", "CHN-17", "CHN-18", "CHN-19", "CHN-20", "CHN-21", "CHN-22", "CHN-23", "CHN-24", "CHN-25", "CHN-26"].includes(requested) ? requested : "CHN-15";
+      Object.defineProperty(window, "localStorage", { configurable: false, value: memoryStorage({
+        membershipHardwareState: "never-bound",
+        haloV5AppProgress: JSON.stringify({ signedIn: true, authVerified: true, authPhone: "13900000000", connectionIntro: { completed: true, choice: "skipped" }, devicePaired: false, dataLifecycle: "none", deviceStatus: "disconnected", toggles: { legal: false, aiLegal: false, haloBody: false, memory: false, proactive: false }, activeTab: "MY-01", tabStacks: { "MY-01": ["MY-01", "CHN-11", "CHN-15"] } }),
+        haloV5CommercialProgress: JSON.stringify({ channelOwnerAccount: "13900000000", trainingApplicationId: applicationId, applicationSnapshot: { ownerAccount: "13900000000", id: applicationId, region: "杭州市", experience: "内容与社群", payeeType: "自然人", submittedAt: "2026-09-07T02:05:00.000Z", reviewDecision: { id: "AR-DEMO-001", applicationId, status: "approved", decidedAt: "2026-09-07T06:30:00.000Z", simulated: true } }, applicationStatus: "approved", channelIdentity: "approved", activationReady: true, completedCourses: ["product", "health", "orders"], assessmentAnswers: { product: "no", health: "no", orders: "no" }, assessmentPassed: true, channelAgreementConfirmed: false, activationRequest: null })
+      }) });
+      Object.defineProperty(window, "sessionStorage", { configurable: false, value: memoryStorage() });
+      if (reviewPage === "CHN-11") {
+        const saved = JSON.parse(localStorage.getItem("haloV5CommercialProgress"));
+        saved.applicationHistory = [{ ...saved.applicationSnapshot, id: "ADV-DEMO-HISTORY", status: "withdrawn", reviewDecision: null, training: { completedCourses: ["product"] }, withdrawal: { withdrawnAt: "2026-09-07T03:00:00.000Z", simulated: true } }];
+        Object.assign(saved, { applicationSnapshot: null, applicationStatus: "none", channelIdentity: "inactive", completedCourses: [], assessmentPassed: false, trainingApplicationId: "" });
+        localStorage.setItem("haloV5CommercialProgress", JSON.stringify(saved));
+      }
+      if (["CHN-17", "CHN-18", "CHN-19", "CHN-20", "CHN-21", "CHN-22", "CHN-23", "CHN-24", "CHN-25", "CHN-26"].includes(reviewPage)) {
+        // Explicit fictional receipt for this disposable result-page preview only.
+        const saved = JSON.parse(localStorage.getItem("haloV5CommercialProgress")), completedAt = "2026-09-07T07:30:00.000Z";
+        const scope = JSON.stringify(["13900000000", "account", applicationId, "自然人", saved.applicationSnapshot.reviewDecision, "agreement-demo-v1"]);
+        const agreement = { version: "agreement-demo-v1", acknowledgedAt: "2026-09-07T07:00:00.000Z", simulated: true }, account = { holder: "演示用户", bank: "演示银行", last4: "8821", subject: "自然人", simulated: true }, tax = { subject: "自然人", simulated: true };
+        const request = { id: "ACT-DEMO-001", applicationId, scope, status: "completed", completedAt, agreement, account, tax, simulated: true };
+        saved.channelActivation = { version: 1, scope, applicationId, agreement, account, tax, confirmed: true, request, reviewReceipt: { id: "RECEIPT-DEMO-001", requestId: request.id, applicationId, agreementSigned: true, settlementReady: true, releaseReady: true, completedAt, simulated: true } };
+        Object.assign(saved, { channelIdentity: "active", channelMode: "new", channelAgreementConfirmed: true, activationRequest: { ...request, mock: true } });
+        if (["CHN-20", "CHN-21", "CHN-22", "CHN-23", "CHN-24", "CHN-25", "CHN-26"].includes(reviewPage)) { saved.channelMode = "established"; saved.channelAvailableCents = 120000; saved.withdrawals = []; }
+        if (reviewPage === "CHN-21") saved.selectedEarningId = "HR20260901018";
+        if (reviewPage === "CHN-23") { saved.channelAvailableCents = 120000; saved.withdrawals = []; }
+        const receiptStatus = new URLSearchParams(location.search).get("receipt");
+        if (reviewPage === "CHN-22" && ["processing", "paid", "failed", "rejected", "delayed"].includes(receiptStatus)) {
+          const status = receiptStatus === "delayed" ? "processing" : receiptStatus, amountCents = 10000;
+          const row = { id: "WD-DEMO-RECEIPT", status, amountCents, submittedAt: "2026-09-07T08:00:00.000Z", queryDelayed: receiptStatus === "delayed" };
+          if (status !== "processing") Object.assign(row, { returnedCents: status === "paid" ? 0 : amountCents, receipt: { id: `RECEIPT-DEMO-${status}`, withdrawalId: row.id, status, amountCents, postedAt: "2026-09-07T09:00:00.000Z", reason: status === "paid" ? "" : "本次处理未完成（演示）", simulated: true } });
+          saved.withdrawals = [row]; saved.channelAvailableCents = 110000 + (row.returnedCents || 0);
+        }
+        if (reviewPage === "CHN-24") { saved.selectedPolicyId = "health"; saved.policiesRead = {}; }
+        if (reviewPage === "CHN-25") { saved.selectedPolicyId = "health"; saved.policiesRead = {}; saved.channelContentSelection = { scope, policyId: "health" }; }
+        if (reviewPage === "CHN-26") saved.channelPromotion = { scope, mode: "demo", code: "DEMO-001", url: "https://haloring.example/advisor/DEMO-001", qrAsset: "assets/channel-tools-demo.svg" };
+        localStorage.setItem("haloV5CommercialProgress", JSON.stringify(saved));
+      }
+      history.replaceState({ halo: true, id: reviewPage, trail: [reviewPage] }, "", `${location.pathname}${location.search}#${reviewPage}`);
+    })();
+    (async () => {
+      try {
+        const response = await fetch("index.html", { cache: "no-store" });
+        if (!response.ok) throw new Error("Prototype entry unavailable");
+        const entry = new DOMParser().parseFromString(await response.text(), "text/html");
+        const resourceUrl = path => {
+          const url = new URL(path, location.href);
+          if (url.origin !== location.origin) throw new Error("Review dependencies must stay local");
+          return url.href;
+        };
+        await Promise.all([...entry.querySelectorAll('link[rel="stylesheet"]')].map(source => new Promise((resolve, reject) => {
+          const link = document.createElement("link"); link.rel = "stylesheet"; link.href = resourceUrl(source.getAttribute("href"));
+          link.onload = resolve; link.onerror = () => reject(new Error("Review stylesheet unavailable")); document.head.append(link);
+        })));
+        const scripts = [...entry.querySelectorAll("script[src]")].map(source => ({ src: source.getAttribute("src"), type: source.type }));
+        entry.querySelectorAll("script").forEach(script => script.remove());
+        document.body.replaceChildren(...[...entry.body.childNodes].map(node => document.importNode(node, true)));
+        const note = document.querySelector(".prototype-note"), label = document.querySelector(".stage-header span");
+        if (note) note.textContent = "独立演示 · 不是真实登录或审核结果 · 不读写已有记录 · 刷新重置";
+        if (label) label.textContent = "渠道页面独立演示 · 刷新重置";
+        for (const source of scripts) await new Promise((resolve, reject) => {
+          const script = document.createElement("script"); script.src = resourceUrl(source.src); script.async = false;
+          if (source.type) script.type = source.type;
+          script.onload = resolve; script.onerror = () => reject(new Error("Review script unavailable")); document.body.append(script);
+        });
+        const requested = new URLSearchParams(location.search).get("page");
+        if (document.getElementById("screen")?.dataset.page !== (["CHN-11", "CHN-16", "CHN-17", "CHN-18", "CHN-19", "CHN-20", "CHN-21", "CHN-22", "CHN-23", "CHN-24", "CHN-25", "CHN-26"].includes(requested) ? requested : "CHN-15")) throw new Error("Review page did not initialize");
+      } catch (error) {
+        console.error("Channel review could not load:", error);
+        const screen = document.getElementById("screen") || document.body;
+        screen.replaceChildren();
+        const title = document.createElement("h1"); title.textContent = "预览暂时没有加载完成";
+        const hint = document.createElement("p"); hint.textContent = "请确认本地预览服务仍在运行，再试一次。";
+        const retry = document.createElement("button"); retry.className = "primary"; retry.textContent = "重新加载"; retry.addEventListener("click", () => location.reload());
+        screen.append(title, hint, retry);
+      }
+    })();
+  </script>
+</body>
+</html>

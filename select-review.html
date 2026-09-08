@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Halo Select · SEL-01 独立原型审阅</title>
+  <link rel="icon" type="image/png" href="assets/HALORING_super_symbol_copper.png">
+  <link rel="stylesheet" href="styles.css?v=6.5.3-team.1">
+  <link rel="stylesheet" href="startup-page.css?v=6.5.3-team.1">
+  <script>
+    // This separate design-review document uses only disposable, in-memory fixtures.
+    // It never reads or writes the regular prototype's local/session storage.
+    // index.html and its normal authentication/consent guards are unchanged.
+    (() => {
+      function memoryStorage(seed = {}) {
+        const values = new Map(Object.entries(seed));
+        return {
+          get length() { return values.size; },
+          key(index) { return Array.from(values.keys())[index] ?? null; },
+          getItem(key) { return values.get(String(key)) ?? null; },
+          setItem(key, value) { values.set(String(key), String(value)); },
+          removeItem(key) { values.delete(String(key)); },
+          clear() { values.clear(); }
+        };
+      }
+      const requestedPage = new URLSearchParams(location.search).get("page");
+      const reviewPage = requestedPage === "SEL-08" ? "SEL-05" : ["SEL-01", "SEL-02", "SEL-03", "SEL-04", "SEL-05", "SEL-06", "SEL-07", "SEL-09", "SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(requestedPage) ? requestedPage : "SEL-01";
+      document.title = `Halo Select · ${reviewPage} 独立原型审阅`;
+      const reviewTrail = ["SEL-09", "SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(reviewPage) ? ["SEL-01", "SEL-03", "SEL-04", "SEL-05"] : reviewPage === "SEL-07" ? ["SEL-01", "SEL-03", "SEL-04", "SEL-05", "SEL-07"] : reviewPage === "SEL-06" ? ["SEL-01", "SEL-03", "SEL-04", "SEL-05", "SEL-06"] : reviewPage === "SEL-05" ? ["SEL-01", "SEL-03", "SEL-04", "SEL-05"] : reviewPage === "SEL-04" ? ["SEL-01", "SEL-03", "SEL-04"] : reviewPage === "SEL-03" ? ["SEL-01", "SEL-02", "SEL-03"] : reviewPage === "SEL-02" ? ["SEL-01", "SEL-02"] : ["SEL-01"];
+      // Cart/checkout review fixtures only: no change to the original page presentation or rules.
+      const cartScene = new URLSearchParams(location.search).get("scene");
+      const paymentReview = ["SEL-09", "SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(reviewPage) && cartScene !== "empty";
+      const entryPage = paymentReview ? "SEL-05" : reviewPage;
+      // Build the disposable payment fixture through the unchanged checkout action below.
+      // Hide only the brief fixture setup, never change normal prototype records.
+      if (paymentReview) {
+        const style = document.createElement("style"); style.id = "payment-review-setup";
+        style.textContent = ".workspace { visibility: hidden; }"; document.head.append(style);
+      }
+      const reviewCart = ["SEL-04", "SEL-05", "SEL-06", "SEL-07", "SEL-09", "SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(reviewPage) && cartScene !== "empty" ? [
+        { productId: "ring", skuId: "ring-white-8", quantity: 1 },
+        { productId: "mask", skuId: "mask-grey-standard", quantity: 1 }
+      ] : [];
+      const reviewAddressRows = cartScene === "empty" ? [] : [
+        { id: "shanghai", name: "林女士", phone: "13900000000", detail: "上海市静安区 · 示例收货地址", simulated: true },
+        { id: "hangzhou", name: "林女士", phone: "13900000001", detail: "杭州市西湖区 · 示例收货地址", simulated: true }
+      ];
+      const fixture = {
+        signedIn: true,
+        authVerified: true,
+        connectionIntro: { completed: true, choice: "skipped", permission: "not-requested" },
+        dataLifecycle: "none",
+        deviceStatus: "disconnected",
+        toggles: { legal: false, aiLegal: false, haloBody: false, memory: false, proactive: false },
+        pageViews: {},
+        activeTab: "MY-01",
+        tabStacks: { "MY-01": ["MY-01", ...reviewTrail] }
+      };
+      Object.defineProperty(window, "localStorage", { value: memoryStorage({
+        membershipHardwareState: "never-bound",
+        haloV5AppProgress: JSON.stringify(fixture),
+        haloV5CommercialProgress: JSON.stringify({ selectHomeScene: "layout", selectedAddress: reviewPage === "SEL-07" && cartScene === "empty" ? null : "shanghai", ...(reviewPage === "SEL-07" ? { addresses: reviewAddressRows } : {}), pointsBalance: cartScene === "new-member" ? 0 : 12860, couponSelected: cartScene !== "new-member", ownedCouponIds: cartScene === "new-member" ? [] : ["member", "presale"], cartCount: reviewCart.length, cartLines: reviewCart, checkoutLines: ["SEL-05", "SEL-06", "SEL-07", "SEL-09", "SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(reviewPage) ? reviewCart.map(line => ({ ...line })) : [], checkoutOrigin: ["SEL-05", "SEL-06", "SEL-07", "SEL-09", "SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(reviewPage) ? "cart" : "buy-now", selectedProductId: ["SEL-03", "SEL-04", "SEL-05", "SEL-06", "SEL-07", "SEL-09", "SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(reviewPage) ? "ring" : "mask", skuStockOverrides: ["SEL-04", "SEL-05", "SEL-06", "SEL-07"].includes(reviewPage) && cartScene === "unavailable" ? { "ring-white-8": 0 } : {} })
+      }), configurable: false });
+      Object.defineProperty(window, "sessionStorage", { value: memoryStorage(), configurable: false });
+      // Parent pages in the fixture are navigation fallbacks, not actual browser history entries.
+      history.replaceState({ halo: true, id: entryPage, trail: [entryPage] }, "", `${location.pathname}${location.search}#${entryPage}`);
+    })();
+  </script>
+</head>
+<body>
+  <main class="workspace">
+    <aside class="rail" aria-label="页面导航">
+      <div class="brand-lockup">
+        <img class="brand-wordmark" src="assets/HALORING_wordmark_with_slogan_ink.png" alt="HALORING · IN TUNE WITH YOU">
+        <small>HALO SELECT · 逐页原型审阅</small>
+      </div>
+      <label class="search-field"><span>搜索页面</span><input id="search" type="search" placeholder="ID / 名称 / 功能"></label>
+      <div class="scope-summary"><b id="page-count">—</b><span>个可交互页面 / 页面形态</span></div>
+      <nav id="group-nav" class="group-nav" aria-label="模块筛选"></nav>
+      <nav id="page-nav" class="page-nav" aria-label="页面清单"></nav>
+    </aside>
+    <section class="stage">
+      <header class="stage-header">
+        <div><span>独立审阅 · 演示数据 · 刷新重置</span><strong id="stage-title">SEL-01 · Halo Select</strong></div>
+        <div class="stage-tools">
+          <button id="previous" class="icon-button" type="button" title="上一页" aria-label="上一页">←</button>
+          <button id="next" class="icon-button" type="button" title="下一页" aria-label="下一页">→</button>
+        </div>
+      </header>
+      <div class="device-shell">
+        <div class="device-status"><span>9:41</span><span>●●● 76%</span></div>
+        <section id="screen" class="screen" aria-live="polite"></section>
+        <nav id="tabbar" class="tabbar" aria-label="主导航">
+          <button data-tab="TOD-01"><i>◐</i><span>今日</span></button>
+          <button data-tab="NIG-01"><i>◒</i><span>夜间</span></button>
+          <button data-tab="HAL-01" class="halo-tab"><i><img src="assets/HALORING_super_symbol_copper.png" alt=""></i><span>Halo</span></button>
+          <button data-tab="RHY-01"><i>◔</i><span>节律</span></button>
+          <button data-tab="MY-01"><i>◇</i><span>我的</span></button>
+        </nav>
+      </div>
+      <p class="prototype-note">独立演示，不是真实登录；不读取或保存原型已有记录。刷新重置到本次审阅页。</p>
+    </section>
+    <aside class="inspector" aria-label="开发审阅信息">
+      <p class="section-kicker">PAGE DECISION</p>
+      <h2 id="inspect-title">Halo Select</h2>
+      <dl id="inspect-data"></dl>
+      <div id="review-controls"></div>
+      <div class="legend"><span></span> 当前 App 1.0 冻结范围</div>
+    </aside>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+  <script>
+    // Read the current entry's dependency list so parallel page modules remain in sync.
+    // The shared scripts still run only against this document's disposable storage.
+    (async () => {
+      try {
+        const response = await fetch("index.html", { cache: "no-store" });
+        if (!response.ok) throw new Error("The main prototype entry could not load.");
+        const entry = new DOMParser().parseFromString(await response.text(), "text/html");
+        const version = String(Date.now());
+        const resourceUrl = path => {
+          const url = new URL(path, location.href);
+          if (url.origin !== location.origin) throw new Error("Review dependencies must stay local.");
+          url.searchParams.set("reviewBuild", version);
+          return url.href;
+        };
+        for (const source of entry.querySelectorAll('link[rel="stylesheet"]')) {
+          await new Promise((resolve, reject) => {
+            const link = document.createElement("link");
+            link.rel = "stylesheet"; link.href = resourceUrl(source.getAttribute("href"));
+            link.onload = resolve; link.onerror = reject; document.head.append(link);
+          });
+        }
+        for (const source of entry.querySelectorAll("script[src]")) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = resourceUrl(source.getAttribute("src")); script.async = false;
+            if (source.type) script.type = source.type;
+            script.onload = resolve; script.onerror = reject; document.body.append(script);
+          });
+        }
+        if (!document.getElementById("screen").dataset.page) throw new Error("The prototype screen did not initialize.");
+        if (document.getElementById("payment-review-setup")) {
+          document.querySelector('#screen[data-page="SEL-05"] [data-action="commercial:submit-order"]')?.click();
+          if (document.getElementById("screen").dataset.page !== "SEL-09") throw new Error("The payment review fixture did not initialize.");
+          if (["SEL-12", "SEL-13"].includes(new URLSearchParams(location.search).get("page"))) {
+            document.querySelector('#screen [data-action="commercial:payment-confirm"]')?.click();
+            const started = Date.now();
+            while (!document.querySelector('.select-payment[data-payment-mode="paid"]') && Date.now() - started < 4000) await new Promise(resolve => setTimeout(resolve, 50));
+            if (!document.querySelector('.select-payment[data-payment-mode="paid"]')) throw new Error("The paid review fixture did not initialize.");
+          }
+          if (["SEL-10", "SEL-11", "SEL-12", "SEL-13"].includes(new URLSearchParams(location.search).get("page"))) {
+            document.querySelector('#screen [data-action="go:SEL-10"]')?.click();
+            if (document.getElementById("screen").dataset.page !== "SEL-10") throw new Error("The orders review fixture did not initialize.");
+            if (["SEL-11", "SEL-12", "SEL-13"].includes(new URLSearchParams(location.search).get("page"))) {
+              document.querySelector('#screen [data-action^="commercial:open-order:"]')?.click();
+              if (document.getElementById("screen").dataset.page !== "SEL-11") throw new Error("The order detail review fixture did not initialize.");
+              if (["SEL-12", "SEL-13"].includes(new URLSearchParams(location.search).get("page"))) {
+                document.querySelector('#screen [data-action^="commercial:order-detail-aftersale:"]')?.click();
+                if (document.getElementById("screen").dataset.page !== "SEL-12") throw new Error("The aftersale review fixture did not initialize.");
+                if (new URLSearchParams(location.search).get("page") === "SEL-13") {
+                  document.querySelector('#aftersale-type-0')?.click();
+                  const reason = document.getElementById("aftersale-reason");
+                  reason.value = "质量问题"; reason.dispatchEvent(new Event("input", { bubbles: true }));
+                  document.querySelector('#screen [data-action="commercial:aftersale"]')?.click();
+                  if (document.getElementById("screen").dataset.page !== "SEL-13") throw new Error("The aftersale progress fixture did not initialize.");
+                }
+              }
+            }
+          }
+          document.getElementById("payment-review-setup").remove();
+        }
+      } catch (error) {
+        document.getElementById("payment-review-setup")?.remove();
+        console.error("Select review could not load:", error);
+        const screen = document.getElementById("screen");
+        screen.replaceChildren();
+        const title = document.createElement("h1"); title.textContent = "预览暂时没有加载完成";
+        const hint = document.createElement("p"); hint.textContent = "请确认本地预览服务仍在运行，再试一次。";
+        const retry = document.createElement("button"); retry.className = "primary"; retry.textContent = "重新加载";
+        retry.addEventListener("click", () => location.reload()); screen.append(title, hint, retry);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><link rel="icon" href="assets/HALORING_super_symbol_copper.png"><title>Halo Points · 独立原型审阅</title></head><body><p id="loading">正在打开积分原型…</p><script>
+// Disposable review fixtures. No reads/writes to ordinary prototype storage.
+(async()=>{
+  const nativeStorage=window.localStorage;
+  let persistReview=null;
+  const memory=(seed,persistent=false)=>{const m=new Map(Object.entries(seed));const put=next=>{if(persistent&&persistReview)persistReview(Object.fromEntries(next));m.clear();for(const [k,v]of next)m.set(k,v);};return {get length(){return m.size},key:i=>[...m.keys()][i]??null,getItem:k=>m.get(String(k))??null,setItem:(k,v)=>{const next=new Map(m);next.set(String(k),String(v));put(next);},removeItem:k=>{const next=new Map(m);next.delete(String(k));put(next);},clear:()=>put(new Map())}};
+  const scene=new URLSearchParams(location.search).get('scene')||'normal', account='13900000000';
+  const requestedPage=new URLSearchParams(location.search).get('page');
+  const reviewPage=['PTS-02','PTS-03','PTS-04'].includes(requestedPage)?requestedPage:'PTS-01';
+  const reviewKey='haloPoints04Review:v1:'+scene;
+  let savedReview=null;try{if(reviewPage==='PTS-04')savedReview=JSON.parse(nativeStorage.getItem(reviewKey)||'null');}catch{}
+  Object.defineProperty(window,'localStorage',{value:memory({membershipHardwareState:'never-bound',haloV5AppProgress:JSON.stringify({signedIn:true,authVerified:true,authPhone:account,connectionIntro:{completed:true},dataLifecycle:'none'}),haloV5CommercialProgress:JSON.stringify({accountRef:scene==='unavailable'?'unverified':account,pointsBalance:scene==='zero'||scene==='pending'?0:12860,pendingPointsCorrection:scene==='pending'?1200:0,pointsMode:scene==='pending'?'pending':'normal',pointsTransactions:[],ownedCouponIds:[],memberAssets:{accountRef:account,level:'Halo Member（L1）',growth:0,badges:0}})},true),configurable:false});
+  Object.defineProperty(window,'sessionStorage',{value:memory({}),configurable:false});
+  if(reviewPage==='PTS-02'){
+    const data=JSON.parse(localStorage.getItem('haloV5CommercialProgress')),stamp=days=>new Date(Date.now()-days*86400000).toISOString(),expiry=new Date(Date.now()+365*86400000).toISOString();
+    const rows=[{id:'demo:reward',title:'活动奖励',amount:100,posted_at:stamp(5),occurred_at:stamp(5),expires_at:expiry},{id:'redemption:demo',title:'体验权益兑换',amount:-90,posted_at:stamp(4),occurred_at:stamp(4)},{id:'correction:demo',title:'活动奖励调整',reason:'活动奖励重复发放，已扣回重复部分',amount:-30,correction:true,posted_at:stamp(3),occurred_at:stamp(3)},{id:'demo:offset',title:'会员任务奖励',amount:20,offset:20,posted_at:stamp(2),occurred_at:stamp(2),expires_at:expiry},{id:'correction:demo:restored',title:'复核恢复积分',amount:30,posted_at:stamp(1),occurred_at:stamp(1),expires_at:expiry}].map(r=>({...r,accountRef:account,simulated:true}));
+    data.pointsTransactions=scene==='zero'?[]:scene==='pending'?rows.slice(0,3):rows;data.pointsBalance=scene==='zero'||scene==='pending'?0:30;data.pendingPointsCorrection=scene==='pending'?20:0;
+    localStorage.setItem('haloV5CommercialProgress',JSON.stringify(data));
+  }
+  if(['PTS-03','PTS-04'].includes(reviewPage)){
+    const data=JSON.parse(localStorage.getItem('haloV5CommercialProgress'));
+    // Illustrative conditions only, never copied into ordinary prototype assets.
+    data.pointsRedemptionOffers={'studio-public-session-pass':{status:'open',cost:6000,stock:10,endsAt:new Date(Date.now()+30*86400000).toISOString(),voucherValidityDays:30,activityId:'studio-public-202609',redemptionPolicy:scene==='repeat'?'repeat':'once',simulated:true,usage:'支持体验券的 Halo Studio 公开场次，预约时选择使用',returns:'未使用且在有效期内，可联系客服申请退回（演示条件）'}};
+    data.vouchers=[];
+    if(reviewPage==='PTS-04'){data.selectedRedemptionId='studio-public-session-pass';data.redemptionStatus='ready';}
+    localStorage.setItem('haloV5CommercialProgress',JSON.stringify(data));
+  }
+  if(reviewPage==='PTS-04'){
+    if(savedReview&&typeof savedReview==='object'&&!Array.isArray(savedReview)){localStorage.clear();for(const [k,v]of Object.entries(savedReview))if(typeof v==='string')localStorage.setItem(k,v);}
+    persistReview=data=>nativeStorage.setItem(reviewKey,JSON.stringify(data));
+    window.HALO_POINTS_REVIEW={failNext:scene==='failure'&&!savedReview};
+  }
+  history.replaceState({halo:true,id:reviewPage,trail:[reviewPage]},'',location.pathname+location.search+'#'+reviewPage);
+  try{
+    const response=await fetch('index.html',{cache:'no-store'});if(!response.ok)throw Error('entry');
+    const source=new DOMParser().parseFromString(await response.text(),'text/html');
+    const body=source.body.cloneNode(true);body.querySelectorAll('script').forEach(s=>s.remove());document.body.replaceChildren(...body.childNodes);
+    const url=path=>{const u=new URL(path,location.href);u.searchParams.set('pointsReview',Date.now());return u.href};
+    for(const src of source.querySelectorAll('link[rel=stylesheet]'))await new Promise((resolve,reject)=>{const l=document.createElement('link');l.rel='stylesheet';l.href=url(src.getAttribute('href'));l.onload=resolve;l.onerror=reject;document.head.append(l)});
+    for(const src of source.querySelectorAll('script[src]'))await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url(src.getAttribute('src'));s.async=false;s.onload=resolve;s.onerror=reject;document.body.append(s)});
+    const panel=document.createElement('div');panel.style.cssText='padding:12px 20px;background:#edece4;font:13px sans-serif;display:flex;gap:10px;align-items:center;flex-wrap:wrap';panel.append(reviewPage==='PTS-04'?'独立演示数据 · 刷新保留兑换进度':'演示数据 · 刷新重置');
+    const scenes=[['normal','有积分'],['zero','零积分'],['pending','调整中'],['unavailable','读取异常']];if(reviewPage==='PTS-04')scenes.push(['failure','首次失败'],['repeat','可重复兑换']);
+    for(const [value,label]of scenes){const a=document.createElement('a');a.textContent=label;a.href='points-review.html?page='+reviewPage+'&scene='+value+'#'+reviewPage;panel.append(a)}
+    if(reviewPage==='PTS-04'){const reset=document.createElement('button');reset.textContent='重置本场景';reset.onclick=()=>{nativeStorage.removeItem(reviewKey);persistReview=null;location.reload();};panel.append(reset);}
+    document.querySelector('.stage').prepend(panel);
+  }catch(error){document.body.replaceChildren();const p=document.createElement('p');p.textContent='原型暂未加载，请刷新重试。';const b=document.createElement('button');b.textContent='重新加载';b.onclick=()=>location.reload();document.body.append(p,b);console.error(error)}
+})();
+</script></body></html>
