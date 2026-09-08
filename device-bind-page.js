@@ -168,7 +168,13 @@
       if (action === "bind-check" && !unresolved()) { check(); render(); }
       if (action === "bind-back") back();
       if (action === "bind-leave" && unresolved()) { closeModal(); go("MY-01"); }
-      if (action === "bind-select" && !unresolved()) { clearIntent = null; if (binding()) binding().acknowledged = true; persist(); closeModal(); go("DEV-02", false); }
+      if (action === "bind-select" && !unresolved()) {
+        const occupied = binding()?.status === "blocked";
+        clearIntent = null; if (binding()) binding().acknowledged = true;
+        // An occupied demo result needs a fresh scan, not the identical saved selection.
+        if (occupied) scan.start();
+        persist(); closeModal(); go("DEV-02", false);
+      }
       if (action === "bind-support") {
         const stack = state.tabStacks["MY-01"] || (state.tabStacks["MY-01"] = ["MY-01"]);
         if (stack.at(-1) !== "DEV-03") stack.push("DEV-03"); go("HELP-03");

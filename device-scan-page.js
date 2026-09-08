@@ -4,6 +4,15 @@
     const fixtures = { ring7a21: { id: "ring7a21", suffix: "7A21", signal: "strong" }, ring8c54: { id: "ring8c54", suffix: "8C54", signal: "strong" }, ring2f09: { id: "ring2f09", suffix: "2F09", signal: "weak" } };
     const outcomes = [["single", "一枚戒指"], ["multiple", "多枚戒指"], ["weak", "信号较弱"], ["empty", "未找到"], ["failed", "查找失败"], ["bluetooth-off", "蓝牙关闭"], ["denied", "权限撤回"]];
     let timer = null, reviewOutcome = "single";
+    const account = () => String(state.authPhone || state.authForm?.phone || "local-demo");
+    function defaultResults() {
+      // Demo discovery must not strand a second test account on the first account's ring.
+      // Never transfer ownership: the binding page still checks the selected device.
+      const ids = Object.keys(fixtures), inventory = state.deviceBindings || {};
+      const own = ids.find(id => inventory[id]?.accountRef === account());
+      const available = ids.find(id => !inventory[id]);
+      return own || available ? [own || available] : ids;
+    }
     const saved = state.deviceScan;
     state.deviceScan = saved?.version === 1 && ["idle", "scanning", "found", "empty", "failed", "cancelled", "interrupted"].includes(saved.status)
       ? { ...saved, results: Array.isArray(saved.results) ? [...new Set(saved.results)].filter(id => fixtures[id]) : [] }
@@ -38,7 +47,7 @@
     function start() {
       if (!state.signedIn || unavailable() || scan().status === "scanning") return false;
       const now = Date.now();
-      state.deviceScan = { version: 1, status: "scanning", results: [], selectedId: "", handoff: false, request: { id: `scan-${now}-${Math.random().toString(36).slice(2, 7)}`, startedAt: now, readyAt: now + 1600, outcome: reviewOutcome } };
+      state.deviceScan = { version: 1, status: "scanning", results: [], selectedId: "", handoff: false, request: { id: `scan-${now}-${Math.random().toString(36).slice(2, 7)}`, accountRef: account(), startedAt: now, readyAt: now + 1600, outcome: reviewOutcome } };
       track("device_scan_started", { source_page: "DEV-02", request_id: scan().request.id, simulated: true }); persist(); return true;
     }
     function resume() {
@@ -49,11 +58,12 @@
         timer = null;
         if (scan().status !== "scanning" || scan().request?.id !== request.id) return;
         const issue = unavailable();
-        if (issue) interrupt(issue.reason);
+        if (!state.signedIn || request.accountRef && request.accountRef !== account()) interrupt("account-changed");
+        else if (issue) interrupt(issue.reason);
         else if (["denied", "bluetooth-off"].includes(request.outcome)) {
           state.connectionIntro.permission = request.outcome; state.toggles.bluetooth = false; interrupt(request.outcome);
         } else {
-          scan().results = ({ single: ["ring7a21"], multiple: ["ring7a21", "ring8c54", "ring2f09"], weak: ["ring2f09"] })[request.outcome] || [];
+          scan().results = ({ single: defaultResults(), multiple: ["ring7a21", "ring8c54", "ring2f09"], weak: ["ring2f09"] })[request.outcome] || [];
           scan().status = request.outcome === "failed" ? "failed" : scan().results.length ? "found" : "empty";
           // A delayed/cold-start callback must not turn old nearby-device results into fresh ones.
           scan().finishedAt = request.readyAt;
