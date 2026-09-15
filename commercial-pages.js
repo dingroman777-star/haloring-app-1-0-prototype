@@ -47,15 +47,9 @@
     page("SEL-12", "申请售后", "/me/select/after-sales/new", "SEL-11", "选择类型、原因并提交售后", "Halo Select"),
     page("SEL-13", "售后进度", "/me/select/after-sales/:id", "SEL-10 / SEL-12", "查看处理进度、退款与补件", "Halo Select"),
     page("CHN-01", "申请体验顾问", "/me/channel/join", "MY-01", "了解顾问职责与申请条件；根据已有进度开始、继续申请或进入经营，不重置资料", "渠道经营"),
-    page("CHN-02", "确认身份", "/me/channel/verify", "CHN-01", "填写本人姓名和大陆身份证号，阅读并主动同意核验说明后提交；已有处理进度时继续原请求", "渠道经营"),
-    page("CHN-03", "身份核验进度", "/me/channel/verify/processing", "CHN-02", "查看本次核验与查询状态；可离开后继续，核验通过后主动进入下一步", "渠道经营"),
-    page("CHN-04", "身份核验结果", "/me/channel/verify/failed", "CHN-03", "仅展示本次未通过结果的安全原因、编号和恢复动作；其他状态回真实进度，联系客服不等于提交复核", "渠道经营"),
-    page("CHN-06", "体验顾问申请", "/me/channel/apply", "CHN-02", "填写地区、经验与收款身份", "渠道经营"),
+    page("CHN-06", "体验顾问申请", "/me/channel/apply", "CHN-01", "已登录会员按全国省市选择服务地区与行业经验，按个人／公司填写必填资料；身份核验合并至签署后的后台统一审核", "渠道经营"),
     page("CHN-07", "申请资料", "/me/channel/application/detail", "CHN-06", "查看已提交资料与更新时间", "渠道经营"),
-    page("CHN-08", "必修培训", "/me/channel/training", "CHN-06", "查看本次申请的三门必修课程与有效进度，开始或继续学习；完成后测评，其他申请阶段只回顾", "渠道经营"),
-    page("CHN-09", "培训课程", "/me/channel/training/:id", "CHN-08", "按课序阅读要点；保存本课后继续下一门未完成课程，全部完成再进入测评；回顾不重复记进度", "渠道经营"),
-    page("CHN-10", "培训测评", "/me/channel/assessment", "CHN-08", "完成三题、逐题核对后主动提交审核；答案与结果保留，失败可重试", "渠道经营"),
-    page("CHN-11", "申请进度", "/me/channel/application", "CHN-10", "查看当前审核与查询状态，按结果继续；保留资料、补件、客服和安全撤回入口", "渠道经营"),
+    page("CHN-11", "申请进度", "/me/channel/application", "AGT-04", "查看当前审核与查询状态，按结果继续；保留资料、补件、客服和安全撤回入口", "渠道经营"),
     page("CHN-12", "补充申请资料", "/me/channel/application/needs-info", "CHN-11", "查看本次补件要求，选择并预览有效文件后提交；失败保留，按申请与会话隔离，原型不上传文件", "渠道经营"),
     page("CHN-13", "申请审核结果", "/me/channel/application/rejected", "CHN-11", "查看本次未通过结果；原因未知不猜测，联系客服不自动提交复核，重新申请须确认并保留原记录", "渠道经营"),
     page("CHN-14", "撤回申请", "/me/channel/application/withdraw", "CHN-11", "确认本次申请与撤回影响；取消不改变记录；失败可重试，成功显示撤回记录", "渠道经营"),
@@ -65,7 +59,7 @@
     page("CHN-18", "开始使用顾问工具", "/me/channel/home/new", "CHN-17", "查看推广、内容与订单入口，不以引导页推断订单数量", "渠道经营"),
     page("CHN-19", "经营首页", "/me/channel/home", "MY-01 / CHN-17", "查看当前身份、可提现金额、服务订单与待办；历史记录不冒充本月统计", "渠道经营"),
     page("CHN-20", "服务订单", "/me/channel/orders", "CHN-19", "查看订单、客户进度与收益状态", "渠道经营"),
-    page("CHN-21", "单笔收益", "/me/channel/earnings/:id", "CHN-20", "查看计算结果、确认期与申诉", "渠道经营"),
+    page("CHN-21", "订单详情", "/me/channel/orders/:id", "CHN-20", "查看订单与设备激活进度，不展示单笔收益", "渠道经营"),
     page("CHN-22", "收益明细", "/me/channel/earnings", "CHN-19", "查看可提现、待确认与历史支付", "渠道经营"),
     page("CHN-23", "提现", "/me/channel/withdraw", "CHN-22", "填写金额、核对收款与本次报价，提交后查看处理记录", "渠道经营"),
     page("CHN-24", "内容与政策", "/me/channel/content", "CHN-19", "查看示例内容与政策；本机阅读记录不等于正式政策签收", "渠道经营"),
@@ -98,35 +92,35 @@
     backend: "正式内容发布/版本/下架/分享授权与已读回执待内容服务提供；本页仅使用既有本地示例，CHN-25单独逐页评审"
   });
   Object.assign(extraPages.find(item => item.id === "CHN-23"), {
-    layout: "余额与收款账户；金额/全部；下一步展开核对、二次验证；独立申请结果",
-    data: "channelWithdrawal（version/scope/amount/quote/resultId）；已确认收款快照；channelAvailableCents与withdrawals同源",
-    interaction: "金额校验、全部、修改后重新报价；不保存验证码/勾选；失败保留金额重试；结果按申请ID核对；收益与客服原路返回",
-    logic: "账号/申请/身份/收款/余额/流水快照匹配；暂停/终止和异常账本不提交；本地锁内重读、比较、合并原子保存余额与记录；保存失败不扣减；浏览不写商业缓存；不需要连接戒指",
+    layout: "余额；申请主体只读；首次填写开户银行、收款账号→核对→确认保存；已保存显示脱敏只读资料及客服入口；金额、核对提交与记录",
+    data: "channelPayoutAccount（账号分区、主体标识、名称、银行、尾号、保存时间）；完整账号仅本页临时核对，不落本地存储；channelWithdrawal 与原余额、流水同源",
+    interaction: "收款信息仅首次录入，保存前可返回修改、必须明确确认；保存后只能联系客服；金额校验、二次验证、失败重试、返回代理中心",
+    logic: "收款主体由已生效申请带出，个人本人名下或同名企业账户；主体变更后旧账户停用，不允许自行重录；跨窗口锁内重读、比较与一次保存；未录入、失配、暂停或异常账本不提交提现；原收益计算不变",
     exception: "草稿保存失败、离线、并发/重复提交、余额变化、切换账号/离页、刷新恢复及失配结果；不将本地申请视为真实到账",
-    backend: "正式提现资格、收款验证、报价税费、限额/到账时效、验证码/限流、服务端幂等及到账回执待正式接口；当前沿用¥100最低额、零费用与123456验证的本地示例"
+    backend: "生产服务端需校验账户同名归属、加密保存账号、强制一次录入、客服变更审核审计；当前仅脱敏模拟，非银行核验。提现资格、报价税费、幂等与到账回执待接口，沿用¥100最低额与123456演示码"
   });
   Object.assign(extraPages.find(item => item.id === "CHN-06"), {
-    function: "填写申请资料并开始必修学习；已有申请只继续原进度",
-    layout: "原页表单：地区/经验/收款身份、可展开说明、声明、自动保存状态与单一提交按钮",
-    data: "applicationDraft（含 regionOther）；applicationConsent；applicationFlow 的 consentKey/savedAt/request；申请快照关联 verificationId 与 consentVersion",
+    function: "填写个人或企业资料后直接签约；培训与测评移至商学院，不阻塞申请",
+    layout: "地区/经验/申请身份；个人姓名和身份证或企业名称和税号；声明、草稿保存与继续签约",
+    data: "applicationDraft 省市代码、地区展示名、行业经验、个人或企业资料；applicationConsent；applicationFlow 的 consentKey/savedAt/request；新申请绑定账号与声明版本，无前置身份核验",
     interaction: "新申请默认请选择；其他地区填写城市；编辑后重新勾选；自动保存失败可重试；提交中禁重复，失败沿用请求重试",
-    logic: "不要求购买/连接/激活戒指。校验当前登录与核验；已提交阶段不可覆盖。声明绑定资料和核验；保存成功后才展示提交成功；刷新续原请求，离页不强跳",
-    exception: "旧草稿保留且不沿用无关联声明；离线/存储失败保留资料；登录或核验变化取消旧请求；旧标签页接续已保存的申请",
-    backend: "正式后端须实现账号归属、身份有效性、应用唯一性与请求幂等；本页为本地异步模拟",
+    logic: "已登录会员直接申请，不要求前置身份核验或戒指。声明绑定账号、会话与资料；已提交阶段不可覆盖；保存成功才展示成功，刷新续原请求，离页不强跳",
+    exception: "旧草稿保留；声明版本或账号变化需重新确认；离线/存储失败保留资料；旧核验状态不阻塞申请；旧标签页接续已保存的申请",
+    backend: "正式后端在签署后统一审核身份与申请资料；保留账号归属、唯一申请及请求幂等校验。本页不制造身份已通过记录，为本地异步模拟",
     rules: "沿用当前渠道规则与用户最新设备独立纠正；本页说明为原型摘要，正式文本及地区/收款主体范围待业务与法务确认"
   });
   Object.assign(extraPages.find(item => item.id === "CHN-07"), {
     function: "只读核对本次申请资料，并从实际阶段继续未完成事项",
     layout: "原状态卡+提交资料卡；原提交时间与可复制编号；有则展开补充记录；一个按阶段变化的主操作",
     data: "applicationSnapshot 原始地区/经验/收款主体/提交时间/编号，已有 supplementedAt/supplement/updatedAt；独立读取当前 applicationStatus/channelIdentity/学习进度，不回填 applicationDraft",
-    interaction: "继续学习、测评、查看审核、补资料、开通或历史；点击时重判状态，原申请变化先重新展示；编号复制失败有提示；资料有误联系客服后回原页",
+    interaction: "继续签约、查看审核、补资料、开通或历史；培训与申请分离，编号复制失败有提示；证件在只读页脱敏",
     logic: "申请提交不等于顾问身份生效；不固定授予 L1，不要求购买或连接戒指。空记录不制造资料，未知状态只核对不重新创建申请，缺失字段显示未记录",
     exception: "空草稿/核验中/后续身份无快照分别处理；补交时间独立且按北京时间；提交中进入本页自动展示最终快照，不强跳；旧页ID不匹配阻止操作",
     backend: "本轮读取本地原型状态；正式后端需提供当前申请快照、阶段版本、补充记录与查询回执；跨端和已有多标签后续状态推送未纳入本页模拟"
   });
   Object.assign(extraPages.find(item => item.id === "CHN-01"), {
-    logic: "渠道申请独立于设备：实名→申请资料→学习与测评→审核→签约开通；不检查是否购买、配对或激活硬件",
-    note: "2026-09-07 用户最新确认覆盖旧设备门槛；CHN-05 不再是页面，旧链接按当前申请进度兼容跳转。健康与会员成长的硬件条件保持不变。",
+    logic: "已登录会员：个人或企业申请资料→阅读、勾选与电子签署→后台统一审核→待生效；培训测评独立放在商学院，不作为申请门槛",
+    note: "2026-09-16 用户确认移除前置身份核验；CHN-02/03/04/05 旧链接按当前申请进度兼容跳转。健康与会员成长的硬件条件保持不变。",
   });
   Object.assign(extraPages.find(item => item.id === "SEL-01"), {
     layout: "顶部搜索/购物车/订单；AI 穿戴主角图；选购帮助；日常精选开放网格；配送与售后/客服",
@@ -245,6 +239,7 @@
   const BASE_POINTS_BALANCE = 0;
   const DEFAULT_REDEMPTION_ID = "studio-public-session-pass";
   const REDEMPTION_CATALOG = Object.freeze({
+    'academy-advanced': {id:'academy-advanced',title:'把放松练习融入日常 · 课程学习权益',shortTitle:'商学院进阶课程',context:'商学院',description:'使用会员 Halo Points 兑换本课程。',usage:'商学院内学习指定进阶课程',delivery:'课程学习权益已到账，可返回商学院学习。',cost:800,available:true,resultAction:['返回商学院学习','go:AGT-07']},
     "studio-public-session-pass": {
       id: "studio-public-session-pass",
       title: "Halo Studio 公开体验券",
@@ -1553,6 +1548,8 @@
   }
 
   function channelJoinNext() {
+    const partner = window.HALO_COMMERCIAL_EXTENSION?.partnerStatus?.();
+    if (partner?.eligible) return {stage:partner.active?'active':partner.stage||'signing',title:partner.title,detail:partner.detail,label:partner.label,route:partner.route};
     const identity = state.channelIdentity, status = state.applicationStatus;
     const next = (stage, title, detail, label, route) => ({ stage, title, detail, label, route });
     if (identity === "active") return next("active", "体验顾问身份已生效", "查看服务订单、收益和推广工具。", "进入经营中心", "CHN-19");
@@ -1564,21 +1561,11 @@
     if (identity === "rejected" || status === "rejected") return next("rejected", "本次申请未通过", "可查看原因并申请复核。", "查看审核结果", "CHN-13");
     if (status === "withdrawn") return next("withdrawn", "本次申请已撤回", "原申请记录保留，重新申请前可先查看。", "查看申请记录", "CHN-11");
     if (status === "reviewing") return next("reviewing", "申请正在审核", "资料已提交，可以查看审核进度。", "查看审核进度", "CHN-11");
-    if (state.applicationSnapshot && status === "training") {
-      const completed = completedCourseIds().length;
-      if (completed < COURSES.length) return next("training", "还有必修学习未完成", `已完成 ${completed} / ${COURSES.length} 门课程，学习记录已保留。`, "继续学习", "CHN-08");
-      return next("assessment", state.assessmentPassed ? "测评已通过，尚未提交审核" : "必修学习已完成", state.assessmentPassed ? "确认后提交审核，等待申请结果。" : "完成测评后即可提交审核。", state.assessmentPassed ? "继续提交审核" : "继续测评", "CHN-10");
-    }
-    const verification = identityRecord();
-    if (verification?.status === "failed") return next("identity-processing", "本次身份核验未通过", "查看原因与处理方法，再继续申请。", "查看核验结果", "CHN-03");
-    if (verification?.status === "expired") return next("identity-processing", "本次身份核验已过期", "请重新核验身份，已有申请资料保留。", "查看核验结果", "CHN-03");
-    if (verification?.status === "manual-review") return next("identity-processing", "本人身份正在人工复核", "无需重复提交，可以先查看本次进度。", "查看核验进度", "CHN-03");
-    if (state.identityProcessing) return next("identity-processing", "本人身份正在核验", "核验完成后继续填写申请资料。", "查看核验进度", "CHN-03");
-    if (hasPassedChannelIdentity()) return next("draft", "本人身份已确认", "继续填写申请资料，已填内容会保留。", "继续申请", "CHN-06");
-    if (verification) return next("identity-processing", "确认本次核验结果", "查看最新进度，再继续本次申请。", "查看核验进度", "CHN-03");
+    if (state.applicationSnapshot && ['training','signing'].includes(status)) return next('signing','申请资料已保存','继续阅读协议并签署；培训在商学院独立学习。','继续签约','AGT-01');
+    // Historical identity requests are retained, but no longer gate a new application.
     if (state.applicationSnapshot) return next("application", "已有申请记录", "先查看本次申请，再继续未完成的步骤。", "查看申请进度", "CHN-11");
-    if (state.applicationDraftSaved || status === "draft") return next("draft", "申请草稿已保留", "先确认本次申请身份，再继续填写。", "继续申请", "CHN-02");
-    return next("new", "", "", "开始申请", "CHN-02");
+    if (state.applicationDraftSaved || status === "draft") return next("draft", "申请草稿已保留", "继续填写，身份与资料在签署后统一审核。", "继续申请", "CHN-06");
+    return next("new", "", "", "开始申请", "CHN-06");
   }
 
   function applicationDetailNext() {
@@ -1589,7 +1576,7 @@
       const request = state.applicationFlow?.request;
       if (request?.status === "pending") return { stage: "submitting", title: "申请资料正在提交", detail: "提交完成后，资料会显示在这里。", label: "查看提交进度", route: "CHN-06" };
       const hasDraft = Object.values(state.applicationDraft || {}).some(value => String(value || "").trim());
-      return { ...next, title: hasDraft ? "申请尚未提交" : "还没有申请资料", detail: next.stage === "identity-processing" ? next.detail : hasDraft ? "已填写的内容仍在草稿中，可继续完成申请。" : "完成身份核验并提交申请后，可在这里查看资料。", label: next.stage === "identity-processing" ? next.label : hasDraft ? "继续申请" : "开始申请" };
+      return { ...next, title: hasDraft ? "申请尚未提交" : "还没有申请资料", detail: next.stage === "identity-processing" ? next.detail : hasDraft ? "已填写的内容仍在草稿中，可继续完成申请。" : "提交申请资料后，可在这里查看资料。", label: next.stage === "identity-processing" ? next.label : hasDraft ? "继续申请" : "开始申请" };
     }
     return next;
   }
@@ -1608,17 +1595,18 @@
     const historicalId = history.state?.channelHistoryOwner === channelStore.owner() ? history.state.channelHistoricalId : "";
     if (historicalId) {
       const record = state.applicationHistory.find(row => row.id === historicalId && row.ownerAccount === channelStore.owner());
-      return shell(item, "体验顾问 · 历史申请", record ? `${feedback("历史申请 · 只读", "查看旧记录不会改变当前申请。", "plain")}${summary([["申请编号", record.id], ["服务地区", record.region || "未记录"], ["相关经验", record.experience || "未记录"], ["收款身份", record.payeeType || "未记录"], ["申请结果", ({ withdrawn: "已撤回", rejected: "未通过", approved: "已通过" })[record.status] || "已归档"], ["提交时间", applicationRecordTime(record.submittedAt)], ["已完成课程", `${record.training?.completedCourses?.length || 0} / 3`]])}${record.withdrawal?.withdrawnAt ? `<p>撤回时间：${e(applicationRecordTime(record.withdrawal.withdrawnAt))}</p>` : ""}${record.reviewDecision ? `<p>审核说明：${record.reviewDecision.reasonCode === "region-unavailable" ? "所选服务地区暂未开放" : "请按原审核记录联系客服核对"}</p>` : ""}${actions([["返回申请进度", "go:CHN-11", "primary"]])}` : `${feedback("未找到这条历史申请", "请返回历史列表重新选择。", "plain")}${actions([["返回申请进度", "go:CHN-11", "primary"]])}`);
+      return shell(item, "体验顾问 · 历史申请", record ? `${feedback("历史申请 · 只读", "查看旧记录不会改变当前申请。", "plain")}${summary([["申请编号", record.id], ["服务地区", record.region || "未记录"], ["相关经验", record.experience || "未记录"], ["收款身份", record.payeeType || "未记录"], ["申请结果", ({ withdrawn: "已撤回", rejected: "未通过", approved: "已通过" })[record.status] || "已归档"], ["提交时间", applicationRecordTime(record.submittedAt)]])}${record.withdrawal?.withdrawnAt ? `<p>撤回时间：${e(applicationRecordTime(record.withdrawal.withdrawnAt))}</p>` : ""}${record.reviewDecision ? `<p>审核说明：${record.reviewDecision.reasonCode === "region-unavailable" ? "所选服务地区暂未开放" : "请按原审核记录联系客服核对"}</p>` : ""}${actions([["返回申请进度", "go:CHN-11", "primary"]])}` : `${feedback("未找到这条历史申请", "请返回历史列表重新选择。", "plain")}${actions([["返回申请进度", "go:CHN-11", "primary"]])}`);
     }
     const record = state.applicationSnapshot, next = applicationDetailNext();
-    const status = ({ training: "待完成学习", assessment: state.assessmentPassed ? "待提交审核" : "待完成测评", reviewing: "审核中", "needs-info": "待补充资料", rejected: "未通过", withdrawn: "已撤回", approved: "审核通过 · 待开通", "activation-pending": "开通中", active: "身份已生效", paused: "经营已暂停", terminated: "合作已结束", unknown: "状态待确认", submitting: "提交中" })[next.stage] || "尚未提交";
-    const detail = next.stage === "training" ? "完成必修学习与测评后，再提交审核。" : next.stage === "approved" ? "完成协议与收款资料后，等待顾问身份生效。" : next.detail;
+    const status = ({ signing:"待签约", training: "待签约", assessment: "待签约", reviewing: "审核中", "needs-info": "待补充资料", rejected: "未通过", withdrawn: "已撤回", approved: "审核通过 · 待开通", "activation-pending": "开通中", active: "身份已生效", paused: "经营已暂停", terminated: "合作已结束", unknown: "状态待确认", submitting: "提交中" })[next.stage] || "尚未提交";
+    const detail = next.stage === "training" ? "完成电子签署后，由后台统一审核。" : next.stage === "approved" ? "完成协议与收款资料后，等待顾问身份生效。" : next.detail;
     const id = typeof record?.id === "string" ? record.id : "";
     const payee = record?.payeeType === "自然人" ? "个人" : applicationRecordValue(record?.payeeType);
     const region = record?.region === "其他地区" && typeof record.regionOther === "string" && record.regionOther.trim() ? record.regionOther : applicationRecordValue(record?.region);
     const beforeSubmission = ["new", "draft", "identity-processing", "submitting"].includes(next.stage);
     const progressCard = `<section class="application-snapshot application-detail-status" role="status"><small>${e(status)}</small><h2>${record ? "本次申请资料" : beforeSubmission ? e(next.title) : "暂未找到申请资料"}</h2><p>${e(record || beforeSubmission ? detail : `${next.title}，可先查看当前进度。`)}</p></section>`;
-    const fields = record ? `${summary([["服务地区", region], ["相关经验", applicationRecordValue(record.experience)], ["收款身份", payee]], "提交时填写的资料")}
+    const partyFields = record?.payeeType === '自然人' ? [['姓名',applicationRecordValue(record.personName)],['身份证号码',window.HaloPartnerParty.mask(record.idNumber)]] : [['公司／个体工商户名称',applicationRecordValue(record?.companyName)],['税号／统一社会信用代码',window.HaloPartnerParty.mask(record?.taxNumber)]];
+    const fields = record ? `${summary([["服务地区", region], ["相关经验", applicationRecordValue(record.experience)], ["申请身份", payee], ...partyFields], "提交时填写的资料")}
       <section class="application-detail-record"><div><span>提交时间（北京时间）</span><strong>${e(applicationRecordTime(record.submittedAt))}</strong></div>
       ${record.updatedAt ? `<div><span>资料更新时间（北京时间）</span><strong>${e(applicationRecordTime(record.updatedAt))}</strong></div>` : ""}
       ${next.stage === "withdrawn" && record.withdrawal?.applicationId === id ? `<div><span>撤回时间（北京时间）</span><strong>${e(applicationRecordTime(record.withdrawal.withdrawnAt))}</strong></div>` : ""}
@@ -1631,15 +1619,15 @@
 
   function channelJoinPage(item, ctx) {
     const next = channelJoinNext(ctx), returning = next.stage !== "new";
-    const step = ({ new: 0, "identity-processing": 0, draft: hasPassedChannelIdentity() ? 1 : 0, training: 2, assessment: 2, reviewing: 3, "needs-info": 3, rejected: 3, approved: 4, "activation-pending": 4, active: 5, paused: 5, terminated: 5 })[next.stage] ?? -1;
+    const step = ({ new: 0, draft: 0, training: 1, assessment: 1, signing:1, application: 1, reviewing: 2, "needs-info": 2, rejected: 2, approved: 3, "activation-pending": 3, active: 4, paused: 4, terminated: 4 })[next.stage] ?? -1;
     return `<header class="screen-head commercial-head"><div><button class="back" data-action="go:MY-01" aria-label="返回我的">← 返回</button><span class="page-context">体验顾问</span><h1>${e(item.name)}</h1></div></header>
       <div class="stack commercial-stack">
         <section class="channel-intro"${returning ? ' role="status"' : ""}><small>Halo 体验顾问</small><h2>${returning ? e(next.title) : "申请成为体验顾问"}</h2><p>${returning ? e(next.detail) : "介绍 Halo Ring，帮助客户选购和使用。身份生效后开放顾问工具。"}</p></section>
-        ${flowStrip(["身份", "申请", "学习", "审核", "生效"], step, "advisor")}
+        ${flowStrip(["申请", "签约", "审核", "生效"], step, "advisor")}
         <div class="button-row"><button id="channel-join-primary" class="primary" data-action="commercial:join-continue">${e(next.label)}</button></div>
         ${state.applicationHistory.some(row => row?.ownerAccount === channelStore.owner()) ? '<button class="inline-page-link" data-action="go:CHN-11">查看申请进度与历史</button>' : !returning ? '<button class="inline-page-link" data-action="go:CHN-11">查看已有申请进度</button>' : ["paused", "terminated"].includes(next.stage) ? '<button class="inline-page-link" data-action="go:HELP-03">联系企业微信客服</button>' : ""}
         ${feedback("顾问等级从 L1 开始", "顾问等级与会员等级独立，无需先购买或连接戒指。", "plain")}
-        ${disclosure("申请前了解", '<p><strong>身份与申请</strong><br>完成本人身份核验，再填写申请资料。</p><p><strong>学习与审核</strong><br>完成 3 门必修课程和测评后，提交申请审核。</p><p><strong>签约与开通</strong><br>审核通过后签约并完善收款资料，收到身份生效通知后使用顾问工具。</p>')}
+        ${disclosure("申请前了解", '<p><strong>填写申请</strong><br>个人填写姓名和身份证；公司或个体工商户填写主体名称和税号。</p><p><strong>签约</strong><br>阅读协议、勾选确认并完成电子签署。培训与测评在商学院独立学习，不作为申请门槛。</p><p><strong>审核与生效</strong><br>签署后由后台统一审核身份与申请资料。审核通过并完成开通所需确认，收到身份生效通知后使用顾问工具。</p>')}
       </div>`;
   }
 
@@ -1652,9 +1640,7 @@
 
   function channel(item, ctx = {}) {
     if (item.id === "CHN-01") return channelJoinPage(item, ctx);
-    if (item.id === "CHN-02") return identityPage(item, ctx);
-    if (item.id === "CHN-03") return identityProgressPage(item, ctx);
-    if (item.id === "CHN-04") return identityFailurePage(item, ctx);
+    if (["CHN-02", "CHN-03", "CHN-04"].includes(item.id)) return applicationPage.render(extraPages.find(page => page.id === "CHN-06"), ctx);
     if (item.id === "CHN-15") return approvalPage.render(item);
     if (item.id === "CHN-16") return activationPage.render(item);
     if (item.id === "CHN-17") return activationPage.renderResult();
@@ -1707,6 +1693,7 @@
   }
 
   function reviewControls(item) {
+    if (["CHN-02", "CHN-03", "CHN-04"].includes(item.id)) return "";
     if (item.id === "CHN-22") return `<section class="review-controls"><p>SETTLEMENT REVIEW</p><h3>提现处理回执演示</h3><small>先提交一笔模拟提现。以下仅改变本地示例，不会转账；失败/拒绝只退回一次预占余额。</small>${state.withdrawals?.some(row => row.status === "processing") ? reviewGroup("最早展示的处理中申请", [["演示到账", "commercial:chn-ledger-demo:paid"], ["演示失败退回", "commercial:chn-ledger-demo:failed"], ["演示拒绝退回", "commercial:chn-ledger-demo:rejected"], ["演示处理较久", "commercial:chn-ledger-demo:delayed"]]) : '<small>当前没有处理中申请。</small>'}</section>`;
     if (item.id === "MY-02") return "";
     if (item.id === "REF-01") return referralPage.reviewControls();
@@ -1839,7 +1826,7 @@ if (["STU-01", "STU-02", "STU-07", "STU-13", "STU-14", "STU-15"].includes(item.i
       queueMicrotask(() => window.HALO_SELECT_GALLERY?.mount(state, persistCommercialState, productId));
     }
     if (item.id === "SEL-02") resumeCatalogRetry(ctx);
-    if (["CHN-03", "CHN-04"].includes(item.id)) resumeIdentityQuery(ctx);
+    // Retired identity pages never resume standalone verification requests.
     resumeAsyncFlows(ctx);
     if (item.id.startsWith("MEM-") || item.id.startsWith("PTS-") || item.id.startsWith("REF-")) return member(item, ctx);
     if (item.id.startsWith("SEL-")) return select(item);
@@ -1853,6 +1840,9 @@ if (["STU-01", "STU-02", "STU-07", "STU-13", "STU-14", "STU-15"].includes(item.i
     if (commercialStore.unavailable() && !document.querySelector('#screen')?.dataset.page?.startsWith("CHN-")) { ctx.flash("商业记录暂时无法读取，请刷新后重试，原记录仍保留"); return true; }
     if (channelStore.select(ctx) && document.querySelector('#screen')?.dataset.page?.startsWith("CHN-")) { ctx.render(); ctx.flash("账号已变化，请从当前页面继续"); return true; }
     const [, command, value] = action.split(":");
+    if (command.startsWith("identity-") && command !== "identity-state") {
+      ctx.go(channelJoinNext(ctx).route); ctx.flash("身份与申请资料将在签署后由后台统一审核"); return true;
+    }
     if (command === "channel-store-retry") { channelStore.sync(); ctx.render(); return true; }
     if (document.querySelector('#screen')?.dataset.page?.startsWith("CHN-") && channelStore.unavailable()) { ctx.render(); return true; }
     if (command === "history-open") {
@@ -2178,7 +2168,7 @@ if (["STU-01", "STU-02", "STU-07", "STU-13", "STU-14", "STU-15"].includes(item.i
       state.trainingApplicationId = ""; state.trainingVisit = null;
       state.identityConsent = false; state.identityVerified = false; state.identityProcessing = false; state.identityVerification = null; state.identityQuery = null; state.identityMockReply = null; state.identityRequestId = ""; state.identitySubmittedAt = null; state.applicationConsent = false;
       if (!persistCommercialState()) { Object.assign(state, previous); ctx.flash("暂未保存，原申请记录仍保留，请重试"); return true; }
-      ctx.go("CHN-02"); return true;
+      ctx.go("CHN-06"); return true;
     }
 
     if (command === "task-state") {
@@ -2470,11 +2460,7 @@ if (["STU-01", "STU-02", "STU-07", "STU-13", "STU-14", "STU-15"].includes(item.i
     };
     if (addressPage.handleInput(target)) return true;
     if (target.id === "identity-name" || target.id === "identity-id-number") {
-      if (state.identityProcessing || (state.identityVerified && !["rejected", "withdrawn"].includes(state.applicationStatus))) return true;
-      state.identityDraft[target.id === "identity-name" ? "name" : "idNumber"] = target.value;
-      identityDraftIsVolatile = true;
-      persistCommercialState();
-      syncIdentityControls();
+      // Ignore events from a stale, retired identity form; keep historical records intact.
       return true;
     }
 
@@ -2514,7 +2500,7 @@ if (["STU-01", "STU-02", "STU-07", "STU-13", "STU-14", "STU-15"].includes(item.i
     }
     if (event.target.id === "catalog-search" && event.key === "Enter" && !event.isComposing) { event.preventDefault(); event.target.blur(); }
   });
-  const applicationPage = window.HALO_CHANNEL_APPLICATION.create({ state, persist: persistCommercialState, read: readCommercialProgress, storageKey: COMMERCIAL_PROGRESS_KEY, passedIdentity: hasPassedChannelIdentity, next: channelJoinNext, shell, feedback, actions, escape: e });
+  const applicationPage = window.HALO_CHANNEL_APPLICATION.create({ state, persist: persistCommercialState, read: readCommercialProgress, storageKey: COMMERCIAL_PROGRESS_KEY, next: channelJoinNext, shell, feedback, actions, escape: e });
   const trainingPage = window.HALO_CHANNEL_TRAINING.create({ state, courses: COURSES, completed: completedCourseIds, persist: persistCommercialState, read: readCommercialProgress, storageKey: COMMERCIAL_PROGRESS_KEY, resume: applicationDetailNext, shell, feedback, actions, progress, escape: e });
   const applicationProgress = window.HALO_CHANNEL_PROGRESS.create({ state, persist: persistCommercialState, synchronize: trainingPage.synchronize, next: applicationDetailNext, restart: ctx => handleAction("commercial:application-new", ctx), actions, feedback, escape: e });
   const supplementPage = window.HALO_CHANNEL_SUPPLEMENT.create({ state, persist: persistCommercialState, synchronize: trainingPage.synchronize, current: applicationProgress.current, actions, feedback, escape: e });
@@ -2524,7 +2510,7 @@ if (["STU-01", "STU-02", "STU-07", "STU-13", "STU-14", "STU-15"].includes(item.i
 const activationPage = window.HALO_CHANNEL_ACTIVATION.create({ state, persist: persistCommercialState, synchronize: trainingPage.synchronize, validResult: approvalPage.validResult, actions, feedback, copy: copyWithFeedback, escape: e, serviceOrders: () => state.channelMode === "new" ? [] : state.channelMode === "established" ? CHANNEL_ORDERS : null, dashboardData: () => {
     const known = ["new", "established"].includes(state.channelMode), fresh = state.channelMode === "new";
     const pendingCents = known ? fresh ? 0 : CHANNEL_ORDERS.reduce((sum, order) => sum + Math.round(order.earning * 100), 0) : null;
-    const availableCents = known ? fresh ? 0 : state.channelAvailableCents : null;
+    const availableCents = known ? state.channelAvailableCents : null;
     return { count: known ? fresh ? 0 : CHANNEL_ORDERS.length : null, pendingCents, availableCents, invalid: !known || !Number.isSafeInteger(availableCents) || availableCents < 0 };
   } });
   const payoutPage = window.HALO_CHANNEL_PAYOUT.create({ state, synchronize: trainingPage.synchronize, model: activationPage.payoutContext, escape: e, actions, feedback });
@@ -2571,6 +2557,29 @@ const activationPage = window.HALO_CHANNEL_ACTIVATION.create({ state, persist: p
     if (withdrawalId) { if (!data.withdrawals?.some(row => row.id === withdrawalId)) return null; recordId = withdrawalId; recordLabel = "提现申请编号"; }
     return { kind: "channel", ownerAccount: owner, sourceRoute: route, applicationId, recordId, recordLabel, orderId: orderId || null, withdrawalId: withdrawalId || null };
   }
-  window.HALO_COMMERCIAL_EXTENSION = { extraPages, state, render, observePage: observeCommercialPage, handleAction, handleInput, reviewControls, getMemberSnapshot, getDeletionSnapshot, getStudioVoucher, consumeStudioVoucher, restoreStudioVoucher, awardStudioBenefit, getStudioBenefit, postStudioBenefit, completeTask, maybeUpgradeMember, channelJoinNext, identitySupportPanel, channelSupportContext };
+  // All partner pages use the same account partition and existing ledger; no new calculation.
+  const preparePartner = ctx => { channelStore.select(ctx); channelStore.sync(); return !channelStore.unavailable(); };
+  const partnerPrerequisites = ctx => {
+    const session = ctx.applicationContext?.() || {};
+    return session.signedIn && state.applicationSnapshot?.ownerAccount === session.accountRef &&
+      Boolean(state.applicationSnapshot?.id) && ['training','signing','reviewing','approved'].includes(state.applicationStatus) &&
+      (state.applicationSnapshot.partySchema !== 1 || !window.HaloPartnerParty.missing(state.applicationSnapshot));
+  };
+  const getPartnerLedger = ctx => { preparePartner(ctx); activationPage.observe(ctx); return activationPage.payoutContext(); };
+  const academyEntitlement = ctx => {
+    const s=pointsHome.read(ctx), item=REDEMPTION_CATALOG['academy-advanced'];
+    if(s.unavailable)return false;
+    const records=window.HALO_POINTS_REDEMPTION_DATA.history(s,item);
+    return !records.unknown&&records.entries.some(r=>r.v.status==='available'&&Date.parse(r.v.expiresAt)>Date.now());
+  };
+  const openAcademyRedemption = ctx => {
+    const s=pointsHome.read(ctx), item=REDEMPTION_CATALOG['academy-advanced'];
+    if(s.unavailable||!window.HALO_POINTS_REDEMPTION_DATA.validOffer(s.data.pointsRedemptionOffers?.[item.id],item))return false;
+    if(s.data.pointsRedemptionRequest?.status==='processing'){ctx.go('PTS-04');return true;}
+    try{localStorage.setItem(COMMERCIAL_PROGRESS_KEY,JSON.stringify({...s.data,selectedRedemptionId:item.id,pointsRedemptionIntent:academyEntitlement(ctx)?'history':'new',selectedPointsRedemptionId:null,redemptionStatus:'ready'}));pointsHome.read(ctx);ctx.go('PTS-04');return true;}catch{return false;}
+  };
+  // Read-only presentation projection: no amount, commission or formula leaves this accessor.
+  const getPartnerOrderRecords = () => state.channelMode === "new" ? [] : state.channelMode === "established" ? CHANNEL_ORDERS.map(({id, title, status}) => ({id, title, progress: status === "客户已激活" ? "设备已激活" : "无需设备激活"})) : null;
+window.HALO_COMMERCIAL_EXTENSION = { extraPages, state, preparePartner, partnerPrerequisites, trainingCourses:()=>COURSES.map(course=>({...course})), getPartnerLedger, academyEntitlement, openAcademyRedemption, getPartnerOrderRecords, render, observePage: observeCommercialPage, handleAction, handleInput, reviewControls, getMemberSnapshot, getDeletionSnapshot, getStudioVoucher, consumeStudioVoucher, restoreStudioVoucher, awardStudioBenefit, getStudioBenefit, postStudioBenefit, completeTask, maybeUpgradeMember, channelJoinNext, identitySupportPanel, channelSupportContext };
   window.HALO_V5_COMMERCIAL = window.HALO_COMMERCIAL_EXTENSION;
 })();

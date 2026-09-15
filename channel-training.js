@@ -56,8 +56,8 @@ const snapshotFields = ["applicationSnapshot", "applicationStatus", "channelIden
       function home(item) {
         if (!owned()) return gate(item);
         const done = completed(), next = nextCourse(), visit = state.trainingVisit, current = resume();
-        const primaryLabel = !editable() ? current.label : passed() ? "继续提交审核" : allDone() ? Object.keys(state.assessmentAnswers || {}).length ? "继续测评" : "进入测评" : done.length || visit?.applicationId === id() ? "继续学习" : "开始学习";
-        const overview = editable() ? `<section class="training-summary"><div><strong>${done.length} / ${courses.length}</strong><span>已完成课程</span></div>${progress(Math.round(done.length / courses.length * 100), "学习进度")}</section><p class="training-guidance">${passed() ? "测评已通过，下一步提交申请审核。" : allDone() ? "三门课程已完成，接下来进行测评。" : "完成三门课程后，即可进入测评。"}</p>` : feedback(current.title, `${current.detail} 课程仍可回顾。`, "plain");
+        const primaryLabel = !editable() ? current.label : passed() ? "继续签约" : allDone() ? Object.keys(state.assessmentAnswers || {}).length ? "继续测评" : "进入测评" : done.length || visit?.applicationId === id() ? "继续学习" : "开始学习";
+        const overview = editable() ? `<section class="training-summary"><div><strong>${done.length} / ${courses.length}</strong><span>已完成课程</span></div>${progress(Math.round(done.length / courses.length * 100), "学习进度")}</section><p class="training-guidance">${passed() ? "测评已通过，下一步阅读协议并完成电子签署。" : allDone() ? "三门课程已完成，接下来进行测评。" : "完成三门课程后，即可进入测评。"}</p>` : feedback(current.title, `${current.detail} 课程仍可回顾。`, "plain");
         const list = courses.map((course, index) => {
           const complete = done.includes(course.id), recent = !complete && visit?.applicationId === id() && visit.courseId === course.id;
           const status = complete ? "已完成 · 回顾" : !editable() ? "查看内容" : recent ? "继续阅读" : next?.id === course.id ? "接下来" : "未开始";
@@ -95,13 +95,13 @@ const snapshotFields = ["applicationSnapshot", "applicationStatus", "channelIden
         const blocked = assessmentGate(item); if (blocked) return blocked;
         const count = answeredCount(), correct = QUESTIONS.filter(question => state.assessmentAnswers?.[question.id] === "no").length;
         const checked = count === QUESTIONS.length && (["correct", "retry"].includes(state.assessmentFeedback) || passed());
-        const result = checked ? `<section id="assessment-result" class="assessment-result ${passed() ? "is-passed" : "needs-retry"}" tabindex="-1" role="status"><strong>${passed() ? "✓ 测评已通过" : `有 ${QUESTIONS.length - correct} 道题需要再看一下`}</strong><p>${passed() ? "申请尚未提交。确认后，点击下方按钮提交审核。" : "已保留你的选择，请查看标出的题目，修改后重新核对。"}</p></section>` : "";
+        const result = checked ? `<section id="assessment-result" class="assessment-result ${passed() ? "is-passed" : "needs-retry"}" tabindex="-1" role="status"><strong>${passed() ? "✓ 测评已通过" : `有 ${QUESTIONS.length - correct} 道题需要再看一下`}</strong><p>${passed() ? "申请尚未进入审核。完成协议阅读、勾选和电子签署后，由后台统一审核。" : "已保留你的选择，请查看标出的题目，修改后重新核对。"}</p></section>` : "";
         const list = QUESTIONS.map((question, index) => {
           const answer = state.assessmentAnswers?.[question.id], wrong = checked && answer !== "no";
           return `<fieldset class="assessment-question ${wrong ? "is-wrong" : ""}" id="assessment-question-${question.id}"><legend>第 ${index + 1} 题：${e(question.question)}</legend><div class="assessment-question-heading" aria-hidden="true"><small>${String(index + 1).padStart(2, "0")} · ${e(question.label)}</small><span>${e(question.question)}</span></div><div class="assessment-options">${[["yes", "可以"], ["no", "不可以"]].map(([value, label]) => `<label class="assessment-option ${answer === value ? "is-selected" : ""}"><input type="radio" name="channel-assessment-${question.id}" value="${value}" ${answer === value ? "checked" : ""} ${checked ? `aria-describedby="assessment-explanation-${question.id}"` : ""}><span>${label}</span></label>`).join("")}</div>${checked ? `<p id="assessment-explanation-${question.id}" class="assessment-explanation"><strong>${wrong ? "需要修改" : "✓ 回答正确"}</strong>${e(question.explanation)}</p>` : ""}</fieldset>`;
         }).join("");
         const questions = passed() ? `<details class="assessment-review" ${document.querySelector(".assessment-review")?.open ? "open" : ""}><summary>查看我的答案<span>3 / 3 答对</span></summary><div>${list}</div></details>` : list;
-        const body = `<div class="channel-assessment" ${scope()}><div class="assessment-overview"><strong>已答 ${count} / ${QUESTIONS.length}</strong><span>全部答对后可提交申请</span></div>${result}${questions}<section class="assessment-actions">${error ? `<div role="alert" tabindex="-1">${feedback("暂未完成", error, "warm")}</div>` : ""}<p id="assessment-action-hint" class="assessment-action-hint" aria-live="polite">${count < QUESTIONS.length ? `还有 ${QUESTIONS.length - count} 道题未选择` : passed() ? "测评通过不代表顾问身份已生效。" : "已全部选择，可以核对答案。"}</p>${actions([[passed() ? "提交申请审核" : checked ? "重新核对答案" : "核对答案", passed() ? "commercial:assessment-review" : "commercial:assessment-submit", "primary", count < QUESTIONS.length], ["返回课程列表", "go:CHN-08", "secondary"]])}</section></div>`;
+        const body = `<div class="channel-assessment" ${scope()}><div class="assessment-overview"><strong>已答 ${count} / ${QUESTIONS.length}</strong><span>全部答对后可继续签约</span></div>${result}${questions}<section class="assessment-actions">${error ? `<div role="alert" tabindex="-1">${feedback("暂未完成", error, "warm")}</div>` : ""}<p id="assessment-action-hint" class="assessment-action-hint" aria-live="polite">${count < QUESTIONS.length ? `还有 ${QUESTIONS.length - count} 道题未选择` : passed() ? "测评通过不代表顾问身份已生效。" : "已全部选择，可以核对答案。"}</p>${actions([[passed() ? "继续签约" : checked ? "重新核对答案" : "核对答案", passed() ? "commercial:assessment-review" : "commercial:assessment-submit", "primary", count < QUESTIONS.length], ["返回课程列表", "go:CHN-08", "secondary"]])}</section></div>`;
         const header = `<header class="screen-head commercial-head"><div><button class="back" data-action="go:CHN-08" aria-label="返回课程列表">← 返回</button><span class="page-context">体验顾问 · 必修培训</span><h1>${e(item.name)}</h1></div></header>`;
         return `${header}<div class="stack commercial-stack">${body}</div>`;
       }
@@ -171,12 +171,9 @@ const snapshotFields = ["applicationSnapshot", "applicationStatus", "channelIden
           repaintAssessment(error ? '.channel-assessment [role="alert"]' : "#assessment-result"); return true;
         }
         if (!passed()) { context.flash("请先完成测评并核对答案"); return true; }
-        if (!navigator.onLine) { error = "网络暂不可用，答案已保留。联网后请重试提交。"; context.render(); return true; }
-        const previous = { applicationStatus: state.applicationStatus, channelIdentity: state.channelIdentity, applicationSnapshot: state.applicationSnapshot };
-        state.applicationStatus = "reviewing"; state.channelIdentity = "application";
-        state.applicationSnapshot = { ...state.applicationSnapshot, reviewSubmittedAt: new Date().toISOString() };
-        if (!save()) { Object.assign(state, previous); error = "申请尚未提交审核，请重试。"; context.render(); return true; }
-        error = ""; context.go("CHN-11"); return true;
+        // Training completion is not an audit submission. Signing starts the final review.
+        if (!window.HALO_COMMERCIAL_EXTENSION?.partnerPrerequisites?.(context)) return changed();
+        error = ""; context.go("AGT-01"); return true;
       }
       function handleInput(target, ctx) {
         if (!target.name?.startsWith("channel-assessment")) return false;

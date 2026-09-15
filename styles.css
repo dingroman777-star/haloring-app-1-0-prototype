@@ -137,6 +137,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .prototype-note { margin: 13px auto 0; max-width: 414px; text-align: center; color: var(--quiet); font-size: 10px; }
 .device-shell.shopping-subpage { grid-template-rows: 34px minmax(0, 1fr) 0; }
 .shopping-subpage .tabbar { display: none; }
+.device-shell.partner-subpage { grid-template-rows: 34px minmax(0, 1fr) 0; }
+.partner-subpage .tabbar { display: none; }
+.partner-subpage .screen { scroll-padding-bottom: 24px; }
 
 /* TOD-03: dated evidence and a clear next action; no decorative trend values. */
 .screen[data-page="TOD-03"] { padding: 4px 20px 24px; }

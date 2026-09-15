@@ -22,13 +22,13 @@
       }
       function render() {
         const v = model();
-        const head = '<header class="screen-head commercial-head"><div><button class="back" data-action="previous" aria-label="返回上一页">← 返回</button><span class="page-context">体验顾问</span><h1>推广工具</h1></div></header>';
+        const head = '<header class="screen-head commercial-head"><div><button class="back" data-action="previous" aria-label="返回上一页">← 返回</button><span class="page-context">推广与分享</span><h1>推广工具</h1></div></header>';
         const wrap = body => `${head}<div class="stack commercial-stack"><div class="channel-tools" data-tools-revision="${e(revision())}">${body}</div></div>`;
         if (unavailable) return wrap(`${feedback("推广资料暂时无法读取", "请重试，已有资料不会被改动。", "plain")}${actions([["重新加载", "commercial:tools-refresh", "primary"], ["联系客服", "commercial:tools-help", "secondary"]])}`);
         if (!v.active) return wrap(`${feedback(v.title, v.detail, "plain")}${actions([[v.label, "commercial:tools-status", "primary"], ["联系客服", "commercial:tools-help", "secondary"]])}`);
-        const identity = `<div class="tools-identity"><span>Halo 体验顾问</span><small>${v.simulated ? "演示身份" : "身份已生效"}</small></div>`;
+        const identity = `<div class="tools-identity"><span>${e(window.HaloPartnerReviewModel?.rankLabel(window.HALO_COMMERCIAL_EXTENSION?.partnerStatus(context)?.level)||"Halo 合作伙伴")}</span><small>${v.simulated ? "演示身份" : "身份已生效"}</small></div>`;
         const content = demo() ? `<section class="tools-card"><span class="tools-label">演示名片 · 不可用于推广</span>${imageFailed ? '<div class="tools-image-error"><p>演示图片暂未加载</p><button class="secondary" data-action="commercial:tools-image-retry">重新加载图片</button></div>' : `<img class="tools-qr" src="${IMAGE}?attempt=${imageAttempt}" alt="DEMO-001 演示二维码，示例地址无法访问">`}<button class="text-button tools-download" data-action="commercial:advisor-qr-save" ${busy || imageFailed ? "disabled" : ""}>${busy === "download" ? "正在准备图片…" : "下载演示图片"}</button></section><section class="tools-link"><div><h2>演示链接</h2><small>无法访问</small></div><p>${LINK}</p>${actions([[busy === "copy" ? "正在复制…" : "复制演示链接", "commercial:advisor-link-copy", "primary", Boolean(busy)]])}</section><p class="tools-note">这些操作仅供预览，不会建立客户归属或产生收益。</p>` : `<section class="tools-empty"><span aria-hidden="true">↗</span><h2>${state.channelPromotion ? "推广资料待核对" : "推广工具尚未就绪"}</h2><p>${state.channelPromotion ? "这份资料暂时无法与当前身份对应，请联系客服核对。" : "暂未收到你的专属链接和二维码。可以先了解分享内容，或联系客服查询。"}</p></section>${actions([["重新查看推广资料", "commercial:tools-refresh", "primary"]])}`;
-        return wrap(`${identity}${content}<p id="tools-feedback" role="status">${e(error)}</p>${manual ? `<section class="tools-copy-fallback"><label for="tools-copy-text">可选中下方文字手动复制</label><textarea id="tools-copy-text" readonly rows="5">${e(copyText())}</textarea></section>` : ""}<div class="tools-links"><button data-action="commercial:tools-content"><span>先看内容与政策</span><i aria-hidden="true">›</i></button><button data-action="commercial:tools-identity"><span>查看顾问身份</span><i aria-hidden="true">›</i></button><button data-action="commercial:tools-help"><span>推广问题联系客服</span><i aria-hidden="true">›</i></button></div>`);
+        return wrap(`${identity}${content}<p id="tools-feedback" role="status">${e(error)}</p>${manual ? `<section class="tools-copy-fallback"><label for="tools-copy-text">可选中下方文字手动复制</label><textarea id="tools-copy-text" readonly rows="5">${e(copyText())}</textarea></section>` : ""}<div class="tools-links"><button data-action="commercial:tools-content"><span>查看商学院</span><i aria-hidden="true">›</i></button><button data-action="commercial:tools-identity"><span>返回代理中心</span><i aria-hidden="true">›</i></button><button data-action="commercial:tools-help"><span>推广问题联系客服</span><i aria-hidden="true">›</i></button></div>`);
       }
       function guard() {
         if (!onPage()) return false;
@@ -80,8 +80,8 @@
         if (command === "tools-image-retry" && demo()) { imageFailed = false; imageAttempt++; context.render(); return true; }
         if (command === "tools-status") { context.go(model().route); return true; }
         if (!model().active) return true;
-        if (command === "tools-content") context.go("CHN-24");
-        if (command === "tools-identity") context.go("CHN-17");
+        if (command === "tools-content") context.go("AGT-07");
+        if (command === "tools-identity") context.go("AGT-05");
         if (command === "advisor-link-copy") void exportDemo("copy");
         if (command === "advisor-qr-save") void exportDemo("download");
         return true;

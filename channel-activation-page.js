@@ -126,6 +126,8 @@
         return true;
       }
       function resultModel() {
+        const partner = window.HALO_COMMERCIAL_EXTENSION?.partnerStatus?.(context);
+        if (partner) return partner;
         const flow = own(), receipt = flow?.reviewReceipt, request = flow?.request;
         const linked = valid() && viewScope === scope();
         if (linked && ["paused", "terminated"].includes(state.channelIdentity)) return { title: state.channelIdentity === "paused" ? "经营已暂停" : "合作已结束", detail: "历史结算仍可查看。如有待处理事项，可联系客服。", label: "查看历史结算", route: "CHN-22" };
@@ -142,7 +144,7 @@
         const recordsValid = Array.isArray(state.withdrawals) && rows.every(recordValid) && !(state.channelMode === "new" && rows.length);
         const processing = recordsValid ? rows.filter(row => row.status === "processing").reduce((sum,row) => sum + row.amountCents,0) : null;
         const healthy = !data.invalid && recordsValid && Number.isSafeInteger(processing);
-        const readOnly = state.channelIdentity !== "active";
+        const readOnly = !resultModel().active;
         return { ...data, rows, recordValid, healthy, readOnly, processing, canWithdraw: canReadOrders() && !readOnly && healthy && data.availableCents >= 10000 };
       }
       function renderLedger() {
@@ -193,13 +195,12 @@
       const earningOrder = () => canReadOrders() ? serviceOrders()?.find(row => row.id === state.selectedEarningId) : null;
       const earningStamp = () => JSON.stringify([homeStamp(), state.selectedEarningId]);
       function renderEarning() {
-        const head = '<header class="screen-head commercial-head"><div><button class="back" data-action="previous" aria-label="返回服务订单">← 返回</button><span class="page-context">体验顾问</span><h1>单笔收益</h1></div></header>';
+        const head = '<header class="screen-head commercial-head"><div><button class="back" data-action="previous" aria-label="返回服务订单">← 返回</button><span class="page-context">HALO PARTNER</span><h1>订单详情</h1></div></header>';
         const wrap = body => `${head}<div class="stack commercial-stack"><div class="channel-earning-detail" data-earning-scope="${e(earningStamp())}">${body}</div></div>`;
         if (!canReadOrders()) { const view = resultModel(); return wrap(`${feedback(view.title,view.detail,"plain")}${actions([[view.label,"commercial:earning-status","primary"],["联系客服","commercial:earning-help","secondary"]])}`); }
         const order = earningOrder();
-        if (!order) return wrap(`${feedback("未找到这笔收益","请返回服务订单重新选择，已有记录仍保留。","plain")}${actions([["查看服务订单","commercial:earning-list","primary"],["联系客服","commercial:earning-help","secondary"]])}`);
-        const rate = order.amount > 0 ? (order.earning / order.amount * 100).toFixed(2).replace(/\.00$/, "") : "—";
-        return wrap(`${state.channelIdentity !== "active" ? '<p class="service-notice">当前仅查看历史收益，不能新增推广或提现。</p>' : ""}<section class="earning-feature earning-result"><small>本笔预计收益</small><strong>¥${order.earning.toFixed(2)}</strong><span class="service-tag">待确认</span><p>这笔收益还不能用于提现。</p></section><section class="earning-order-info"><h2>${e(order.title)}</h2><span>关联订单</span><strong>${e(order.id)}</strong>${order.status === "客户已激活" ? '<p>客户进度：已激活设备</p>' : ""}</section><details class="earning-calculation"><summary>这笔收益怎么算？</summary><dl><div><dt>参与计算的金额</dt><dd>¥${order.amount.toFixed(2)}</dd></div><div><dt>本笔示例比例</dt><dd>${rate}%</dd></div></dl><p>¥${order.amount.toFixed(2)} × ${rate}% = ¥${order.earning.toFixed(2)}</p><small>当前是示例计算，不代表你的正式协议或到账金额。</small></details><p class="earning-note">确认后可在收益明细中查看后续结算进度。</p>${actions([["查看收益明细","commercial:earning-ledger","primary"]])}<details class="earning-question"><summary>对这笔收益有疑问？</summary><p>可复制本笔摘要，联系客服核对。打开客服不代表已提交复核申请。</p>${actions([["复制本笔摘要","commercial:earning-copy","secondary"],["联系客服核对","commercial:earning-help","secondary"]])}</details><p class="earning-note">本地示例，不产生真实收益或工单。</p>`);
+        if (!order) return wrap(`${feedback("未找到这笔订单","请返回服务订单重新选择，已有记录仍保留。","plain")}${actions([["查看服务订单","commercial:earning-list","primary"],["联系客服","commercial:earning-help","secondary"]])}`);
+        return wrap(`${state.channelIdentity !== "active" ? '<p class="service-notice">当前仅查看历史订单，不能新增推广或提现。</p>' : ""}<section class="earning-order-info"><h2>${e(order.title)}</h2><span>订单编号</span><strong>${e(order.id)}</strong><p>服务进度：${order.status === "客户已激活" ? '设备已激活' : '无需设备激活'}</p></section>${actions([["返回服务订单","commercial:earning-list","primary"],["查看经营首页","commercial:earning-ledger","secondary"]])}<details class="earning-question"><summary>订单有疑问？</summary><p>可复制订单编号，联系客服核对。</p>${actions([["复制订单编号","commercial:earning-copy","secondary"],["联系客服核对","commercial:earning-help","secondary"]])}</details><p class="earning-note">本地示例，不产生真实订单或工单。</p>`);
       }
       function handleEarningAction(command, ctx) {
         if (!["earning-status","earning-list","earning-ledger","earning-copy","earning-help","earning-appeal"].includes(command)) return false;
@@ -210,24 +211,23 @@
         if (command === "earning-status") { context.go(resultModel().route); return true; }
         if (["earning-help","earning-appeal"].includes(command)) { context.go("HELP-03"); return true; }
         const order = earningOrder(); if (!order) return true;
-        if (command === "earning-ledger") { context.go("CHN-22"); return true; }
+        if (command === "earning-ledger") { context.go("CHN-19"); return true; }
         if (command === "earning-copy") {
           const original = earningStamp();
-          copy(`本地示例收益核对\n订单：${order.id}\n商品：${order.title}\n预计收益：¥${order.earning.toFixed(2)}\n状态：待确认\n尚未提交复核申请`, "本笔摘要已复制，请在客服对话中粘贴", { ...context, flash: message => { if (!synchronize() && matches() && original === earningStamp()) context.flash?.(message); } });
+          copy(order.id, "订单编号已复制", { ...context, flash: message => { if (!synchronize() && matches() && original === earningStamp()) context.flash?.(message); } });
         }
         return true;
       }
-      const canReadOrders = () => resultModel().active || (valid() && viewScope === scope() && ["paused", "terminated"].includes(state.channelIdentity));
+      const canReadOrders = () => resultModel().active || (resultModel().historical && ["paused", "terminated"].includes(state.channelIdentity)) || (valid() && viewScope === scope() && ["paused", "terminated"].includes(state.channelIdentity));
       function renderOrders() {
         const head = '<header class="screen-head commercial-head"><div><button class="back" data-action="previous" aria-label="返回上一页">← 返回</button><span class="page-context">体验顾问</span><h1>服务订单</h1></div></header>';
         const wrap = body => `${head}<div class="stack commercial-stack"><div class="channel-service-orders" data-service-scope="${e(homeStamp())}">${body}</div></div>`;
         if (!canReadOrders()) { const view = resultModel(); return wrap(`${feedback(view.title,view.detail,"plain")}${actions([[view.label,"commercial:service-status","primary"],["联系客服","commercial:service-help","secondary"]])}`); }
         const orders = serviceOrders(), readOnly = state.channelIdentity !== "active";
         if (!orders) return wrap(`${feedback("订单信息待核对","暂时无法读取当前服务订单，请核对经营状态或联系客服。","plain")}${actions([["返回经营首页","commercial:service-home","primary"],["联系客服","commercial:service-help","secondary"]])}`);
-        const notice = readOnly ? '<p class="service-notice">当前仅可查看历史订单与收益，不能新增推广或提现。</p>' : "";
-        if (!orders.length) return wrap(`${notice}<section class="service-empty"><span aria-hidden="true">▤</span><h2>暂无服务订单</h2><p>${readOnly ? "当前示例没有历史服务订单。" : "服务订单产生后，可在这里查看对应进度与收益。"}</p></section>${actions([["返回经营首页","commercial:service-home","primary"],["查看收益明细","commercial:service-earnings","secondary"]])}<button class="text-button service-help" data-action="commercial:service-help">有疑问？联系客服</button>`);
-        const total = orders.reduce((sum, order) => sum + Math.round(order.earning * 100), 0);
-        return wrap(`${notice}<section class="service-summary"><div><span>服务订单</span><strong>${orders.length} 笔</strong></div><div><span>待确认收益</span><strong>¥${(total/100).toFixed(2)}</strong></div></section><p class="service-caption">本地示例 · 预计收益尚不可提现</p><section class="service-order-list order-list" aria-label="服务订单列表">${orders.map(order => `<button class="service-order" data-action="commercial:service-open:${e(order.id)}"><span class="service-order-top"><span>订单 ${e(order.id)}</span><i aria-hidden="true">›</i></span><strong class="service-product">${e(order.title)}</strong>${order.status === "客户已激活" ? '<span class="service-progress">客户进度：已激活设备</span>' : ""}<span class="service-order-bottom"><span><small>预计收益</small><strong>¥${order.earning.toFixed(2)}</strong></span><span class="service-tag">收益待确认</span></span><span class="service-open-label">查看本笔收益</span></button>`).join("")}</section>${error ? `<p class="service-notice" role="alert">${e(error)}</p>` : ""}${actions([["查看收益明细","commercial:service-earnings","secondary"]])}<button class="text-button service-help" data-action="commercial:service-help">订单有疑问？联系客服</button>`);
+        const notice = readOnly ? '<p class="service-notice">当前仅可查看历史订单，不能新增推广或提现。</p>' : "";
+        if (!orders.length) return wrap(`${notice}<section class="service-empty"><span aria-hidden="true">▤</span><h2>暂无服务订单</h2><p>${readOnly ? "当前示例没有历史服务订单。" : "服务订单产生后，可在这里查看订单与设备激活进度。"}</p></section>${actions([["返回经营首页","commercial:service-home","primary"]])}<button class="text-button service-help" data-action="commercial:service-help">有疑问？联系客服</button>`);
+        return wrap(`${notice}<section class="service-summary"><div><span>服务订单</span><strong>${orders.length} 笔</strong></div><div><span>设备已激活</span><strong>${orders.filter(order => order.status === "客户已激活").length} 笔</strong></div></section><section class="service-order-list order-list" aria-label="服务订单列表">${orders.map(order => `<button class="service-order" data-action="commercial:service-open:${e(order.id)}"><span class="service-order-top"><span>订单 ${e(order.id)}</span><i aria-hidden="true">›</i></span><strong class="service-product">${e(order.title)}</strong><span class="service-progress">${order.status === "客户已激活" ? '设备已激活' : '无需设备激活'}</span><span class="service-open-label">查看订单详情</span></button>`).join("")}</section>${error ? `<p class="service-notice" role="alert">${e(error)}</p>` : ""}${actions([["查看经营首页","commercial:service-home","secondary"]])}<button class="text-button service-help" data-action="commercial:service-help">订单有疑问？联系客服</button>`);
       }
       function handleOrderAction(command, value, ctx) {
         if (!command.startsWith("service-") && command !== "earning-open") return false;
@@ -237,12 +237,12 @@
         if (command === "service-status") { context.go(resultModel().route); return true; }
         if (command === "service-home") { context.go("CHN-19"); return true; }
         if (!canReadOrders()) return true;
-        if (command === "service-earnings") { context.go("CHN-22"); return true; }
+        if (command === "service-earnings") { context.go("CHN-19"); return true; }
         if (["service-open","earning-open"].includes(command)) {
           const order = serviceOrders()?.find(row => row.id === value);
           if (!order) { error = "这笔订单暂时无法核对，请从当前列表重新选择。"; context.render?.(); return true; }
           const previous = state.selectedEarningId; state.selectedEarningId = order.id;
-          if (!persist()) { state.selectedEarningId = previous; error = "暂时无法打开这笔收益，原订单记录仍保留，请重试。"; context.render?.(); return true; }
+          if (!persist()) { state.selectedEarningId = previous; error = "暂时无法打开这笔订单，原订单记录仍保留，请重试。"; context.render?.(); return true; }
           error = ""; context.go("CHN-21");
         }
         return true;
@@ -305,8 +305,16 @@
       document.addEventListener("click", event => { if (event.detail > 1 && ["commercial:act-submit", "commercial:act-read-save", "commercial:act-account-save", "commercial:act-tax-save"].includes(event.target.closest?.("[data-action]")?.dataset.action)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
       function payoutContext() {
         const ledger = ledgerModel();
-        const revision = JSON.stringify([scope(), state.channelIdentity, own()?.account, own()?.reviewReceipt, state.channelMode, state.channelAvailableCents, ledger.rows.map(row => row && [row.id, row.amountCents, row.status])]);
-        return { ...ledger, ...resultModel(), scope: scope(), stamp: revision, account: own()?.account || null };
+        const identity = resultModel(), payee = identity.account || own()?.account || null, identityScope = identity.scope || scope();
+        const payeeKey = identity.payeeKey || JSON.stringify([session().accountRef, id(), payee?.subject, payee?.holder]);
+        const saved = state.channelPayoutAccount;
+        const payeeKnown = Boolean(identity.active && payee?.holder && ['自然人','企业或个体工商户'].includes(payee?.subject));
+        const recordOK = saved?.version === 1 && saved.simulated === true && saved.ownerAccount === session().accountRef && typeof saved.id === 'string' && Boolean(saved.id) && typeof saved.bank === 'string' && saved.bank.trim().length >= 2 && /^\d{4}$/.test(saved.last4) && Number.isFinite(Date.parse(saved.savedAt));
+        const accountState = !payeeKnown ? 'unavailable' : saved == null ? 'missing' : !recordOK ? 'invalid' : saved.partyKey !== payeeKey || saved.holder !== payee.holder || saved.subject !== payee.subject ? 'mismatch' : 'saved';
+        // Old fixture bank/last4 values are illustrative, not proof of one-time user entry.
+        const account = payee ? { holder:payee.holder, subject:payee.subject, bank:accountState==='saved'?saved.bank:'', last4:accountState==='saved'?saved.last4:'', simulated:true } : null;
+        const revision = JSON.stringify([identityScope, identity.active, state.channelIdentity, payeeKey, saved, account, state.channelMode, state.channelAvailableCents, ledger.rows.map(row => row && [row.id, row.amountCents, row.status])]);
+        return { ...ledger, ...identity, scope: identityScope, stamp: revision, account, payeeKey, accountState, canWithdraw:ledger.canWithdraw && accountState==='saved' };
       }
       const contentContext = () => ({ ...resultModel(), scope: scope(), stamp: stamp() });
       return { observe, render, handleAction, handleInput, reviewControls, renderResult, handleResultAction, renderStart, handleStartAction, renderHome, handleHomeAction, renderOrders, handleOrderAction, renderEarning, handleEarningAction, renderLedger, handleLedgerAction, payoutContext, contentContext };

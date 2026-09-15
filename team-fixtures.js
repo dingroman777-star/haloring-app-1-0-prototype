@@ -6,7 +6,7 @@
   'use strict';
   if (!/\/(?:index\.html)?$/.test(location.pathname)) return;
   const SCENES = {
-    full: ['完整用户', 'TOD-01', '已激活 · L3 · 健康、订单与体验历史'],
+    full: ['完整用户', 'TOD-01', '已激活 · 会员 L3 · 领航伙伴 · 健康、订单与体验历史'],
     fresh: ['首次使用', 'ONB-01', '未登录 · 未绑定 · 真实空状态'],
     member: ['未绑定会员', 'MEM-01', 'L1 · 可用积分和公共内容 · 无身体数据'],
     pending: ['渠道审核中', 'CHN-11', '申请已提交 · 经营与提现门禁保留'],
@@ -15,6 +15,31 @@
     correction: ['积分待调整', 'PTS-02', '可用为 0 · 待调整 1,200 · 查看原因与申诉'],
     'studio-live': ['活动进行中', 'STU-04', '正在参加瑜伽 · 可结束、生成报告及查看奖励'],
   };
+  // Launch presets reuse the existing data fixtures; they do not change business gates.
+  const PARTNER_SCENES = {
+    'partner-new': ['新渠道申请', 'CHN-01', '已注册并登录 · 尚未申请渠道身份 · 从原申请第一步开始', 'member', 'application'],
+    'partner-reviewing': ['新渠道 · 审核中', 'AGT-04', '协议已签署 · 等待审核 · 身份未生效', 'pending', 'application-reviewing'],
+    'partner-approved': ['新渠道 · 审核通过待生效', 'AGT-04', '审核通过 · 核验必要资料后等待身份生效', 'pending', 'application-approved'],
+    'partner-active-L1': ['体验顾问 · 已生效', 'AGT-05', '体验顾问 Experience Advisor · 身份已生效', 'full', 'L1'],
+    'partner-promotion-L1': ['单次晋升 · 体验顾问 → 专业顾问', 'AGT-11', '当前体验顾问 · 本次仅晋升专业顾问', 'full', 'promotion-L1'],
+    'partner-promotion-L2': ['单次晋升 · 专业顾问 → 经营伙伴', 'AGT-11', '当前专业顾问 · 晋升经营伙伴需主体认证并重新签署', 'full', 'promotion-L2'],
+    'partner-promotion-L3': ['单次晋升 · 经营伙伴 → 领航伙伴', 'AGT-11', '当前经营伙伴 · 有效主体沿用，对应协议仍需重签', 'full', 'promotion-L3'],
+  };
+  const LAUNCH_SCENES = {...SCENES, ...PARTNER_SCENES};
+  const defaultPartnerCase = id => id === 'fresh' ? 'application' : id === 'member' ? 'member' : id === 'pending' ? 'application-reviewing' : 'L4';
+  function createSceneURL(selected, href = location.href) {
+    if (!Object.hasOwn(LAUNCH_SCENES, selected)) return null;
+    const u = new URL(href), preset = PARTNER_SCENES[selected], previous = u.searchParams.get('demo');
+    u.search = ''; u.searchParams.set('demo', 'new');
+    if (/^[a-f0-9]{32}$/.test(previous || '')) u.searchParams.set('demoPrevious', previous);
+    u.searchParams.set('scene', preset ? preset[3] : selected);
+    u.searchParams.set('demoScene', selected);
+    if (preset) {
+      u.searchParams.set('partnerUI', 'review'); u.searchParams.set('academyUI', 'review');
+      u.searchParams.set('partnerCase', preset[4]);
+    }
+    u.hash = LAUNCH_SCENES[selected][1]; return u.href;
+  }
   let scene = new URL(location.href).searchParams.get('scene');
   if (!SCENES[scene]) scene = 'full';
   const MARKER = 'haloTeamFixtureV1';
@@ -83,6 +108,9 @@
     if(monthNights.length)app.healthReports.accounts[recordScope].reports.push({id:'TEAM-REPORT-MONTH',type:'monthly',title:`${Number(lastMonth.slice(5))} 月健康回顾`,status:'ready',range:{start:lastMonth+'-01',end:lastMonthDate.toISOString().slice(0,10)},nights:monthNights,generatedAt:at(),ruleVersion:'team-synthetic-monthly-v1',simulated:true});
     for (const [id,title,days,duration,price,done] of [['yoga-evening','暮色舒展瑜伽',2,60,99,true],['pilates-morning','晨间核心普拉提',-5,50,0,false]]) {
       const start=new Date(now-days*DAY-duration*60000).toISOString(),end=at(days),bookingId=`TEAM-BOOK-${id}`,sessionId=`TEAM-SESSION-${id}`;
+      // Keep historical demo reports chronological at every hour, including late-night sessions.
+      const sleepStart=Math.max(Date.parse(`${date(days)}T23:15:00+08:00`),Date.parse(end)+15*60000);
+      const sleepEnd=sleepStart+428*60000;
       const r=wrap({eventId:id,bookingId,booked:true,paid:true,paidAmount:price,paidAt:at(done?4:0),source:'app',refundStatus:'none',deletionStatus:'ready',
         eventSnapshot:{id,title,date:`${date(days).slice(5).replace('-','月')}日 · 演示场次`,startsAt:start,place:'Halo 体验室',duration,category:id==='yoga-evening'?'瑜伽':'普拉提',price,host:done?'Lin':'Mia',seats:6,cancellationHours:24},
         mode:'ring',activityConsent:true,healthConsent:true,contactConsent:false,sessionStarted:done,sessionDone:done,reportStatus:done?'generated':'waiting',benefitStatus:'pending',
@@ -90,8 +118,8 @@
           captureReceipt:{id:`CAP-${id}`,source:'prototype-fixture',status:'valid',eventId:id,bookingId,sessionId,accountRef:account,startedAt:start},
           completionSnapshot:{version:1,eventId:id,bookingId,sessionId,accountRef:account,completedAt:end,reportEligible:true,hardwareActive:true,captureReceiptId:`CAP-${id}`},
           beforeFeeling:'今天坐得有点久，想活动一下肩背。',beforeRecordScope:{eventId:id,bookingId},beforeSavedAt:start,beforeVersion:1,
-          nextDayReport:{version:1,eventId:id,bookingId,sessionId,accountRef:account,completedAt:end,reportDate:date(days-1),sourceId:'TEAM-NEXT-DAY',generatedAt:at(days-1),simulated:true,status:'ready',
-            sleep:{minutes:428,quality:'complete',sourceId:'TEAM-SLEEP-NEXT',startAt:`${date(days)}T23:15:00+08:00`,endAt:`${date(days-1)}T06:23:00+08:00`},bodyWeather:{label:'平衡日',date:date(days-1),sourceId:'TEAM-WEATHER-NEXT'},baseline:{ready:true,sourceId:'TEAM-SLEEP-BASELINE',sleepMinutes:415}},
+          nextDayReport:{version:1,eventId:id,bookingId,sessionId,accountRef:account,completedAt:end,reportDate:date(days-1),sourceId:'TEAM-NEXT-DAY',generatedAt:new Date(sleepEnd+5*60000).toISOString(),simulated:true,status:'ready',
+            sleep:{minutes:428,quality:'complete',sourceId:'TEAM-SLEEP-NEXT',startAt:new Date(sleepStart).toISOString(),endAt:new Date(sleepEnd).toISOString()},bodyWeather:{label:'平衡日',date:date(days-1),sourceId:'TEAM-WEATHER-NEXT'},baseline:{ready:true,sourceId:'TEAM-SLEEP-BASELINE',sleepMinutes:415}},
           teamMeasurements:{simulated:true,heart:[68,74,70,76,71,68],breath:[16,16,15,14,15,14]}
         }:{} )});
       app.studioRecords[id]=r;
@@ -102,7 +130,7 @@
       ownedCouponIds:['member'],coupons:[wrap({id:'team-discount',title:'精选体验折扣券（展示示例）',kind:'discount',discountRate:0.9,status:'available',expiresAt:at(-30),usage:'适用范围与使用入口待产品确认，仅展示券形态。',rules:['这是折扣券的界面示例，不新增正式结算规则。']})],couponSelected:false,pointsUsed:false,addresses:[address],selectedAddress:address.id,selectedAddressSnapshot:address,
       cartLines:[{productId:'ring',skuId:'ring-white-8',quantity:1},{productId:'mask',skuId:'mask-grey-standard',quantity:1}],
       checkoutLines:[{productId:'ring',skuId:'ring-white-8',quantity:1}],checkoutOrigin:'buy-now',selectedProductId:'ring',selectedTaskId:'wear-12h',redemptionStatus:'ready',
-      selectedRedemptionId:'studio-public-session-pass',pointsRedemptionOffers:{'studio-public-session-pass':{status:'open',cost:6000,stock:20,endsAt:at(-30),voucherValidityDays:30,activityId:'team-studio-repeat',redemptionPolicy:'repeat',simulated:true,usage:'适用的 Halo Studio 公开体验，预约时选择使用。',returns:'未使用时按活动规则处理；本原型仅演示。'}},
+      selectedRedemptionId:'studio-public-session-pass',pointsRedemptionOffers:{'academy-advanced':{status:'open',cost:800,stock:100,endsAt:at(-30),voucherValidityDays:365,activityId:'team-academy-202609',redemptionPolicy:'once',simulated:true,usage:'兑换后在商学院学习《把放松练习融入日常》。',returns:'本地虚构兑换；不产生真实款项。有疑问可联系支持。'},'studio-public-session-pass':{status:'open',cost:6000,stock:20,endsAt:at(-30),voucherValidityDays:30,activityId:'team-studio-repeat',redemptionPolicy:'repeat',simulated:true,usage:'适用的 Halo Studio 公开体验，预约时选择使用。',returns:'未使用时按活动规则处理；本原型仅演示。'}},
       taskStates:{'wear-12h':'posted','night-repair':'posted','weekly-feedback':'posted','wear-5days':'available','monthly-review':'posted'},
       taskPeriods:{'wear-12h':date(),'night-repair':date(),'weekly-feedback':week(),'wear-5days':week(),'monthly-review':date().slice(0,7)},
       taskProgress:{'wear-5days':wrap({periodKey:week(),unit:'days',value:1,updatedAt:at()})},
@@ -138,14 +166,14 @@
     if(scene==='member'){
       hardware='never-bound';Object.assign(app,{devicePaired:false,deviceStatus:'disconnected',pairedDevice:null,deviceBindings:{},hardwareActivatedAt:'',dataLifecycle:'none',healthReports:{accounts:{}},studioRecords:{},nightHistory:[],conversations:[],haloMemories:[],rhythmRecords:{},rhythmMode:'record-only',rhythmStatus:'empty'});
       app.connectionIntro={completed:true,choice:'skipped',permission:'not-requested'};app.personalAccountScope.legacyHealthOwner='';
-      Object.assign(commerce,{memberAssets:wrap({level:'Halo Member（L1）',growth:0,badges:0}),badgeDetails:null,taskStates:{},taskPeriods:{},channelIdentity:'inactive',applicationSnapshot:null,applicationStatus:'none',channelActivation:null,channelAvailableCents:0,withdrawals:[]});
+      Object.assign(commerce,{memberAssets:wrap({level:'Halo Member（L1）',growth:0,badges:0}),badgeDetails:null,taskStates:{},taskPeriods:{},channelIdentity:'inactive',channelMode:'new',applicationSnapshot:null,applicationStatus:'none',channelActivation:null,channelAvailableCents:0,withdrawals:[],completedCourses:[],assessmentAnswers:{},assessmentPassed:false,trainingApplicationId:'',activationReady:false,channelAgreementConfirmed:false,activationRequest:null});
       // Unbound assets contain no historical growth or hardware-task rewards.
       commerce.pointsTransactions=commerce.pointsTransactions.filter(t=>!t.id.startsWith('task:')&&!t.id.startsWith('studio:'));commerce.studioAwards=[];
       let balance=0;for(const row of commerce.pointsTransactions){balance+=row.amount;row.balanceAfter=balance;}
       commerce.pointsBalance=12680;commerce.referralSnapshot.records[0].receipt.growth=0;
       commerce.teamPointsExpiry.remaining=12680;app.oxygenMeasurements={legacyImported:true,accounts:{}};app.rhythmCycleData={version:1,accounts:{}};
     }
-    if(scene==='pending'){Object.assign(commerce,{channelIdentity:'application',applicationStatus:'reviewing',channelActivation:null,activationRequest:null,activationReady:false,channelAgreementConfirmed:false,channelAvailableCents:0,withdrawals:[]});commerce.applicationSnapshot.reviewDecision=null;commerce.applicationSnapshot.reviewSubmittedAt=at(2);}
+    if(scene==='pending'){Object.assign(commerce,{channelIdentity:'application',applicationStatus:'reviewing',channelMode:'new',channelActivation:null,activationRequest:null,activationReady:false,channelAgreementConfirmed:false,channelAvailableCents:0,withdrawals:[]});commerce.applicationSnapshot.reviewDecision=null;commerce.applicationSnapshot.reviewSubmittedAt=at(2);}
     if(scene==='paused'||scene==='terminated')commerce.channelIdentity=scene;
     if(scene==='studio-live'){
       const r=app.studioRecords['yoga-evening'];r.sessionDone=false;r.startedAt=new Date(now-15*60000).toISOString();r.completedAt=null;r.completionSnapshot=null;r.nextDayReport=null;r.teamMeasurements=null;r.reportStatus='waiting';r.eventSnapshot.startsAt=r.startedAt;r.eventSnapshot.date=`${date().slice(5).replace('-','月')}日 · 进行中演示场次`;r.captureReceipt.startedAt=r.startedAt;
@@ -175,22 +203,36 @@
       localStorage.setItem(MARKER,JSON.stringify({version:1,scene,seededAt:at(),simulated:true}));
     }
   } catch(error){return stop(error);}
-  window.HALO_TEAM_DEMO={scene,scenes:SCENES,simulated:true};
+  // Restore a previous demo's role as well as its fixture without reseeding it.
+  const currentURL = new URL(location.href), currentParams = currentURL.searchParams;
+  const marker = JSON.parse(localStorage.getItem(MARKER));
+  const partnerCase = currentParams.get('partnerCase') || marker.partnerCase || defaultPartnerCase(scene);
+  const requestedScene = currentParams.get('demoScene') || marker.launchScene;
+  const selectedScene = Object.hasOwn(LAUNCH_SCENES, requestedScene || '') ? requestedScene
+    : currentParams.has('partnerCase') ? Object.keys(PARTNER_SCENES).find(id => PARTNER_SCENES[id][3] === scene && PARTNER_SCENES[id][4] === partnerCase) || scene : scene;
+  currentParams.set('partnerCase', partnerCase);
+  currentParams.set('partnerUI', 'review'); currentParams.set('academyUI', 'review');
+  history.replaceState(history.state, '', currentURL);
+  try {
+    if (marker.partnerCase !== partnerCase || marker.launchScene !== selectedScene)
+      localStorage.setItem(MARKER, JSON.stringify({...marker, partnerCase, launchScene:selectedScene}));
+  } catch(error) { return stop(error); }
+  window.HALO_TEAM_DEMO={scene,scenes:LAUNCH_SCENES,selectedScene,createSceneURL,simulated:true};
   document.addEventListener('DOMContentLoaded',()=>{
     const stage=document.querySelector('.stage');
     const panel=document.createElement('section');panel.className='team-demo-panel';panel.setAttribute('aria-label','团队演示台（非 App 界面）');
-    panel.innerHTML='<div class="team-demo-title"><span>TEAM PREVIEW</span><strong>团队全貌演示版</strong><small>全为虚构数据 · 不发送短信、不付款、不连接真实硬件</small></div><div class="team-demo-controls"><label>演示场景 <select id="team-scene"></select></label><button id="team-open">开启新场景</button><button id="team-catalog">页面全貌</button></div><p id="team-scene-note"></p>';
+    panel.innerHTML='<div class="team-demo-title"><span>TEAM PREVIEW</span><strong>团队全貌演示版</strong><small>全为虚构数据 · 不发送短信、不付款、不连接真实硬件</small></div><div class="team-demo-controls"><label>演示场景 <select id="team-scene" aria-label="演示场景"></select></label><button id="team-open">开启新场景</button><button id="team-catalog">页面全貌</button></div><p id="team-scene-note"></p><a class="team-h5-entry" href="agent-points-review.html" target="_blank" rel="noopener">代理积分 H5 原型 ↗</a>';
     const placement=matchMedia('(max-width:760px)');
     function placePanel(){if(placement.matches)(stage||document.querySelector('.workspace')).prepend(panel);else(document.querySelector('.brand-lockup')||stage).append(panel);}
     placePanel();placement.addEventListener('change',placePanel);
-    const select=panel.querySelector('select');for(const[id,[name]]of Object.entries(SCENES)){const o=document.createElement('option');o.value=id;o.textContent=name;select.append(o);}select.value=scene;
-    panel.querySelector('#team-scene-note').textContent=`当前：${SCENES[scene][2]}。刷新保留操作；新场景保留本轮记录。`;
-    panel.querySelector('#team-open').onclick=()=>{const u=new URL(location.href);const selected=select.value;u.search='';u.searchParams.set('demo','new');u.searchParams.set('demoPrevious',new URL(location.href).searchParams.get('demo'));u.searchParams.set('scene',selected);u.hash=SCENES[selected][1];location.assign(u);};
+    const select=panel.querySelector('select');for(const[id,[name]]of Object.entries(LAUNCH_SCENES)){const o=document.createElement('option');o.value=id;o.textContent=name;select.append(o);}select.value=selectedScene;
+    panel.querySelector('#team-scene-note').textContent=`当前：${LAUNCH_SCENES[selectedScene][0]}。${LAUNCH_SCENES[selectedScene][2]}。刷新保留操作；新场景保留本轮记录。`;
+    panel.querySelector('#team-open').onclick=()=>{const href=createSceneURL(select.value);if(href)location.assign(href);};
     const catalog=document.createElement('dialog');catalog.className='team-catalog';catalog.innerHTML='<header><h2>页面全貌</h2><button id="team-catalog-close">关闭</button></header><p>目录是团队审阅入口，不替代 App 内自然入口。受登录、活动与渠道身份限制的页面仍执行原门禁。</p><div id="team-page-count"></div><div id="team-page-list"></div>';
     document.body.append(catalog);catalog.querySelector('#team-catalog-close').onclick=()=>catalog.close();
     panel.querySelector('#team-catalog').onclick=()=>{
       const pages=window.HALO_V5_PAGES||[],aliases=['AUTH-02','TOD-04'],groups=[...new Set(pages.map(p=>p.group))];
-      catalog.querySelector('#team-page-count').textContent=`${pages.length} 个页面 ID · ${pages.length-aliases.length} 个独立页面（另含 ${aliases.join(' / ')} 兼容入口）· ${Object.keys(SCENES).length} 个演示场景`;
+      catalog.querySelector('#team-page-count').textContent=`${pages.length} 个页面 ID · ${pages.length-aliases.length} 个独立页面（另含 ${aliases.join(' / ')} 兼容入口）· ${Object.keys(LAUNCH_SCENES).length} 个演示场景`;
       const list=catalog.querySelector('#team-page-list');list.replaceChildren();
       for(const group of groups){const sec=document.createElement('section'),h=document.createElement('h3');h.textContent=group;sec.append(h);for(const p of pages.filter(p=>p.group===group)){const b=document.createElement('button');b.textContent=`${p.id} · ${p.name}${aliases.includes(p.id)?'（兼容）':''}`;b.onclick=()=>{catalog.close();const rail=document.querySelector(`[data-page="${p.id}"]`);if(rail?.tagName==='BUTTON')rail.click();else location.hash=p.id;};sec.append(b);}list.append(sec);}catalog.showModal();
     };

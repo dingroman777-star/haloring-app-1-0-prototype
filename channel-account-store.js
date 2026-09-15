@@ -25,7 +25,7 @@
     create(state, defaults) {
       let session = appSession(), owner = "", baseline = {}, initialized = false, unreadable = false;
       const project = source => Object.fromEntries(Object.entries(source || {}).filter(([key]) => channelField(key)).map(([key, value]) => [key, clone(value)]));
-      const empty = account => ({ ...project(defaults), channelAvailableCents: 0, channelOwnerAccount: account, channelActivation: null, channelWithdrawal: null, channelPromotion: null, channelContentSelection: null, channelContentReads: [], applicationFlow: { consentKey: "", savedAt: "", request: null }, applicationSupplement: null, applicationReviewQuery: null, trainingApplicationId: "", trainingVisit: null, channelHistorySelection: null });
+      const empty = account => ({ ...project(defaults), channelAvailableCents: 0, channelOwnerAccount: account, channelActivation: null, channelWithdrawal: null, channelPayoutAccount: null, channelPromotion: null, channelContentSelection: null, channelContentReads: [], applicationFlow: { consentKey: "", savedAt: "", request: null }, applicationSupplement: null, applicationReviewQuery: null, trainingApplicationId: "", trainingVisit: null, channelHistorySelection: null });
       function root() {
         const saved = JSON.parse(localStorage.getItem(KEY) || "null");
         if (saved !== null) {
@@ -86,6 +86,10 @@
           patch[key] = clone(proposed[key]);
         }
         const merged = { ...currentData, ...patch, channelOwnerAccount: owner };
+        // A saved payee cannot be edited, cleared or replaced by an older App tab.
+        // Support changes require an audited server operation, not an App action.
+        if (currentData.channelPayoutAccount != null && !equal(currentData.channelPayoutAccount, merged.channelPayoutAccount)) throw new Error("Payee locked; contact support");
+        if (merged.channelPayoutAccount && merged.channelPayoutAccount.ownerAccount !== owner) throw new Error("Payee owner mismatch");
         if (merged.applicationSnapshot && merged.applicationSnapshot.ownerAccount !== owner) throw new Error("Application owner mismatch");
         if (merged.identityVerification && merged.identityVerification.ownerAccount !== owner) throw new Error("Identity owner mismatch");
         const draft = merged.identityDraft;

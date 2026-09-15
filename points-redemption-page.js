@@ -63,13 +63,14 @@
       shown={scope:s.scope,itemId:item?.id,offer:fingerprint(o)};
       const same=r&&!r.unknown&&r.itemId===item?.id&&s.data.pointsRedemptionIntent!=='new';
       let title='确认兑换',body='',footer='';
-      const card=item?`<section class="pr-ticket"><svg class="pr-ticket-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Z"/><path d="M15 5v3m0 3v2m0 3v3"/></svg><small>Halo Studio</small><h2>${e(item.shortTitle)}</h2><span>1 张 · ${e(item.usage)}</span></section>`:'';
+      const academy=item?.id==='academy-advanced';
+      const card=item?`<section class="pr-ticket"><svg class="pr-ticket-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4Z"/><path d="M15 5v3m0 3v2m0 3v3"/></svg><small>${e(item.context||"Halo Studio")}</small><h2>${e(item.shortTitle)}</h2><span>1 张 · ${e(item.usage)}</span></section>`:'';
       if(s.unavailable||!item){title='兑换';body=`<section class="pr-state"><span aria-hidden="true">—</span><h2>${s.unavailable?'暂时无法查看':'还没有选择兑换内容'}</h2><p>${s.unavailable?'积分与兑换信息暂未取得。':'先看看积分能换什么，再来确认。'}</p></section>`;footer=button(s.unavailable?'refresh':'route:PTS-03',s.unavailable?'重新读取':'去选择兑换内容','pr-primary');}
       else if(rec?.unknown||r?.unknown||(same&&r.status==='success'&&!rec)||(!r&&['success','processing'].includes(s.data.redemptionStatus))){title='核对兑换结果';body=`${card}<p class="pr-notice">当前记录还不能确认兑换结果，请先核对，暂不重复提交。</p>`;footer=button('refresh','重新查询','pr-primary')+button('route:PTS-02','查看积分明细')+button('route:HELP-03','联系支持');}
       else if(rec){
         title='兑换结果';const expired=Date.parse(rec.v.expiresAt||rec.v.expires_at)<=Date.now(),usable=rec.v.status==='available'&&!expired;
-        body=`<section class="pr-state pr-success"><span aria-hidden="true">✓</span><h2>兑换成功</h2><p>${usable?'体验券已到账，预约时可选择使用。':rec.v.status==='used'?'这张体验券已使用。':rec.v.status==='returned'?'这张体验券已退回。':'这张体验券已到期。'}</p></section>${card}${rows([['本次使用',n(-rec.tx.amount)+' 积分'],['兑换后余额',n(rec.tx.balanceAfter)+' 积分'],['当前可用',n(s.balance)+' 积分'],['使用截止',date(rec.v.expiresAt||rec.v.expires_at)],['兑换时间',date(rec.tx.posted_at)]])}<details class="pr-more"><summary>使用说明与兑换编号</summary><p>${e(rec.v.usage||'使用说明待取得')}</p><p>${e(rec.v.returns||'退回条件待取得')}</p><p>编号 ${e(rec.tx.requestId)}</p></details>`;
-        footer=button(usable?'route:STU-08':'route:PTS-02',usable?'去 Halo Studio 使用':'查看积分明细','pr-primary')+button('route:PTS-03','返回兑换列表');
+        body=`<section class="pr-state pr-success"><span aria-hidden="true">✓</span><h2>兑换成功</h2><p>${usable?e(item.delivery||'体验券已到账，预约时可选择使用。'):rec.v.status==='used'?'这张体验券已使用。':rec.v.status==='returned'?'这张体验券已退回。':'这张体验券已到期。'}</p></section>${card}${rows([['本次使用',n(-rec.tx.amount)+' 积分'],['兑换后余额',n(rec.tx.balanceAfter)+' 积分'],['当前可用',n(s.balance)+' 积分'],['使用截止',date(rec.v.expiresAt||rec.v.expires_at)],['兑换时间',date(rec.tx.posted_at)]])}<details class="pr-more"><summary>使用说明与兑换编号</summary><p>${e(rec.v.usage||'使用说明待取得')}</p><p>${e(rec.v.returns||'退回条件待取得')}</p><p>编号 ${e(rec.tx.requestId)}</p></details>`;
+        footer=button(usable?(academy?'academy-study':'route:STU-08'):'route:PTS-02',usable?(academy?'开始学习本课程':'去 Halo Studio 使用'):'查看积分明细','pr-primary')+button('route:PTS-03','返回兑换列表');
       }else if(same&&r.status==='processing'){
         title='正在兑换';body=`<section class="pr-state"><span class="pr-pulse" aria-hidden="true">◷</span><h2>正在确认兑换</h2><p>可以稍后回来查看，无需再次提交。</p></section>${card}${rows([['本次所需',n(r.cost)+' 积分'],['提交时间',date(r.requestedAt)]])}`;footer=button('refresh','查询兑换结果','pr-primary')+button('route:PTS-03','稍后查看');resume(ctx);
       }else if(r&&r.status==='processing'){
@@ -92,7 +93,8 @@
         const h=model.history(s,item),r=request(s),id=s.data.selectedPointsRedemptionId||(!r?.unknown&&r?.id)||h.entries[0]?.tx.requestId||s.data.pointsTransactions?.find(x=>x?.itemId===item.id||x?.id==='redemption:'+item.id)?.requestId||'';
         if(save(s,{...s.data,pointsRedemptionSupport:{scope:s.scope,itemId:item.id,requestId:id,issue:message||(!h.unknown&&h.entries.length?'咨询兑换与使用':'兑换结果待核对')}},ctx))ctx.go('HELP-03');else ctx.render();return true;
       }
-      if(command==='pr-route'){if(['PTS-03','PTS-02','MEM-04','STU-08','HELP-03'].includes(value))ctx.go(value);return true;}
+      if(command==='pr-academy-study'){if(!window.HALO_COMMERCIAL_EXTENSION?.openAcademyOwnedCourse?.(ctx)){ctx.flash?.('课程权益暂未取得，请重新查询。');ctx.go('AGT-07');}return true;}
+      if(command==='pr-route'){if(['PTS-03','PTS-02','MEM-04','STU-08','HELP-03','AGT-07'].includes(value))ctx.go(value);return true;}
       if(command==='pr-refresh'){failedSave='';message='已重新读取兑换信息。';resume(ctx);ctx.render();return true;}
       if(command==='pr-resume-original'){const s=snapshot(ctx),r=!s.unavailable&&request(s);if(r&&!r.unknown&&r.status==='processing'&&save(s,{...s.data,selectedRedemptionId:r.itemId},ctx))ctx.render();return true;}
       if(command==='pr-submit'&&!busy){

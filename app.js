@@ -1,7 +1,7 @@
 (function () {
   if (new URLSearchParams(location.search).has("demo") && !window.HaloDemoSessionReady) throw new Error("独立演示尚未加载，请重新加载页面；旧记录未改变。");
   const pages = window.HALO_V5_PAGES || [];
-  const groups = ["全部", "首次使用", "设备", "今日", "健康数据", "夜间", "Halo AI", "节律", "我的", "会员与积分", "Halo Select", "渠道经营", "Halo Studio"];
+  const groups = ["全部", "首次使用", "设备", "今日", "健康数据", "夜间", "Halo AI", "节律", "我的", "会员与积分", "Halo Select", "渠道经营", "商学院", "Halo Studio"];
   const MEMBERSHIP_STATE_KEY = "membershipHardwareState";
   const SUBJECTIVE_RECORDS_KEY = "haloSubjectiveRecords";
   const SLEEP_GOAL_KEY = "haloSleepGoal";
@@ -527,7 +527,7 @@
   };
   const BODY_WEATHER_STATES = {
     restore: {
-      label: "修复日",
+      label: "休息日",
       english: "RESTORE DAY",
       homeTitle: "今天先别勉强自己",
       homeBody: "昨晚比平时少睡了不少，夜里也醒得多。日常安排可以继续，运动和加班都先收一点。",
@@ -575,7 +575,7 @@
       ],
     },
     slow: {
-      label: "缓行日",
+      label: "慢行日",
       english: "SLOW DAY",
       homeTitle: "今天别把安排塞太满",
       homeBody: "昨晚睡得不够连贯。工作和日常出门可以照常，运动先别冲强度。",
@@ -623,7 +623,7 @@
       ],
     },
     balance: {
-      label: "平衡日",
+      label: "平常日",
       english: "BALANCE DAY",
       homeTitle: "今天按平时的节奏来",
       homeBody: "昨晚的睡眠和夜间信号都接近你的平常水平。工作、出门和运动照常即可。",
@@ -795,7 +795,9 @@
   function currentBodyWeather() {
     const config = BODY_WEATHER_STATES[state.bodyWeather] || BODY_WEATHER_STATES.slow;
     const { variants, ...defaults } = config;
-    return rotatingCopy(`body-weather:${state.bodyWeather}`, defaults, variants);
+    const result = rotatingCopy(`body-weather:${state.bodyWeather}`, defaults, variants);
+    const visual = window.HaloBodyWeatherVisuals.get(state.bodyWeather, copyVariantIndex(`body-weather:${state.bodyWeather}`, 2));
+    return visual ? { ...result, label: visual.label, homeTitle: visual.copy, homeBody: "", detailSummary: visual.copy, shareLine: visual.copy, copyVariant: visual.copyVariant } : result;
   }
   // Shared demo observations: raw readings remain available before personal comparisons.
   // Missing overnight segments must never reuse the complete-night demo aggregates.
@@ -1632,9 +1634,10 @@
   const SIGNED_OUT_ROUTES = new Set(["SYS-01", "ONB-01", "AUTH-01", "AUTH-02", "LEGAL-01", "SEL-03"]);
   const DELETION_STATUS_ROUTES = new Set(["SYS-01", "ACC-02", "ACC-03", "HELP-03", "LEGAL-02"]);
   function guardedRoute(id) {
+    id = window.HaloPartnerNavigation?.resolve(id) || id;
     accountDeletion?.syncStatus();
     if (id === "SEL-08") id = "SEL-05";
-    if (id === "CHN-05") id = window.HALO_COMMERCIAL_EXTENSION?.channelJoinNext?.().route || "CHN-01";
+    if (["CHN-02", "CHN-03", "CHN-04", "CHN-05"].includes(id)) id = window.HALO_COMMERCIAL_EXTENSION?.channelJoinNext?.().route || "CHN-01";
     if (id === "AUTH-02") id = "AUTH-01";
     if (id === "AUTH-01" && state.signedIn && state.authForm.login?.status === "complete") id = state.authForm.login.destination === "SEL-03" ? "SEL-03" : state.connectionIntro.completed ? "TOD-01" : "ONB-03";
     if (!state.signedIn && !SIGNED_OUT_ROUTES.has(id)) return "AUTH-01";
@@ -1653,7 +1656,7 @@
     if (prefix === "NIG") return "NIG-01";
     if (prefix === "HAL") return "HAL-01";
     if (prefix === "RHY") return "RHY-01";
-    if (["MY", "ACC", "SET", "HELP", "DEV", "STU", "MEM", "PTS", "REF", "SEL", "CHN"].includes(prefix)) return "MY-01";
+    if (["MY", "ACC", "SET", "HELP", "DEV", "STU", "MEM", "PTS", "REF", "SEL", "CHN", "AGT", "ACA"].includes(prefix)) return "MY-01";
     return "";
   }
   function capturePageView() {
@@ -1699,6 +1702,7 @@
     haloSettingsHub?.enter(target, state.current);
     studioTodayReminder?.enter(target, state.current);
     if (!pages.some((item) => item.id === target)) return;
+    window.HALO_ACADEMY_REVIEW?.beforeNavigate(target);
     if (target !== state.current && (target === "PERM-01" || state.current === "PERM-01")) permissionFeedback = "";
     if (modalRoot.querySelector(".legal-reading-modal, .permission-system-modal, .system-health-modal")) closeModal(true);
     helpCenter?.enter(target, state.current);
@@ -1755,6 +1759,9 @@
     render();
   }
   function goBack() {
+    if (["CHN-23", "AGT-07"].includes(state.current)) return go("AGT-05", false);
+    if (state.current === "CHN-26") return go(window.HaloPartnerNavigation.toolsReturn(history.state?.trail), false);
+    if (window.HALO_ACADEMY_REVIEW?.back(state.current, go)) return;
     if (nightFade.back()) return;
     if (nightSupport.back()) return;
     if (state.current === "REF-01") {
@@ -3314,17 +3321,18 @@
   function todayWeatherHome(item) {
     const weather = currentBodyWeather();
     const active = isHardwareActive();
-    const canInterpret = active && state.dataLifecycle === "interpretable";
+    const canInterpret = bodyWeatherPageState().ready;
     const correction = activeWeatherCorrection();
-    const dataState = currentDataLifecycle();
+    const dataState = active && state.dataLifecycle !== "none" && !bodyWeatherPageState().fresh ? { ...currentDataLifecycle("none"), label: "等待更新", headline: "今天的记录还没更新", summary: "可以先查看最近的记录，同步后再看看今天。" } : currentDataLifecycle();
     const firstUseView = todayFirstUseView();
     const title = firstUseView ? firstUseView.title : !active ? "还没有今天的身体天气" : correction ? "你的感受已补充" : canInterpret ? weather.homeTitle : dataState.headline;
     const titleMarkup = title.split(/(?<=，)/).map(part => `<span class="today-title-clause">${esc(part)}</span>`).join("");
-    const body = firstUseView ? firstUseView.body : !active ? "连接戒指后，开始记录睡眠与日常状态。" : correction ? "戒指记录保留，今天怎么安排也听听你的感受。" : canInterpret ? `${weather.homeBody.split("。")[0]}。` : dataState.summary;
+    const body = firstUseView ? firstUseView.body : !active ? "连接戒指后，开始记录睡眠与日常状态。" : correction ? "戒指记录保留，今天怎么安排也听听你的感受。" : canInterpret ? "" : dataState.summary;
     const signals = !active ? [["睡眠", "等待记录"], ["身体能量", "等待记录"], ["今天怎么动", "按感受"]] : canInterpret ? weather.signals.map(([label, value]) => [label, correction && label === "今天怎么动" ? "按感受" : value]) : dataState.signals;
     const main = firstUseView ? firstUseView.main : canInterpret ? ["看看今天怎么安排", "today-advice", "primary"] : ["查看记录进度", "go:TOD-11", "primary"];
     const copyVariant = firstUseView ? firstUseView.copyVariant : canInterpret ? weather.copyVariant : dataState.copyVariant;
-    return `${head(item, new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric", weekday: "short" }).format(new Date()))}<div class="stack today-stack${firstUseView ? " today-first-use" : ""}"><button class="body-weather visual-weather" data-action="${firstUseView ? "go:ONB-02" : "today-weather-details"}" data-copy-variant="${esc(copyVariant)}"><img class="weather-symbol" src="${HALO_SYMBOL}" alt="">${canInterpret ? `<span class="label today-weather-heading"><span>BODY WEATHER</span><strong class="today-weather-state">${esc(weather.label)}</strong></span>` : `<span class="label">BODY WEATHER · ${esc(firstUseView ? firstUseView.label : dataState.label)}</span>`}<h2>${titleMarkup}</h2><p>${esc(body)}</p><span class="today-card-link">${firstUseView ? "怎么开始记录" : canInterpret ? "查看状态与原因" : "了解记录条件"} <i aria-hidden="true">›</i></span></button><section class="today-health-links" aria-label="今天的身体信号">${visualSignalCards(signals, !active || state.dataLifecycle === "none")}<button class="today-all-health" data-action="go:HLT-00">查看全部健康数据 <i aria-hidden="true">›</i></button></section>${buttons([main])}${studioTodayReminder.page()}${todayRecordEntry()}${dailyInspirationCard()}${todayNightCard()}${todayServices()}</div>`;
+    const weatherHeading = canInterpret ? `<div class="bw-home-top"><span class="label today-weather-heading"><span>身体天气 · Body Weather</span><strong class="today-weather-state">${esc(weather.label)}</strong></span>${window.HaloBodyWeatherVisuals.artwork(state.bodyWeather)}</div>` : `<img class="weather-symbol" src="${HALO_SYMBOL}" alt=""><span class="label">身体天气 · ${esc(firstUseView ? firstUseView.label : dataState.label)}</span>`;
+    return `${head(item, new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "long", day: "numeric", weekday: "short" }).format(new Date()))}<div class="stack today-stack${firstUseView ? " today-first-use" : ""}"><button class="body-weather visual-weather${canInterpret ? " weather-with-art" : ""}" data-weather="${canInterpret ? esc(state.bodyWeather) : "pending"}" data-action="${firstUseView ? "go:ONB-02" : "today-weather-details"}" data-copy-variant="${esc(copyVariant)}">${weatherHeading}<h2>${titleMarkup}</h2>${body ? `<p>${esc(body)}</p>` : ""}<span class="today-card-link">${firstUseView ? "怎么开始记录" : canInterpret ? "查看状态与原因" : "了解记录条件"} <i aria-hidden="true">›</i></span></button><section class="today-health-links" aria-label="今天的身体信号">${visualSignalCards(signals, !active || state.dataLifecycle === "none")}<button class="today-all-health" data-action="go:HLT-00">查看全部健康数据 <i aria-hidden="true">›</i></button></section>${buttons([main])}${studioTodayReminder.page()}${todayRecordEntry()}${dailyInspirationCard()}${todayNightCard()}${todayServices()}</div>`;
   }
 
 
@@ -3408,7 +3416,7 @@
       const previous = points[i - 1], third = (point.x - previous.x) / 3;
       return `C${(previous.x + third).toFixed(2)},${(previous.y + tangents[i - 1] * third).toFixed(2)} ${(point.x - third).toFixed(2)},${(point.y - tangents[i] * third).toFixed(2)} ${point.x.toFixed(2)},${point.y.toFixed(2)}`;
     }).join(" ");
-    return `<svg class="bw-trend-chart" width="${width}" height="196" viewBox="0 0 ${width} 196" role="img" aria-labelledby="bw-trend-chart-title bw-trend-chart-desc"><title id="bw-trend-chart-title">最近 ${model.days} 天身体天气趋势 · 示例数据</title><desc id="bw-trend-chart-desc">横轴为日期，纵轴为活力、平衡、缓行、修复四种状态，不是健康分数。已选 ${selected.date}，${BODY_WEATHER_STATES[selected.status].label}。可以点选图表，或用下方日期控件查看每一天。</desc>${states.map((status, i) => { const y = top + i * (bottom - top) / 3; return `<g class="bw-chart-axis"><text x="0" y="${y + 4}">${BODY_WEATHER_STATES[status].label.slice(0, -1)}</text><line x1="${left}" x2="${right}" y1="${y}" y2="${y}"/></g>`; }).join("")}<line class="bw-chart-selection" x1="${selectedPoint.x}" x2="${selectedPoint.x}" y1="${top - 8}" y2="${bottom + 8}"/><path class="bw-chart-line" d="${path}"/>${points.map(point => `<circle class="bw-chart-point" data-date="${point.date}" data-status="${point.status}" cx="${point.x}" cy="${point.y}" r="${daily.length > 14 ? 2.5 : 3.5}" fill="${color[point.status]}"/>${state.toggles.trendRecords && point.records.length ? `<path class="bw-chart-record-mark" d="M${point.x},162 l4,4 l-4,4 l-4,-4 Z"/>` : ""}`).join("")}<circle class="bw-chart-current" cx="${selectedPoint.x}" cy="${selectedPoint.y}" r="6"/>${ticks.map(i => `<text class="bw-chart-date" x="${points[i].x}" y="190" text-anchor="${i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}">${Number(points[i].date.slice(5, 7))}/${Number(points[i].date.slice(8))}</text>`).join("")}<g aria-hidden="true">${points.map(point => `<rect class="bw-chart-hit" data-action="bw-trend-day:${point.date}" x="${Math.max(left - 6, point.x - step / 2)}" y="${top - 10}" width="${Math.min(right + 6, point.x + step / 2) - Math.max(left - 6, point.x - step / 2)}" height="166" fill="transparent"/>`).join("")}</g></svg>`;
+    return `<svg class="bw-trend-chart" width="${width}" height="196" viewBox="0 0 ${width} 196" role="img" aria-labelledby="bw-trend-chart-title bw-trend-chart-desc"><title id="bw-trend-chart-title">最近 ${model.days} 天身体天气趋势 · 示例数据</title><desc id="bw-trend-chart-desc">横轴为日期，纵轴为活力、平常、慢行、休息四种状态，不是健康分数。已选 ${selected.date}，${BODY_WEATHER_STATES[selected.status].label}。可以点选图表，或用下方日期控件查看每一天。</desc>${states.map((status, i) => { const y = top + i * (bottom - top) / 3; return `<g class="bw-chart-axis"><text x="0" y="${y + 4}">${BODY_WEATHER_STATES[status].label.slice(0, -1)}</text><line x1="${left}" x2="${right}" y1="${y}" y2="${y}"/></g>`; }).join("")}<line class="bw-chart-selection" x1="${selectedPoint.x}" x2="${selectedPoint.x}" y1="${top - 8}" y2="${bottom + 8}"/><path class="bw-chart-line" d="${path}"/>${points.map(point => `<circle class="bw-chart-point" data-date="${point.date}" data-status="${point.status}" cx="${point.x}" cy="${point.y}" r="${daily.length > 14 ? 2.5 : 3.5}" fill="${color[point.status]}"/>${state.toggles.trendRecords && point.records.length ? `<path class="bw-chart-record-mark" d="M${point.x},162 l4,4 l-4,4 l-4,-4 Z"/>` : ""}`).join("")}<circle class="bw-chart-current" cx="${selectedPoint.x}" cy="${selectedPoint.y}" r="6"/>${ticks.map(i => `<text class="bw-chart-date" x="${points[i].x}" y="190" text-anchor="${i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}">${Number(points[i].date.slice(5, 7))}/${Number(points[i].date.slice(8))}</text>`).join("")}<g aria-hidden="true">${points.map(point => `<rect class="bw-chart-hit" data-action="bw-trend-day:${point.date}" x="${Math.max(left - 6, point.x - step / 2)}" y="${top - 10}" width="${Math.min(right + 6, point.x + step / 2) - Math.max(left - 6, point.x - step / 2)}" height="166" fill="transparent"/>`).join("")}</g></svg>`;
   }
   function bodyWeatherTrendInspector(model) {
     const index = model.daily.findIndex(day => day.date === model.selected.date);
@@ -3432,7 +3440,7 @@
     const correction = activeWeatherCorrection();
     const record = sleepReviewRecord();
     const title = !data.active ? "连接戒指，开始了解自己" : !data.hasRecords ? "还没有收到身体记录" : !data.fresh ? "今天的记录还没更新" : data.limited ? "昨晚少了一段记录" : !data.ready ? "正在了解你的平时水平" : correction ? "先按你现在的感受来" : weather.homeTitle;
-    const summary = !data.active ? "戴着 Halo Ring 睡一晚，醒来后同步。" : !data.hasRecords ? "今晚照常佩戴，睡醒后打开 App 同步。" : !data.fresh ? "下面保留最近的记录，不用它判断今天。" : data.limited ? "02:10–03:00 缺少记录，暂不判断身体状态。" : !data.ready ? "已经收到的记录可以看，暂不与平时比较。" : correction ? "你的反馈已单独记下，戒指记录保持原样。" : `睡眠 ${sleepDuration(record.asleep)}，夜里清醒 ${record.awakenings} 次。身体能量接近平时。`;
+    const summary = !data.active ? "戴着 Halo Ring 睡一晚，醒来后同步。" : !data.hasRecords ? "今晚照常佩戴，睡醒后打开 App 同步。" : !data.fresh ? "下面保留最近的记录，不用它判断今天。" : data.limited ? "02:10–03:00 缺少记录，暂不判断身体状态。" : !data.ready ? "已经收到的记录可以看，暂不与平时比较。" : correction ? "你的反馈已单独记下，戒指记录保持原样。" : "";
     const status = !data.active ? "尚未连接" : !data.hasRecords ? "等待记录" : !data.fresh ? "等待更新" : data.limited ? "记录不完整" : !data.ready ? "积累中" : correction ? "感受已补充" : weather.label;
     const main = !data.active ? [state.membershipHardwareState === "unbound-retained" ? "重新连接 Halo Ring" : "连接 Halo Ring", "go:DEV-01", "primary"] : !data.hasRecords || data.limited || !data.fresh ? ["查看连接与同步", "go:DEV-10", "primary"] : !data.ready ? ["查看建立进度", "go:HLT-00", "primary"] : correction ? ["按我的感受聊聊", "bw-halo", "primary"] : ["看看今晚的放松内容", "go:NIG-01", "primary"];
     const actions = {
@@ -3444,7 +3452,7 @@
     const action = correction ? ["下一步，先听听你的感受", "想继续、想休息，或有别的感觉，都可以和 Halo 说。"] : actions[state.bodyWeather] || actions.slow;
     const dateText = data.hasRecords ? `${healthDateLabel(data.date)} · ${data.fresh ? "本次记录" : "最近记录"}` : "Body Weather";
     const syncText = data.hasRecords ? todaySyncLabel() : "等待首次有效记录";
-    return `<article class="bw-detail"><header class="health-overview-header"><button type="button" data-action="previous" aria-label="返回">${healthChevron("left")}</button><h1>身体天气</h1><button type="button" data-action="bw-help" aria-label="关于身体天气">i</button></header><p class="bw-record-date">${esc(dateText)}</p><section class="bw-hero detail-conclusion ${data.ready ? "ready" : "pending"}"><div class="bw-state"><span>${esc(status)}</span><img src="${HALO_SYMBOL}" alt=""></div><h2>${esc(title)}</h2><p>${esc(summary)}</p></section>${data.ready ? interpretationCorrectionCard() : ""}<section class="bw-action detail-action" aria-label="下一步">${data.ready ? `<div><span>今天可以怎么做</span><h2>${esc(action[0])}</h2><p>${esc(action[1])}</p></div>` : data.limited ? '<p>记录缺口不代表身体异常，已同步内容仍然保留。</p>' : ""}${buttons([main])}</section>${bodyWeatherEvidence(data)}${bodyWeatherTrendSection()}${bodyWeatherRecordLinks()}<section class="bw-more"><h2>再了解一点</h2><button type="button" class="bw-link-row" data-action="bw-pressure"><span>了解压力变化</span>${healthChevron()}</button><details class="bw-source"><summary><span>数据来源与说明</span>${healthChevron()}</summary><div><p>${data.hasRecords ? `Halo Ring · ${esc(healthDateLabel(data.date))}的记录` : "尚无可用的身体记录"}<br>${esc(syncText)}</p><p>${data.limited ? "夜间记录有缺口，暂不汇总整晚；已同步的活动片段可以查看。" : data.hasRecords ? "睡眠按醒来日期归档；活动仅统计已同步的部分。" : "没有收到数据时，不用示例数值代替你的记录。"}</p><p>你主动记下的感受会单独标注，不改动戒指测量。身体天气是日常参考，不是诊断。</p><button class="text-button" data-action="go:TOD-11">查看数据来源与质量</button><button class="text-button" data-action="go:DEV-10">查看连接与同步</button></div></details></section>${data.ready ? `<div class="bw-secondary-actions">${buttons([["分享这次状态", "go:TOD-10", "secondary"], ["和 Halo 聊聊", "bw-halo", "secondary"]])}</div>` : ""}<p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
+    return `<article class="bw-detail"><header class="health-overview-header"><button type="button" data-action="previous" aria-label="返回">${healthChevron("left")}</button><h1>身体天气</h1><button type="button" data-action="bw-help" aria-label="关于身体天气">i</button></header><p class="bw-record-date">${esc(dateText)}</p><section class="bw-hero detail-conclusion ${data.ready ? "ready" : "pending"}" data-weather="${data.ready ? esc(state.bodyWeather) : "pending"}"><div class="bw-state"><span>${esc(status)}</span>${data.ready ? window.HaloBodyWeatherVisuals.artwork(state.bodyWeather) : `<img src="${HALO_SYMBOL}" alt="">`}</div><h2>${esc(title)}</h2>${summary ? `<p>${esc(summary)}</p>` : ""}</section>${data.ready ? interpretationCorrectionCard() : ""}<section class="bw-action detail-action" aria-label="下一步">${data.ready ? `<div><span>今天可以怎么做</span><h2>${esc(action[0])}</h2><p>${esc(action[1])}</p></div>` : data.limited ? '<p>记录缺口不代表身体异常，已同步内容仍然保留。</p>' : ""}${buttons([main])}</section>${bodyWeatherEvidence(data)}${bodyWeatherTrendSection()}${bodyWeatherRecordLinks()}<section class="bw-more"><h2>再了解一点</h2><button type="button" class="bw-link-row" data-action="bw-pressure"><span>了解压力变化</span>${healthChevron()}</button><details class="bw-source"><summary><span>数据来源与说明</span>${healthChevron()}</summary><div><p>${data.hasRecords ? `Halo Ring · ${esc(healthDateLabel(data.date))}的记录` : "尚无可用的身体记录"}<br>${esc(syncText)}</p><p>${data.limited ? "夜间记录有缺口，暂不汇总整晚；已同步的活动片段可以查看。" : data.hasRecords ? "睡眠按醒来日期归档；活动仅统计已同步的部分。" : "没有收到数据时，不用示例数值代替你的记录。"}</p><p>你主动记下的感受会单独标注，不改动戒指测量。身体天气是日常参考，不是诊断。</p><button class="text-button" data-action="go:TOD-11">查看数据来源与质量</button><button class="text-button" data-action="go:DEV-10">查看连接与同步</button></div></details></section>${data.ready ? `<div class="bw-secondary-actions">${buttons([["分享这次状态", "go:TOD-10", "secondary"], ["和 Halo 聊聊", "bw-halo", "secondary"]])}</div>` : ""}<p class="health-overview-boundary">用于日常健康管理，不替代医疗诊断。</p></article>`;
   }
   function today(item) {
     if (item.id === "TOD-10") return stateShare.body();
@@ -4135,6 +4143,7 @@
     const greeting = `<section class="hal-empty"><img class="hal-welcome-ip" src="${HALO_IP_DEFAULT}" alt="Halo 日常小花团" width="140" height="140"><h2>想聊点什么？</h2><p>${source && source.kind !== "body" ? "你带来的内容已在这里，可以接着说。" : "说说今天，或从一个小问题开始。"}</p>${haloSourceChip()}${suggestions}${haloJourneyNudge()}</section>`;
     const messages = `<div class="hal-thread-heading"><img src="${HALO_IP_DEFAULT}" alt="" width="32" height="32"><span>${source ? `正在聊：${esc(source.title)}` : "这次对话"}</span></div>${haloSourceChip()}<div id="chat-messages" class="hal-messages" role="log" aria-label="对话消息">${state.chat.map(message => message.role === "user" ? `<div class="message user">${esc(message.text)}</div>` : `<article class="hal-reply"><img class="hal-reply-avatar" src="${HALO_IP_DEFAULT}" alt="Halo" width="30" height="30"><div class="hal-reply-content"><div class="message halo">${esc(message.text)}</div>${message.action?.route === "NIG-01" && !message.safety ? `<button class="hal-reply-action" data-action="go:NIG-01"><span>${esc(message.action.label || "去选一段放松内容")}</span>${haloUiIcon("arrow")}</button>` : ""}${message.safety ? haloSafetySupport() : ""}</div></article>`).join("")}</div>`;
     const quota = !isHardwareActive() ? `今天还可聊 ${Math.max(0, 10 - ensureHaloQuota().used)} 条` : !hasBodyContext() ? "暂不参考身体状态" : "";
+    if (window.HaloHomeUIPreview) return window.HaloHomeUIPreview.render({ hasChat, source, locked, status: state.conversationStatus, prompts, journey: haloJourneyNudge(), headerActions: haloHeaderActions(), messages, sourceChip: haloSourceChip(), composer: haloComposer("想说什么，都可以写在这里…"), quota, ip: HALO_IP_DEFAULT, esc });
     return `<section class="hal-chat-page ${hasChat ? "is-conversation" : "is-empty"}" aria-label="Halo 对话"><header class="hal-chat-header"><h1>Halo</h1><div class="hal-header-actions">${haloHeaderActions()}</div></header><div class="hal-chat-scroll">${hasChat ? messages : greeting}</div><footer class="hal-chat-footer">${locked ? `<div class="hal-conversation-state"><span>${state.conversationStatus === "paused" ? "这次对话已暂停" : "这次对话已归档"}</span><button data-action="halo-resume-active">继续对话</button></div>` : ""}<div class="hal-composer-meta"><span>${quota}</span><button data-action="halo-usage">使用说明</button></div>${haloComposer()}<p class="hal-ai-note">AI 回答仅供参考</p></footer></section>`;
   }
   function haloMemoryPage(item) {
@@ -4256,7 +4265,7 @@
     const assets = currentMemberAssetSnapshot();
     const commerce = window.HALO_COMMERCIAL_EXTENSION;
     const next = commerce?.channelJoinNext?.();
-    const advisor = !next || next.stage === "new" ? ["成为体验顾问", "了解申请条件", "CHN-01"] : [next.stage === "active" ? "经营中心" : `体验顾问 · ${next.label}`, next.stage === "active" ? "体验顾问" : next.title, next.route];
+    const advisor = commerce?.partnerEntry?.({applicationContext: () => ({signedIn:state.signedIn,accountRef:state.authPhone || "",page:state.current})}) || (!next || next.stage === "new" ? ["成为体验顾问", "了解申请条件", "CHN-01"] : [next.stage === "active" ? "经营中心" : `体验顾问 · ${next.label}`, next.stage === "active" ? "体验顾问" : next.title, next.route]);
     const device = myHomeDevice();
     const growth = state.membershipHardwareState === "unbound-retained" ? "等级保留，成长暂停" : isHardwareActive() ? "查看成长进度" : "激活后开启成长";
     const pointsPaused = assets.pending > 0;
@@ -4634,7 +4643,7 @@
 
   function renderNavigation() {
     groupNav.innerHTML = groups.map((group) => `<button class="group-chip ${state.group === group ? "active" : ""}" data-group="${esc(group)}">${esc(group)}</button>`).join("");
-    const list = filteredPages();
+    const list = window.HaloPartnerNavigation?.orderDirectory(filteredPages()) || filteredPages();
     document.getElementById("page-count").textContent = String(list.length);
     const grouped = new Map();
     list.forEach((item) => { if (!grouped.has(item.group)) grouped.set(item.group, []); grouped.get(item.group).push(item); });
@@ -4646,7 +4655,7 @@
   }
   function bodyWeatherReviewControls(item) {
     if (!["TOD-01", "TOD-03", "TOD-04", "TOD-10", "HAL-01", "SET-03", "STU-06"].includes(item.id)) return "";
-    const weatherOptions = [["restore", "修复日"], ["slow", "缓行日"], ["balance", "平衡日"], ["active", "活力日"]];
+    const weatherOptions = window.HaloBodyWeatherVisuals.keys.map(key => [key, window.HaloBodyWeatherVisuals.get(key).label]);
     const lifecycleOptions = Object.entries(DATA_LIFECYCLE).map(([value, data]) => [value, data.label]);
     const optionButtons = (options, prefix, selected) => options.map(([value, label]) => `<button class="${selected === value ? "active" : ""}" data-action="${prefix}:${value}">${esc(label)}</button>`).join("");
     return `<section class="review-controls"><p>BODY WEATHER STATES</p><h3>身体天气审阅状态</h3><small>切换结果只用于评审四种天气与五种数据阶段，不会出现在设备界面。</small><div class="review-control-group"><strong>天气状态</strong><div>${optionButtons(weatherOptions, "body-weather", state.bodyWeather)}</div></div><div class="review-control-group"><strong>数据状态</strong><div>${optionButtons(lifecycleOptions, "lifecycle", state.dataLifecycle)}</div></div></section>`;
@@ -4674,10 +4683,12 @@
     const prefix = item.id.split("-")[0];
     const shoppingPage = prefix === "SEL";
     const recordPage = item.id === "TOD-02";
+    const partnerPage = ["渠道经营", "商学院"].includes(item.group) || ["CHN", "AGT", "ACA"].includes(prefix);
     screen.closest(".device-shell").classList.toggle("shopping-subpage", shoppingPage);
     screen.closest(".device-shell").classList.toggle("record-subpage", recordPage);
-    const active = ["TOD", "HLT"].includes(prefix) ? "TOD-01" : prefix === "NIG" ? "NIG-01" : prefix === "HAL" ? "HAL-01" : prefix === "RHY" ? "RHY-01" : ["MY", "ACC", "SET", "HELP", "DEV", "STU", "MEM", "PTS", "REF", "SEL", "CHN"].includes(prefix) && !["DEV-01", "DEV-02", "DEV-03", "DEV-04", "DEV-05"].includes(item.id) ? "MY-01" : "";
-    tabbar.style.visibility = shoppingPage || recordPage || !state.signedIn || state.welcomeShopping && item.id === "SEL-03" || ["SYS", "ONB", "AUTH", "LEGAL", "PERM"].includes(prefix) || ["DEV-01", "DEV-02", "DEV-03", "DEV-04", "DEV-05", "RHY-00"].includes(item.id) ? "hidden" : "visible";
+    screen.closest(".device-shell").classList.toggle("partner-subpage", partnerPage);
+    const active = ["TOD", "HLT"].includes(prefix) ? "TOD-01" : prefix === "NIG" ? "NIG-01" : prefix === "HAL" ? "HAL-01" : prefix === "RHY" ? "RHY-01" : ["MY", "ACC", "SET", "HELP", "DEV", "STU", "MEM", "PTS", "REF", "SEL", "CHN", "AGT"].includes(prefix) && !["DEV-01", "DEV-02", "DEV-03", "DEV-04", "DEV-05"].includes(item.id) ? "MY-01" : "";
+    tabbar.style.visibility = shoppingPage || recordPage || partnerPage || !state.signedIn || state.welcomeShopping && item.id === "SEL-03" || ["SYS", "ONB", "AUTH", "LEGAL", "PERM"].includes(prefix) || ["DEV-01", "DEV-02", "DEV-03", "DEV-04", "DEV-05", "RHY-00"].includes(item.id) ? "hidden" : "visible";
     tabbar.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.tab === active));
   }
   function render() {
@@ -5916,7 +5927,7 @@
   }
 
   groupNav.addEventListener("click", (event) => { const button = event.target.closest("[data-group]"); if (!button) return; state.group = button.dataset.group; const first = filteredPages()[0]; if (first) state.current = first.id; render(); });
-  nav.addEventListener("click", (event) => { const button = event.target.closest("[data-page]"); if (button) go(button.dataset.page); });
+  nav.addEventListener("click", (event) => { const button = event.target.closest("[data-page]"); if (button && !window.HALO_ACADEMY_REVIEW?.directory(button.dataset.page, go)) go(button.dataset.page); });
   screen.addEventListener("click", (event) => handleAction(event.target.closest("[data-action]")?.dataset.action));
   screen.addEventListener("submit", (event) => {
     if (event.target.id === "profile-editor-form") { event.preventDefault(); if (!profileEditorComposing) handleAction("profile-save"); return; }
@@ -6227,7 +6238,7 @@
   window.addEventListener("hashchange", () => {
     if (!generalSettingsSafe()) { history.replaceState({ ...history.state, id: "SET-03" }, "", "#SET-03"); return; }
     const id = location.hash.slice(1).toUpperCase();
-    if (!["CHN-05", "SEL-08"].includes(id) && !pages.some((item) => item.id === id)) return;
+    if (!["CHN-02", "CHN-03", "CHN-04", "CHN-05", "SEL-08", ...Object.keys(window.HaloPartnerNavigation?.retired || {})].includes(id) && !pages.some((item) => item.id === id)) return;
     if (id === state.current) return;
     if (state.current === "HAL-08" && !haloSettingsHub.canLeave()) {
       history.replaceState({ ...history.state, id:"HAL-08" }, "", "#HAL-08");
@@ -6357,17 +6368,19 @@
     const first = controls[0], last = controls.at(-1);
     if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) { event.preventDefault(); (event.shiftKey ? last : first)?.focus(); }
   });
-  // Old bookmarks and saved navigation resume the application, not the retired device prerequisite.
+  // Retired identity/device prerequisite links resume the application without altering saved records.
   const legacyChannelRoute = window.HALO_COMMERCIAL_EXTENSION?.channelJoinNext?.().route || "CHN-01";
-  if (state.lastVisitedRoute === "CHN-05") state.lastVisitedRoute = legacyChannelRoute;
-  state.navigationHistory = state.navigationHistory.map(id => id === "CHN-05" ? legacyChannelRoute : id);
-  for (const key of Object.keys(state.tabStacks)) state.tabStacks[key] = state.tabStacks[key].map(id => id === "CHN-05" ? legacyChannelRoute : id);
+  const retiredChannelRoutes = ["CHN-02", "CHN-03", "CHN-04", "CHN-05", ...Object.keys(window.HaloPartnerNavigation?.retired || {})];
+  const resolveRetiredChannel = id => window.HaloPartnerNavigation?.retired[id] || (retiredChannelRoutes.includes(id) ? legacyChannelRoute : id);
+  if (retiredChannelRoutes.includes(state.lastVisitedRoute)) state.lastVisitedRoute = resolveRetiredChannel(state.lastVisitedRoute);
+  state.navigationHistory = state.navigationHistory.map(resolveRetiredChannel);
+  for (const key of Object.keys(state.tabStacks)) state.tabStacks[key] = state.tabStacks[key].map(resolveRetiredChannel);
   startup = window.createHaloStartup({ state, pages, esc, symbol: HALO_SYMBOL, go, render,
     bindingRoute: () => deviceBinding.resumeRoute(),
     guideRoute: prior => deviceWear.resumeRoute(prior) || initialSync.resumeRoute(prior),
     expireSession: () => { state.signedIn = false; invalidateAuthRequest(); }, track: trackPrototypeEvent });
   const requestedInitial = location.hash.slice(1).toUpperCase();
-  const initialCandidate = ["CHN-05", "SEL-08"].includes(requestedInitial) ? guardedRoute(requestedInitial) : requestedInitial;
+  const initialCandidate = [...retiredChannelRoutes, "SEL-08"].includes(requestedInitial) ? guardedRoute(requestedInitial) : requestedInitial;
   const initial = pages.some(item => item.id === initialCandidate) ? initialCandidate : "SYS-01";
   // Explicit non-startup hashes remain available for individual prototype reviews.
   if (initial === "SYS-01") {

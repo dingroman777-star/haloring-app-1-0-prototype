@@ -1,0 +1,64 @@
+/* V6.6 academy; isolated from other App and H5 screens. */
+.academy-home{padding:4px 6px 28px;color:#21352a;font-family:inherit}
+.academy-home *{box-sizing:border-box}
+.academy-home button{font:inherit;cursor:pointer;touch-action:manipulation}
+.academy-home button:focus-visible{outline:3px solid #bd873c;outline-offset:3px}
+.academy-home h1{font-size:25px;letter-spacing:-.5px;margin:0}
+.academy-home h2{font-size:18px;line-height:1.45;margin:0}
+.academy-home p{font-size:13px;line-height:1.7;color:#647368;margin:8px 0}
+.ac-header{display:flex;align-items:center;gap:10px;min-height:44px}
+.ac-header h1{flex:1}
+.ac-back{border:0;background:none;font-size:28px!important;padding:0 10px 0 0;min-width:32px;min-height:44px}
+.ac-link{border:0;background:none;color:#365f43;padding:10px 0;font-size:12px!important;min-height:44px}
+.ac-intro{margin:8px 0 15px}
+.ac-identity{font-size:11px;color:#506443}
+.ac-points{border-top:1px solid #dde4d9;border-bottom:1px solid #dde4d9;margin-bottom:18px}
+.ac-points-link{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;border:0;padding:11px 0;color:#294c35;text-align:left}
+.ac-points-link strong{font-size:13px}.ac-points-link small{display:block;font-size:11px;color:#677465;margin-top:5px}.ac-points-link>span:last-child{font-size:11px}
+.ac-resume{background:#e8eddf;border-radius:18px;padding:20px;position:relative}
+.ac-resume span{font-size:11px;color:#547145}.ac-resume h2{margin:9px 0 4px;font-size:22px;max-width:240px}
+.ac-resume p{font-size:12px;color:#56674c}
+.ac-resume progress{display:block;width:100%;height:5px;border:0;appearance:none;margin:16px 0;background:#cdd8c5;border-radius:6px;overflow:hidden}
+.ac-resume progress::-webkit-progress-bar{background:#cdd8c5}.ac-resume progress::-webkit-progress-value{background:#517347}.ac-resume progress::-moz-progress-bar{background:#517347}
+.ac-primary,.ac-secondary{display:block;width:100%;border:0;border-radius:10px;min-height:44px;padding:10px 16px;margin-top:14px;font-weight:600!important}
+.ac-primary{background:#284d36;color:#fff}.ac-secondary{background:#edf1e8;color:#284d36}
+.ac-shortcuts{display:grid;grid-template-columns:repeat(3,1fr);margin:15px 0 22px;gap:6px}
+.ac-shortcuts button{background:#fff;border:1px solid #e1e5dc;border-radius:10px;font-size:12px;min-height:44px;color:#3b4d3f}
+.ac-section-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.ac-section-heading small{font-size:11px;color:#718067}
+.ac-filters{display:flex;gap:5px;margin:12px 0}
+.ac-filters button{border:0;background:#edf0e8;color:#586650;border-radius:24px;padding:8px 12px;min-height:36px;font-size:12px;white-space:nowrap}
+.ac-filters button[aria-pressed=true]{background:#2d4a36;color:#fff}
+.ac-course{display:flex;align-items:center;gap:12px;border:0;border-bottom:1px solid #e6e9e2;background:none;width:100%;padding:16px 0;text-align:left;color:inherit}
+.ac-course-icon{width:48px;height:58px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;font-size:25px;color:#47623b;background:#e5ecde}
+.ac-course-icon.ac-life{background:#e7e5f0;color:#78648e}.ac-course-icon.ac-business{background:#efe7d8;color:#8a7549}
+.ac-course-copy{flex:1;min-width:0}.ac-course strong,.ac-event strong{display:block;font-size:14px;font-weight:600;line-height:1.55}
+.ac-course small,.ac-event small{display:block;font-size:11px;color:#75816f;line-height:1.6;margin-top:5px}
+.ac-course em,.ac-event em{display:block;font-size:11px;font-style:normal;color:#4d7043;margin-top:6px}
+.ac-more{background:none;border:0;width:100%;min-height:44px;color:#48643e;font-size:12px!important}
+.ac-schedule{margin-top:25px}.ac-event{display:flex;gap:12px;align-items:center;width:100%;border:0;border-bottom:1px solid #e1e6dc;background:none;padding:15px 0;text-align:left;color:inherit}
+.ac-event>span:nth-last-child(2){flex:1}.ac-date{font-size:17px;font-weight:600;color:#697951;min-width:45px}
+.ac-panel{background:#fff;border:1px solid #dce4d3;border-radius:14px;padding:18px;margin:16px 0}
+.ac-panel dl{font-size:12px;margin:15px 0}.ac-panel dl div{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid #eef0e9}.ac-panel dt{color:#737f6d}.ac-panel dd{margin:0;text-align:right}
+.ac-preview-note,.ac-footnote{font-size:11px!important;color:#73806c!important}.ac-footnote{margin-top:25px!important}
+.ac-empty{padding:14px 0}.ac-feedback{border-left:3px solid #b58345;padding:10px;background:#f4eee2}
+.ac-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;background:#edf1e8;border-radius:12px;margin:18px 0 22px}
+.ac-tabs button{border:0;background:transparent;color:#5b685b;border-radius:9px;min-height:44px;padding:8px 3px;font-size:12px;white-space:nowrap}
+.ac-tabs button[aria-pressed=true]{background:#284d36;color:#fff;font-weight:600}
+.ac-catalog{margin-top:24px}.ac-points{margin-top:28px}
+.ac-secondary[aria-pressed=true]{background:#284d36;color:#fff}
+.ac-detail-header{display:block;margin-bottom:18px}
+.ac-detail-back{display:block;background:none;border:0;color:#365f43;font-size:13px!important;text-align:left;min-height:44px;padding:0 0 10px}
+.ac-detail-header h1{line-height:1.4;font-size:23px}
+.ac-progress{display:block;width:100%;height:6px;accent-color:#517347;margin:15px 0}
+.ac-chapter{font-size:13px;line-height:1.6;border-bottom:1px solid #edf0e8;padding:12px 0}
+.ac-chapter:last-child{border-bottom:0}.ac-chapter small{display:block;color:#74826d;font-size:11px;margin-top:4px}
+.ac-chapter button{display:block;width:100%;min-height:44px;padding:0;text-align:left;color:#294c35;background:none;border:0}
+.ac-filters{flex-wrap:wrap}.ac-filters button{min-height:44px}
+.ac-file-heading{display:flex;align-items:flex-start;gap:12px}
+.ac-file-icon{display:grid;place-items:center;flex-shrink:0;width:44px;height:54px;border-radius:8px;background:#e8eddf;color:#3b6245;font-size:12px;font-weight:700}
+.ac-file-heading h2{font-size:15px;overflow-wrap:anywhere}.ac-file-heading p{font-size:11px}
+.ac-file-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ac-file-actions a{display:flex;justify-content:center;align-items:center;text-decoration:none;text-align:center;font-size:13px;line-height:1.5;min-height:44px;padding:10px 8px}
+.ac-file-actions a:focus-visible{outline:3px solid #bd873c;outline-offset:3px}
+@media(max-width:380px){.ac-filters button{padding:8px;font-size:11px}.ac-header h1{font-size:23px}.ac-resume{padding:17px}}

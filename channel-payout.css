@@ -1,4 +1,13 @@
 .channel-payout { display:grid; gap:14px; }
+.payout-bank { display:grid; gap:12px; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+.payout-bank h3 { margin:0; font-size:15px; line-height:1.6; }
+.payout-bank .field { width:100%; min-width:0; box-sizing:border-box; }
+.payout-bank .field-label { margin:0; }
+.payout-bank .payout-consent { align-items:flex-start; line-height:1.7; }
+.payout-bank .payout-consent input { margin-top:3px; }
+.payout-saved { margin:0; color:#345442; font-size:12px; }
+.payout-bank-error { margin:0; color:#8b3d26; font-size:12px; line-height:1.6; }
+.payout-bank-error:empty { display:none; }
 .payout-steps { display:flex; justify-content:space-between; gap:10px; list-style:none; margin:0; padding:0 0 8px; font-size:12px; color:var(--muted); }
 .payout-steps .current { color:var(--ink); font-weight:650; }
 .payout-steps .done { color:#526953; }
@@ -37,4 +46,9 @@
 .payout-result h2 { font-size:19px; }
 .payout-result strong { font-size:32px; }
 .payout-result p { color:var(--muted); font-size:13px; }
+.payout-records { margin-top:20px; border-top:1px solid #dde3dd; padding-top:16px; }
+.payout-records h2 { font-size:18px; }
+.payout-record { background:#fff; border:1px solid #dde3dd; border-radius:12px; padding:14px; margin-top:10px; }
+.payout-record > div { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; }
+.payout-record small { display:block; overflow-wrap:anywhere; color:var(--muted); line-height:1.8; }
 .channel-payout button:focus-visible,.channel-payout input:focus-visible { outline:2px solid #79552b; outline-offset:2px; }

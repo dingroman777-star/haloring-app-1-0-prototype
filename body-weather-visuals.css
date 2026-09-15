@@ -1,0 +1,23 @@
+/* Body Weather presentation. No animation is needed to identify a state. */
+.bw-artwork { display: block; width: 128px; height: 96px; flex: 0 0 auto; object-fit: contain; pointer-events: none; }
+.bw-home-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#screen[data-page="TOD-01"] .body-weather.weather-with-art { background: #f0f2eb; border-color: #d9dfd2; padding: 18px 20px; }
+#screen[data-page="TOD-01"] .weather-with-art[data-weather="restore"] { background: #edf1ee; }
+#screen[data-page="TOD-01"] .weather-with-art[data-weather="slow"] { background: #f1f2ea; }
+#screen[data-page="TOD-01"] .weather-with-art[data-weather="active"] { background: #f6f1e4; border-color: #e6dac3; }
+#screen[data-page="TOD-01"] .weather-with-art .today-weather-heading { gap: 12px; color: #59684e; }
+#screen[data-page="TOD-01"] .weather-with-art .today-weather-state { color: #334630; font-size: 34px; }
+#screen[data-page="TOD-01"] .weather-with-art h2 { margin: 10px 0 0; font-size: 17px; line-height: 1.65; text-wrap: pretty; font-weight: 400; }
+#screen[data-page="TOD-01"] .weather-with-art .today-card-link { margin-top: 18px; }
+#screen[data-page="TOD-01"] .weather-with-art:focus-visible { outline: 3px solid #8a672f; outline-offset: 3px; }
+.bw-detail .bw-state .bw-artwork { width: 128px; height: 96px; }
+.bw-detail .bw-hero:has(.bw-artwork) { background: #f0f2eb; }
+.bw-detail .bw-hero[data-weather="restore"] { background: #edf1ee; }
+.bw-detail .bw-hero[data-weather="active"] { background: #f6f1e4; border-color: #e6dac3; }
+.bw-detail .bw-hero:has(.bw-artwork) .bw-state { margin-bottom: 2px; }
+.bw-detail .bw-hero:has(.bw-artwork) .bw-state > span { color: #334630; }
+.bw-review-link { display: inline-flex; align-items: center; min-height: 44px; color: #77582c; text-underline-offset: 4px; }
+@media (max-width: 374px) {
+  #screen[data-page="TOD-01"] .weather-with-art .today-weather-state { font-size: 30px; }
+  .bw-home-top .bw-artwork, .bw-detail .bw-state .bw-artwork { width: 110px; height: 83px; }
+}

@@ -1,0 +1,103 @@
+/* Only the explicit HAL-01 proposal is styled; the original view stays available. */
+.halo-ui-preview .device-shell:has(.hup-page) { background: #fafbf8; }
+.hup-page { --hup-ink: #203c32; --hup-muted: #657269; --hup-surface: #fafbf8; color: var(--hup-ink); background: var(--hup-surface); }
+.hup-page .hal-chat-header { padding: 12px 24px 8px; gap: 8px; }
+.hup-page .hal-chat-header h1 { font-size: 29px; font-weight: 650; letter-spacing: -.9px; }
+.hup-page .hal-chat-header h1 > span { display: block; margin-top: 2px; color: var(--hup-muted); font-size: 10px; font-weight: 450; letter-spacing: 1px; }
+.hup-page .hal-header-actions { gap: 2px; }
+.hup-page .hal-header-control { background: transparent; border: 0; border-radius: 50%; min-width: 44px; padding: 8px; color: #496054; font-size: 12px; }
+.hup-page .hal-header-control:hover { background: #eaf0e9; }
+.hup-page .hal-chat-scroll { padding: 0 24px 16px; }
+.hup-home { min-height: 100%; display: flex; flex-direction: column; }
+.hup-greeting { text-align: center; padding: 8px 0 24px; }
+.hup-mascot { position: relative; display: grid; place-items: center; height: 170px; margin: 0 auto 4px; }
+.hup-mascot::before { content: ""; position: absolute; width: 236px; height: 160px; border-radius: 50%; background: radial-gradient(ellipse, #eceddf 0%, #f2f4e9 44%, transparent 73%); }
+.hup-mascot img { position: relative; width: 216px; height: 216px; object-fit: contain; mix-blend-mode: multiply; mask-image: radial-gradient(ellipse at center, #000 53%, transparent 72%); }
+.hup-page .hup-greeting h2 { color: var(--hup-ink); margin: 0; font-size: 24px; font-weight: 620; letter-spacing: -.6px; line-height: 1.5; }
+.hup-page .hup-greeting p { margin: 8px 0 0; font-size: 13px; color: var(--hup-muted); line-height: 1.7; }
+.hup-greeting .hal-source-chip { margin-top: 14px; background: white; }
+.hup-page button { -webkit-tap-highlight-color: transparent; }
+.hup-page button:focus-visible { outline: 2px solid #46715b; outline-offset: 3px; }
+.hup-feeling { display: grid; grid-template-columns: 44px minmax(0,1fr) 28px; gap: 12px; align-items: center; min-height: 86px; width: 100%; padding: 16px; border: 1px solid #e0e8dd; border-radius: 22px; background: #edf3e9; color: var(--hup-ink); text-align: left; box-shadow: inset 0 1px #ffffffc9; }
+.hup-feeling:hover { background: #e5efdf; }
+.hup-feeling-icon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #dce6d6; background: #f9fcf6; border-radius: 15px; }
+.hup-feeling svg { display: block; width: 23px; height: 23px; }
+.hup-feeling strong { font-size: 15px; font-weight: 600; line-height: 1.5; }
+.hup-feeling small { display: block; margin-top: 4px; font-size: 12px; color: #526a59; line-height: 1.5; }
+.hup-next { width: 28px; height: 28px; border-radius: 50%; background: #ffffffaa; display: grid; place-items: center; }
+.hup-next svg { width: 15px; height: 15px; }
+.hup-topics { margin-top: 22px; }
+.hup-section-label { color: var(--hup-muted); font-size: 11px; letter-spacing: .4px; }
+.hup-topic-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+.hup-topic-grid button { min-width: 0; min-height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 10px 4px; border: 1px solid #e6e9e2; border-radius: 17px; background: #fff; color: #3d5547; font-size: 12px; line-height: 1.5; }
+.hup-topic-grid button:hover { border-color: #becdbb; background: #f5f8f1; }
+.hup-topic-grid svg { width: 21px; height: 21px; }
+.hup-home .halo-journey-nudge { margin: 16px 0 0; min-height: 52px; padding: 8px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.hup-home .halo-journey-nudge strong { font-size: 12px; font-weight: 500; }
+.hup-home .halo-journey-nudge small { font-size: 10px; }
+.hup-home .journey-nudge-icon { background: #edf1e9; }
+.hup-plan { display: flex; align-items: center; min-height: 48px; gap: 10px; margin-top: 14px; padding: 8px 0; border: 0; color: #52685a; background: transparent; font-size: 12px; text-align: left; }
+.hup-plan span { flex: 1; }
+.hup-plan svg { width: 18px; height: 18px; }
+.hup-page .hal-chat-footer { padding: 12px 20px 4px; background: var(--hup-surface); border-top: 1px solid #edf0e8; }
+.hup-page .hal-chat-footer .halo-composer { gap: 4px; padding: 5px; border: 1px solid #d7e0d2; border-radius: 26px; background: #fff; box-shadow: 0 4px 18px #25402d07; }
+.hup-page .hal-chat-footer .composer-tool { background: transparent; border: 0; color: #58705d; border-radius: 50%; }
+.hup-page .hal-chat-footer .composer-send { background: #2e5140; border: 0; color: white; }
+.hup-page .hal-chat-footer .composer-send:disabled { opacity: 1; background: #edf0e9; color: #98a594; }
+.hup-page .hal-chat-footer #chat-input { border: 0; border-radius: 0; padding-inline: 6px; background: transparent; color: var(--hup-ink); }
+.hup-page .hal-chat-footer #chat-input:focus-visible { outline: none; }
+.hup-page .halo-composer:focus-within { outline: 2px solid #77957e; outline-offset: 2px; }
+.hup-page .hal-chat-footer #chat-input::placeholder { color: #7b857c; font-size: 14px; }
+.hup-footer-note { display: flex; justify-content: center; align-items: center; gap: 10px; color: #6d786e; font-size: 11px; }
+.hup-footer-note button { min-height: 44px; padding: 8px 4px; border: 0; background: transparent; color: #526b59; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.hup-quota { margin: 0 0 10px; color: #637265; font-size: 11px; }
+.hup-page .hal-messages .message.user { background: #e4eedf; color: #27402e; border-radius: 22px 22px 6px 22px; }
+.hup-page .hal-messages .message.halo { color: #283b2f; }
+.hup-page .hal-reply-action { background: #eef4e9; border-color: #dbe6d5; color: #31563c; }
+.hup-page .hal-thread-heading { margin-top: 16px; }
+.halo-ui-preview .device-shell:has(.hup-page) .tabbar { border-color: #e6ebe1; background: #fafbf8; }
+.halo-ui-preview .device-shell:has(.hup-page) .tabbar button { min-height: 58px; }
+.halo-ui-preview .device-shell:has(.hup-page) .tabbar button.active { color: #2e5140; }
+/* Optional clean presentation canvas; this changes prototype chrome, not App navigation. */
+.halo-ui-canvas .rail, .halo-ui-canvas .inspector, .halo-ui-canvas .stage-header, .halo-ui-canvas .device-caption, .halo-ui-canvas .team-demo-panel { display: none !important; }
+.halo-ui-canvas .workspace { display: block; min-height: 100dvh; }
+.halo-ui-canvas .stage { padding: 24px 12px; }
+.halo-ui-canvas .device-shell { width: min(100%, 414px); height: min(900px, calc(100dvh - 48px)); min-height: 0; margin: auto; }
+@media (max-width: 760px) {
+  .halo-ui-canvas .stage { padding: 0; }
+  .halo-ui-canvas .device-shell, .halo-ui-canvas .device-shell:has(.screen[data-page="HAL-01"]) { width: 100%; max-width: 480px; height: var(--hal-viewport-height, 100dvh); border: 0; border-radius: 0; box-shadow: none; }
+  .hup-page .hal-chat-header { padding-top: 10px; }
+}
+@media (max-width: 360px), (max-height: 760px) {
+  .hup-page .hal-chat-header { padding-inline: 18px; }
+  .hup-page .hal-chat-scroll { padding-inline: 18px; }
+  .hup-mascot { height: 140px; }
+  .hup-mascot img { width: 174px; height: 174px; }
+  .hup-greeting { padding: 4px 0 18px; }
+  .hup-page .hup-greeting h2 { font-size: 22px; }
+  .hup-topics { margin-top: 16px; }
+  .hup-topic-grid button { min-height: 64px; }
+  .hup-home .halo-journey-nudge { margin-top: 10px; }
+  .hup-page .hal-chat-footer { padding-inline: 16px; }
+}
+@media (max-height: 760px) {
+  .hup-mascot { height: 104px; }
+  .hup-mascot img { width: 132px; height: 132px; }
+  .hup-greeting { padding-top: 0; padding-bottom: 14px; }
+  .hup-feeling { min-height: 76px; padding-block: 12px; }
+  .hup-topics { margin-top: 14px; }
+  .hup-topic-grid { margin-top: 8px; }
+  .hup-topic-grid button { min-height: 60px; padding-block: 8px; gap: 6px; }
+  /* The same plan remains reachable through the composer's tools on short screens. */
+  .hup-home .halo-journey-nudge, .hup-home .hup-plan { display: none; }
+}
+@media (max-height: 520px) {
+  .hup-mascot { height: 76px; }
+  .hup-mascot img { width: 104px; height: 104px; }
+  .hup-mascot::before { width: 130px; height: 76px; }
+  .hup-page .hal-chat-header h1 > span { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hup-page button { transition: background-color .18s, border-color .18s, transform .18s; }
+  .hup-page button:active:not(:disabled) { transform: scale(.98); }
+}

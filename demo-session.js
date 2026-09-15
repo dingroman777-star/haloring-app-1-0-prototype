@@ -61,7 +61,7 @@
     dialog.querySelector("#demo-previous").hidden = !prefix || !(valid(previous) || previous === "legacy");
     function destination(next, prior) {
       const target = new URL("index.html", location.href);
-      target.searchParams.set("v", "6.5.3-demo");
+      target.searchParams.set("v", "6.6");
       if (next) target.searchParams.set("demo", next);
       if (prior) target.searchParams.set("demoPrevious", prior);
       target.hash = "ONB-01";
