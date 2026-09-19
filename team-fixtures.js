@@ -66,7 +66,7 @@
       connectionIntro:{completed:true,choice:'connect',permission:'granted'},
       devicePaired:true,deviceStatus:'connected',deviceLastSyncedAt:at(0),hardwareActivatedAt:at(230),
       pairedDevice:{id:'ring7a21',suffix:'7A21',name:'HALO RING · 7A21',signal:'strong'},
-      deviceBindings:{ring7a21:{...owner,boundAt:at(230),activatedAt:at(230)}},
+      deviceBindings:{ring7a21:{...owner,id:'ring7a21',suffix:'7A21',name:'HALO RING · 7A21',boundAt:at(230),activatedAt:at(230)}},
       basicProfile:{status:'completed',accountRef:account,recordScope},profileSaved:true,
       profile:{nickname:'林小满',birthday:'1994-06-18',height:'165',weight:'56',ownerAccount:account,recordScope},
       toggles:{legal:true,aiLegal:true,bluetooth:true,notification:true,rhythm:true,haloBody:true,memory:true,inspiration:true,trendRecords:true,studioHealth:true,studioActivity:true,wake:true,birthdayBenefit:true},

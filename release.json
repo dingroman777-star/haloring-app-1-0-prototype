@@ -1,14 +1,15 @@
 {
-  "version": "6.6-r11-20260916",
+  "version": "6.6-r12-20260920",
   "appVersion": "6.6",
-  "createdAt": "2026-09-15T21:20:24.235Z",
+  "createdAt": "2026-09-19T16:48:31.901Z",
   "variant": "team-full-synthetic-demo",
-  "previousDeploymentCommit": "8e36ec558c0d5d10b2afa8372b1793147504be40",
+  "previousDeploymentCommit": "4dd55bac2766ece5a2706daf15ee9ec5e22488ac",
   "sourceDirectory": "prototypes/app/team-full-demo-v6.5.3-20260908",
-  "onlineEntry": "https://dingroman777-star.github.io/haloring-app-1-0-prototype/?v=6.6-r11-20260916&scene=full&demo=new#TOD-01",
-  "partnerEntry": "https://dingroman777-star.github.io/haloring-app-1-0-prototype/?v=6.6-r11-20260916&scene=full&partnerCase=L4&demo=new#AGT-05",
+  "onlineEntry": "https://dingroman777-star.github.io/haloring-app-1-0-prototype/?v=6.6-r12-20260920&scene=full&demo=new#TOD-01",
+  "partnerEntry": "https://dingroman777-star.github.io/haloring-app-1-0-prototype/?v=6.6-r12-20260920&scene=full&partnerCase=L4&demo=new#AGT-05",
   "transformations": [
-    "HTML JS/CSS cache parameters use 6.6-r11-20260916; source business code and assets copied byte-for-byte"
+    "R11 runtime preserved except device-home-page.js and team-fixtures.js; index.html cache keys for these two scripts use 6.6-r12-20260920.",
+    "Changed runtime text normalized to LF for byte-exact GitHub Pages release hashes."
   ],
   "scope": "Static prototype only. Mock signing, bank input and H5 previews; no real financial services or separate overseas H5 infrastructure deployed.",
   "files": {
@@ -104,7 +105,7 @@
     "demo-session.js": "72f29797870d156ca57d0f5818cf9d7681a324216931b3d777f68fa4e096a9d9",
     "device-bind-page.js": "edeac15131ab491f69c10e4c67462d0b91de048381147aec5387b08040513157",
     "device-home-page.css": "5c25a89f9773f8330cb3d3b9739a24e6e66a65bbc0efbce965528f18311797d3",
-    "device-home-page.js": "4d5dbe0a13710fddb93686350a066459fe46c28d7ac83fc8b5163fc249ebdb6d",
+    "device-home-page.js": "ca4bcc815a027a1a480ca347e8182b0ab68e35db7c364c53cf017ebf40f8eb6d",
     "device-info-page.css": "f8286e60ff22ff2afe04df4eaea5f490db568eb4b9bc8a547ea3fd73e0244257",
     "device-info-page.js": "dc95f27c95a210b0bf5f016fbc141ca04d5daa09b6a4f7155f9fb471ccb9a999",
     "device-initial-sync-page.css": "0eedcca33174fb3f034a1b857b4a0adedeeae5c57a7bdacb0e18570a2202527d",
@@ -139,7 +140,7 @@
     "heart-trend.js": "f7512c7bdeaedf84ac7a9763204f7ae840f2215c8ad34f0a53169868637671a6",
     "help-center-page.css": "21c1c944bd112057b7bb06753c625b1bd41d736ba843353ea8ed237be4f80ad5",
     "help-center-page.js": "19a7e1b7ba9611ec4724a290481bba0e62becbffba313eac48df2f9ba7e928f0",
-    "index.html": "56c89c98c7d2ae7bb2aa9c243272c990764b8a026beba6645f33125093bb6341",
+    "index.html": "fde591946a130477688618e884295b4bab53f1f89ca7b220cadf3a8e197f1c04",
     "measurement-center.css": "36b6e981d1836a1a542812de6886e192dfc6f0fb975252db61423937eecffead",
     "measurement-center.js": "daeedf6a0040d91615b548275d735c0f8d4bd588c2b76903f02a9c1a53175f4c",
     "member-badges-page.css": "779034ddc786dc2968df0a0ed9fa56078476ac7a30ee783e8949e9407922520d",
@@ -297,10 +298,12 @@
     "system-health-source.js": "5b1f787f4754dd4ed20d33dfff95835d2abfe7b0567f80753b76bfad4dafa46a",
     "team-demo.css": "d52a4e99e617633cef189af8b1c6ba2a8bcf31b138204e75398c51bb2d9be84a",
     "team-entry.js": "f451a875b3c83957487ab1b26523be2f5b5f886b406475642d2a51c191586d6b",
-    "team-fixtures.js": "7302a5638b10cbec64808d02348382e1de6164615363863184bf5b1f319f15e3",
+    "team-fixtures.js": "a0627cf984281eeb961590bc5e685ef5179fcba808cd565192369acb47468070",
     "team-report-preview.js": "9d2781a58513954bce4ce13951cb8e98a16c8e784721cd797b432868bd4481c4",
     "temperature-trend.css": "41e1eb1c0fe13efa0a139445650255b18249938eb491306b81f25a56b22cb728",
     "temperature-trend.js": "b8b12a28dbb787eb7a26359969b9e642f13983e4952d13fbbb49b84ad7a55403",
     "today-rhythm-storage.js": "bca8eed806611eada9ca06caffdfc607e7300f77d731430a0861d4cbf09a6194"
-  }
+  },
+  "deviceEntry": "https://dingroman777-star.github.io/haloring-app-1-0-prototype/?v=6.6-r12-20260920&scene=full&demo=new#DEV-10",
+  "hotfix": "DEV-10: complete new fixture device identity and repair existing owned rows without resetting demo progress; recover the same-device receipt missed by the old empty view."
 }

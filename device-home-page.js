@@ -79,6 +79,22 @@
           changed = true;
         }
       }
+      // Older demo fixtures stored device identity only in the inventory key.
+      // Repair owned rows in place; never create bindings or change their owner.
+      let restoredCurrentIdentity = false;
+      if (state.signedIn && objectRecord(state.deviceBindings)) {
+        for (const [id, item] of Object.entries(state.deviceBindings)) {
+          if (!id || !objectRecord(item) || item.accountRef !== account() || !(item.id == null || item.id === "")) continue;
+          item.id = id;
+          if (id === currentId()) restoredCurrentIdentity = true;
+          if (state.pairedDevice?.id === id) {
+            for (const field of ["suffix", "name"]) {
+              if (item[field] == null && typeof state.pairedDevice[field] === "string") item[field] = state.pairedDevice[field];
+            }
+          }
+          changed = true;
+        }
+      }
       const list = inventory();
       if (!owned(d.selectedId)) { const nextId = owned(currentId())?.id || list[0]?.id || ""; if (d.selectedId !== nextId) { d.selectedId = nextId; changed = true; } }
       const id = currentId();
@@ -88,7 +104,9 @@
       const owner = owned(id);
       const knownReceiptOwner = d.importedReceipt?.deviceId === id && d.importedReceipt?.at === stamp;
       const firstLegacyReceipt = !d.observedOnce && (!h.lastAccountRef || h.lastAccountRef === account());
-      if (owner && (!h.lastAccountRef || h.lastAccountRef === account()) && validTime(stamp) && (!validTime(owner.boundAt) || Date.parse(stamp) >= Date.parse(owner.boundAt)) && (firstLegacyReceipt || d.observedOnce && stamp !== d.lastObservedSyncAt || knownReceiptOwner)) {
+      // The old empty view may already have observed this receipt without importing it.
+      const restoredLegacyReceipt = restoredCurrentIdentity && d.observedDeviceId === id && d.lastObservedSyncAt === stamp && !d.importedReceipt;
+      if (owner && (!h.lastAccountRef || h.lastAccountRef === account()) && validTime(stamp) && (!validTime(owner.boundAt) || Date.parse(stamp) >= Date.parse(owner.boundAt)) && (firstLegacyReceipt || restoredLegacyReceipt || d.observedOnce && stamp !== d.lastObservedSyncAt || knownReceiptOwner)) {
         const f = d.facts[id] || (d.facts[id] = {});
         if (!validTime(f.lastSyncedAt) || Date.parse(stamp) > Date.parse(f.lastSyncedAt)) { f.lastSyncedAt = stamp; changed = true; }
         if (!knownReceiptOwner) { d.importedReceipt = { deviceId: id, at: stamp }; changed = true; }
